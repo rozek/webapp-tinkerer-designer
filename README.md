@@ -1,2 +1,6 @@
-# webapp-tinkerer-designer
- Designer for the WebApp Tinkerer
+# webapp-tinkerer-designer #
+
+visual Designer for the WebApp Tinkerer
+
+
+(currently under development, please stay tuned)
