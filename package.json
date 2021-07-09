@@ -1,7 +1,7 @@
 {
   "name": "webapp-tinkerer-designer",
   "version": "0.1.0",
-  "description": "Designer for the WebApp Tinkerer",
+  "description": "visual Designer for the WebApp Tinkerer",
   "browser": "./dist/webapp-tinkerer-designer.js",
   "types": "./dist/webapp-tinkerer-designer.d.ts",
   "exports": {
@@ -17,9 +17,9 @@
   },
   "keywords": [
     "webapp",
-    "web",
-    "application",
-    "applet"
+    "web-app",
+    "web-application",
+    "visual-programming"
   ],
   "author": "Andreas Rozek <a.rozek@gmx.de> (https://www.rozek.de/)",
   "license": "MIT",
