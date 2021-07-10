@@ -1,14 +1,15 @@
 // see https://remarkablemark.org/blog/2019/07/12/rollup-commonjs-umd/
 
+import svelte         from 'rollup-plugin-svelte'
 import commonjs       from '@rollup/plugin-commonjs'
 import resolve        from '@rollup/plugin-node-resolve'
 import autoPreprocess from 'svelte-preprocess'
 import typescript     from '@rollup/plugin-typescript';
 import postcss        from 'rollup-plugin-postcss'
-import { terser }     from 'rollup-plugin-terser'
+//import { terser }     from 'rollup-plugin-terser'
 
 export default {
-  input: './src/webapp-tinkerer-designer.ts',
+  input: './src/index.ts',
   external:[                                 // list of (unbundled) dependencies
     'webapp-tinkerer-runtime',               // partial bundling
   ],
@@ -22,8 +23,11 @@ export default {
     exports: 'default',
   },
   plugins: [
+    svelte({ preprocess:[
+      autoPreprocess({ aliases:[['ts','typescript']] }),
+    ]}),
     resolve({ browser:true, dedupe:['svelte'] }), commonjs(), typescript(),
     postcss({ extract:false, inject:{insertAt:'top'} }),
-    terser({ format:{ comments:false, safari10:true } })
+//    terser({ format:{ comments:false, safari10:true } })
   ],
 };
