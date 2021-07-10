@@ -20,7 +20,6 @@ export default {
     globals:   { 'webapp-tinkerer-runtime':'WAT' },
     noConflict:true,
     sourcemap: true,
-    exports:   'default',
   },{
     file:      './dist/webapp-tinkerer-designer.min.js',
     format:    'iife',
@@ -28,7 +27,6 @@ export default {
     globals:   { 'webapp-tinkerer-runtime':'WAT' },
     noConflict:true,
     sourcemap: true,
-    exports:   'default',
     plugins:   [ terser({ format:{ comments:false, safari10:true } }) ],
   }],
   plugins: [
