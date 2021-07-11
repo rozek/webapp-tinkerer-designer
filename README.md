@@ -2,7 +2,7 @@
 
 a visual Designer for the WebApp Tinkerer
 
-Build modern Web Applications from Components, live in your Browser, supported by a visual Editor.
+Build modern Web Applications from Components, live in your Browser, supported by an intuitive visual Editor.
 
 *(currently under active development, please stay tuned)*
 
