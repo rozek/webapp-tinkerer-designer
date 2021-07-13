@@ -8,6 +8,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "dev": "rollup -w -c rollup-dev.config.js",
     "build": "rimraf dist && rollup -c rollup.config.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
