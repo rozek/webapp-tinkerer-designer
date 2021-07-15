@@ -37,11 +37,48 @@
 <script lang="ts">
   export const Version = '0.1.0'
 
+/**** get a reference to the "global" object ****/
+
+  export const global = /*#__PURE__*/ Function('return this')()
+// see https://stackoverflow.com/questions/3277182/how-to-get-the-global-object-in-javascript
+
+/**** check WAT presence ****/
+
+  if (typeof global.WAT?.ready !== 'function') {
+    window.alert(
+      '"WebApp Tinkerer" not found\n\n' +
+      'The WAT Designer needs the WAT Runtime to be loaded first'
+    )
+    throw new Error('MissingDependency: "WAT" not found')
+  }
+
+//----------------------------------------------------------------------------//
+//                             Designer Interface                             //
+//----------------------------------------------------------------------------//
+
+/**** startDesigning ****/
+
   export function startDesigning (
     Target:WAT_Visual|WAT_Name, Property?:WAT_Identifier,
     x?:number, y?:number
   ):void {
   }
+/**** inhibitsEventsFrom ****/
+
+  export function inhibitsEventsFrom (Visual:WAT_Visual):boolean {
+
+
+    return false
+  }
+
+
+
+  WAT.ready(() => {
+    WAT.registerDesigner({ startDesigning,inhibitsEventsFrom })
+    console.log('WAD is running')
+  })
+
+
 
 
 </script>
