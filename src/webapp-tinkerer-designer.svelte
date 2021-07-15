@@ -21,17 +21,23 @@
     WAT_TextShadow, WAT_TextAlignment,
     WAT_BackgroundMode, WAT_BackgroundTexture, WAT_BorderStyle, WAT_BoxShadow,
     WAT_Cursor, WAT_customCursor, WAT_Overflow, WAT_TextOverflow,
-    WAT_Text, WAT_Textline, WAT_Color, WAT_URL
+    WAT_Text, WAT_Textline, WAT_Color, WAT_URL,
+
+    WAT_Visual, WAT_Applet, WAT_Container, WAT_Layer, WAT_Card, WAT_Overlay,
+    WAT_Component, WAT_Compound, WAT_Control,
+
+    WAT_Identifier, WAT_Name, WAT_Label
   } from 'webapp-tinkerer-runtime'
 
-  import {
+  import WAT from 'webapp-tinkerer-runtime'
+  const {
     WAT_Categories,
     WAT_horizontalAnchorings, WAT_verticalAnchorings,
     WAT_FontWeights, WAT_FontWeightValues, WAT_FontStyles,
     WAT_TextDecorationLines, WAT_TextDecorationStyles, WAT_TextAlignments,
     WAT_BackgroundModes, WAT_BorderStyles, WAT_Cursors,
     WAT_Overflows, WAT_TextOverflows
-  } from 'webapp-tinkerer-runtime'
+  } = WAT
 </script>
 
 <script lang="ts">
@@ -44,7 +50,8 @@
 
 /**** check WAT presence ****/
 
-  if (typeof global.WAT?.ready !== 'function') {
+  const WAT = global.WAT
+  if (typeof WAT?.ready !== 'function') {
     window.alert(
       '"WebApp Tinkerer" not found\n\n' +
       'The WAT Designer needs the WAT Runtime to be loaded first'
@@ -62,6 +69,8 @@
     Target:WAT_Visual|WAT_Name, Property?:WAT_Identifier,
     x?:number, y?:number
   ):void {
+
+
   }
 /**** inhibitsEventsFrom ****/
 
@@ -77,6 +86,28 @@
     WAT.registerDesigner({ startDesigning,inhibitsEventsFrom })
     console.log('WAD is running')
   })
+
+//----------------------------------------------------------------------------//
+//                                 Monitoring                                 //
+//----------------------------------------------------------------------------//
+
+/**** monitorApplets ****/
+
+  import { AppletList } from './AppletList.js'
+
+  let AppletMonitor:any
+  WAT.ready(() => {
+    AppletMonitor = setInterval(() => {
+      let AppletsInDocument = WAT.AppletPeersInDocument().map(
+        (AppletPeer:HTMLElement) => WAT.VisualForElement(AppletPeer)
+      )
+
+      if (WAT.ValuesDiffer(AppletsInDocument,$AppletList)) {
+        $AppletList = AppletsInDocument
+      }
+    })
+  })
+
 
 
 
