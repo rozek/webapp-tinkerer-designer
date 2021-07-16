@@ -524,7 +524,7 @@
 
 
 
-    function startDesigning(Target, Property, x, y) {
+    function startDesigning(Applet, Target, Property, x, y) {
     	
     }
 
@@ -561,7 +561,6 @@
 
     				if (ValuesDiffer(AppletsInDocument, $AppletList)) {
     					AppletList.set(AppletsInDocument);
-    					console.log("AppletList: ", AppletsInDocument);
     				}
     			},
     			300
