@@ -10,6 +10,9 @@ import { terser }     from 'rollup-plugin-terser'
 
 export default {
   input: './src/index.ts',
+  watch: {
+    include: ['./*.js','./src/**'],
+  },
   external:[                                 // list of (unbundled) dependencies
     'webapp-tinkerer-runtime',               // partial bundling
   ],
@@ -22,9 +25,11 @@ export default {
     sourcemap: true,
   },
   plugins: [
-    svelte({ preprocess:[
-      autoPreprocess({ aliases:[['ts','typescript']] }),
-    ]}),
+    svelte({
+      preprocess:[
+        autoPreprocess({ aliases:[['ts','typescript']] }),
+      ]
+    }),
     resolve({ browser:true, dedupe:['svelte'] }), commonjs(), typescript(),
     postcss({ extract:false, inject:{insertAt:'top'} }),
   ],
