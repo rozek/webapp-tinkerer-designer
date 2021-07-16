@@ -81,7 +81,7 @@
 /**** startDesigning ****/
 
   export function startDesigning (
-    Target:WAT_Visual|WAT_Name, Property?:WAT_Identifier,
+    Applet:WAT_Applet, Target?:WAT_Visual|WAT_Name, Property?:WAT_Identifier,
     x?:number, y?:number
   ):void {
 
@@ -119,7 +119,6 @@
 
       if (ValuesDiffer(AppletsInDocument,$AppletList)) {
         (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
-console.log('AppletList: ',AppletsInDocument)
       }
     }, 300)
   })
