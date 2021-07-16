@@ -1,4 +1,4 @@
-(function () {
+(function (webappTinkererRuntime) {
     'use strict';
 
     function noop() { }
@@ -29,10 +29,6 @@
     }
     function component_subscribe(component, store, callback) {
         component.$$.on_destroy.push(subscribe(store, callback));
-    }
-    function set_store_value(store, ret, value = ret) {
-        store.set(value);
-        return ret;
     }
 
     // Track which nodes are claimed during hydration. Unclaimed nodes can then be removed from the DOM
@@ -370,10 +366,72 @@
     }
 
     //----------------------------------------------------------------------------//
-    //                        JavaScript Interface Library                        //
-    //----------------------------------------------------------------------------//
-    /**** get a reference to the "global" object ****/
-    var global = /*#__PURE__*/ Function('return this')();
+    /**** ValuesDiffer ****/
+    function ValuesDiffer(thisValue, otherValue) {
+        if (thisValue === otherValue) {
+            return false;
+        }
+        var thisType = typeof thisValue;
+        if (thisType !== typeof otherValue) {
+            return true;
+        }
+        /**** ArraysDiffer ****/
+        function ArraysDiffer(thisArray, otherArray) {
+            if (!Array.isArray(otherArray)) {
+                return true;
+            }
+            if (thisArray.length !== otherArray.length) {
+                return true;
+            }
+            for (var i = 0, l = thisArray.length; i < l; i++) {
+                if (ValuesDiffer(thisArray[i], otherArray[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        /**** ObjectsDiffer ****/
+        function ObjectsDiffer(thisObject, otherObject) {
+            if (Object.getPrototypeOf(thisObject) !== Object.getPrototypeOf(otherObject)) {
+                return true;
+            }
+            for (var key in thisObject) {
+                if (!(key in otherObject)) {
+                    return true;
+                }
+            }
+            for (var key in otherObject) {
+                if (!(key in thisObject)) {
+                    return true;
+                }
+                if (ValuesDiffer(thisObject[key], otherObject[key])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        switch (thisType) {
+            case 'undefined':
+            case 'boolean':
+            case 'string':
+            case 'function': return true; // most primitives are compared using "==="
+            case 'number': return ((isNaN(thisValue) !== isNaN(otherValue)) ||
+                (Math.abs(thisValue - otherValue) > Number.EPSILON));
+            case 'object':
+                if (thisValue == null) {
+                    return true;
+                } // since "other_value" != null!
+                if (otherValue == null) {
+                    return true;
+                } // since "this_value" != null!
+                if (Array.isArray(thisValue)) {
+                    return ArraysDiffer(thisValue, otherValue);
+                }
+                return ObjectsDiffer(thisValue, otherValue);
+            default: return true; // unsupported property type
+        }
+        return true;
+    }
 
     const subscriber_queue = [];
     /**
@@ -465,6 +523,7 @@
 
 
 
+
     function startDesigning(Target, Property, x, y) {
     	
     }
@@ -496,13 +555,17 @@
     	});
 
     	WAT.ready(() => {
-    		setInterval(() => {
-    			let AppletsInDocument = WAT.AppletPeersInDocument().map(AppletPeer => WAT.VisualForElement(AppletPeer));
+    		setInterval(
+    			() => {
+    				let AppletsInDocument = webappTinkererRuntime.AppletPeersInDocument().map(AppletPeer => webappTinkererRuntime.VisualForElement(AppletPeer));
 
-    			if (WAT.ValuesDiffer(AppletsInDocument, $AppletList)) {
-    				set_store_value(AppletList, $AppletList = AppletsInDocument, $AppletList);
-    			}
-    		});
+    				if (ValuesDiffer(AppletsInDocument, $AppletList)) {
+    					AppletList.set(AppletsInDocument);
+    					console.log("AppletList: ", AppletsInDocument);
+    				}
+    			},
+    			300
+    		);
     	});
 
     	return [Version, global, startDesigning, inhibitsEventsFrom];
@@ -525,7 +588,7 @@
     	}
 
     	get global() {
-    		return global;
+    		return this.$$.ctx[1];
     	}
 
     	get startDesigning() {
@@ -541,5 +604,5 @@
         target: document.body
     });
 
-}());
+}(WAT));
 //# sourceMappingURL=webapp-tinkerer-designer.js.map
