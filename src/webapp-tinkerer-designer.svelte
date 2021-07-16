@@ -29,15 +29,14 @@
     WAT_Identifier, WAT_Name, WAT_Label
   } from 'webapp-tinkerer-runtime'
 
-  import WAT from 'webapp-tinkerer-runtime'
-  const {
+  import {
     WAT_Categories,
     WAT_horizontalAnchorings, WAT_verticalAnchorings,
     WAT_FontWeights, WAT_FontWeightValues, WAT_FontStyles,
     WAT_TextDecorationLines, WAT_TextDecorationStyles, WAT_TextAlignments,
     WAT_BackgroundModes, WAT_BorderStyles, WAT_Cursors,
     WAT_Overflows, WAT_TextOverflows
-  } = WAT
+  } from 'webapp-tinkerer-runtime'
 </script>
 
 <script lang="ts">
