@@ -989,7 +989,7 @@
     	return child_ctx;
     }
 
-    // (66:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (67:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let designerbutton;
