@@ -115,7 +115,7 @@
     AppletMonitor = setInterval(() => {
       let AppletsInDocument = AppletPeersInDocument().map(
         (AppletPeer:HTMLElement) => VisualForElement(AppletPeer)
-      )
+      ).filter((Applet:WAT_Visual) => (Applet as WAT_Applet).mayBeDesigned)
 
       if (ValuesDiffer(AppletsInDocument,$AppletList)) {
         (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
