@@ -557,7 +557,7 @@
     	WAT.ready(() => {
     		setInterval(
     			() => {
-    				let AppletsInDocument = webappTinkererRuntime.AppletPeersInDocument().map(AppletPeer => webappTinkererRuntime.VisualForElement(AppletPeer));
+    				let AppletsInDocument = webappTinkererRuntime.AppletPeersInDocument().map(AppletPeer => webappTinkererRuntime.VisualForElement(AppletPeer)).filter(Applet => Applet.mayBeDesigned);
 
     				if (ValuesDiffer(AppletsInDocument, $AppletList)) {
     					AppletList.set(AppletsInDocument);
