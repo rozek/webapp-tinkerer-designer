@@ -3,11 +3,20 @@
 ------------------------------------------------------------------------------->
 
 <style>
+  :global([draggable]) {
+    -webkit-touch-callout:none;
+    -ms-touch-action:none; touch-action:none;
+    -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; user-select:none;
+  }
 
 </style>
 
 <script context="module" lang="ts">
   import type { Writable } from 'svelte/store'
+
+/**** Support for Mobile Devices ****/
+
+  import DragDropTouch from 'svelte-drag-drop-touch'
 
 /**** import from 'javascript-interface-library', use from WAT ****/
 
@@ -53,6 +62,10 @@
     VisualForElement,
     AppletPeersInDocument
   } from 'webapp-tinkerer-runtime'
+
+/**** Svelte Components ****/
+
+  import DesignerButton from 'DesignerButton.svelte'
 </script>
 
 <script lang="ts">
@@ -135,5 +148,8 @@
   pointer-events:none;
   margin:0px; padding:0px; border:none; background:transparent;
 ">
+  {#each $AppletList as Applet (Applet['uniqueId'])}
+    <DesignerButton {Applet}/>
+  {/each}
 
 </div>
