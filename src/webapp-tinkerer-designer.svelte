@@ -1,15 +1,22 @@
-<!----------------------------------------------------------------------------//
-//                       WebApp Tinkerer Designer (WAD)                       //
-//----------------------------------------------------------------------------->
+<!------------------------------------------------------------------------------
+--                       WebApp Tinkerer Designer (WAD)                       --
+------------------------------------------------------------------------------->
 
 <style>
 
 </style>
 
 <script context="module" lang="ts">
+  import type { Writable } from 'svelte/store'
+
+/**** import from 'javascript-interface-library', use from WAT ****/
+
   import {
-    global, throwError
+    throwError,
+    ValuesDiffer
   } from 'javascript-interface-library'
+
+/**** WAT Types ****/
 
   import type {
     WAT_Category, WAT_SemVer,
@@ -29,6 +36,8 @@
     WAT_Identifier, WAT_Name, WAT_Label
   } from 'webapp-tinkerer-runtime'
 
+/**** WAT Type-specific Constants ****/
+
   import {
     WAT_Categories,
     WAT_horizontalAnchorings, WAT_verticalAnchorings,
@@ -36,6 +45,13 @@
     WAT_TextDecorationLines, WAT_TextDecorationStyles, WAT_TextAlignments,
     WAT_BackgroundModes, WAT_BorderStyles, WAT_Cursors,
     WAT_Overflows, WAT_TextOverflows
+  } from 'webapp-tinkerer-runtime'
+
+/**** actual WAT methods ****/
+
+  import {
+    VisualForElement,
+    AppletPeersInDocument
   } from 'webapp-tinkerer-runtime'
 </script>
 
@@ -97,14 +113,15 @@
   let AppletMonitor:any
   WAT.ready(() => {
     AppletMonitor = setInterval(() => {
-      let AppletsInDocument = WAT.AppletPeersInDocument().map(
-        (AppletPeer:HTMLElement) => WAT.VisualForElement(AppletPeer)
+      let AppletsInDocument = AppletPeersInDocument().map(
+        (AppletPeer:HTMLElement) => VisualForElement(AppletPeer)
       )
 
-      if (WAT.ValuesDiffer(AppletsInDocument,$AppletList)) {
-        $AppletList = AppletsInDocument
+      if (ValuesDiffer(AppletsInDocument,$AppletList)) {
+        (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
+console.log('AppletList: ',AppletsInDocument)
       }
-    })
+    }, 300)
   })
 
 
