@@ -1429,7 +1429,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     function instance$1($$self, $$props, $$invalidate) {
     	let { Applet } = $$props;
-    	let Offset;
+    	let Offset = ButtonOffset.get(Applet) || { x: Applet.Width - 32 - 2, y: 2 };
 
     	function onDragStart() {
     		return Offset;
@@ -1445,13 +1445,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	$$self.$$.update = () => {
     		if ($$self.$$.dirty & /*Applet, Offset*/ 3) {
-    			{
-    				$$invalidate(1, Offset = ButtonOffset.get(Applet));
-
-    				if (Offset == null) {
-    					ButtonOffset.set(Applet, $$invalidate(1, Offset = { x: Applet.Width - 32 - 2, y: 2 }));
-    				}
-    			}
+    			ButtonOffset.set(Applet, Offset);
     		}
     	};
 
