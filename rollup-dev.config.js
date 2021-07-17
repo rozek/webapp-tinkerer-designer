@@ -25,11 +25,9 @@ export default {
     sourcemap: true,
   },
   plugins: [
-    svelte({
-      preprocess:[
-        autoPreprocess({ aliases:[['ts','typescript']] }),
-      ]
-    }),
+    svelte({preprocess:[
+      autoPreprocess({ aliases:[['ts','typescript']] }),
+    ]}),
     resolve({ browser:true, dedupe:['svelte'] }), commonjs(), typescript(),
     postcss({ extract:false, inject:{insertAt:'top'} }),
   ],
