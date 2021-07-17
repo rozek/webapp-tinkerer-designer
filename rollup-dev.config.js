@@ -9,7 +9,7 @@ import postcss        from 'rollup-plugin-postcss'
 import { terser }     from 'rollup-plugin-terser'
 
 export default {
-  input: './src/index.ts',
+  input: './src/webapp-tinkerer-designer.ts',
   watch: {
     include: ['./*.js','./src/**'],
   },

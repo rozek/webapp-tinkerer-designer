@@ -9,7 +9,7 @@ import postcss        from 'rollup-plugin-postcss'
 import { terser }     from 'rollup-plugin-terser'
 
 export default {
-  input: './src/index.ts',
+  input: './src/webapp-tinkerer-designer.ts',
   external:[                                 // list of (unbundled) dependencies
     'webapp-tinkerer-runtime',               // partial bundling
   ],
