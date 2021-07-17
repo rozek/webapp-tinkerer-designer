@@ -65,7 +65,7 @@
 
 /**** Svelte Components ****/
 
-  import DesignerButton from 'DesignerButton.svelte'
+  import DesignerButton from './DesignerButton.svelte'
 
 </script>
 
