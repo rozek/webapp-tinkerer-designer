@@ -1,9 +1,5 @@
-(function (DesignerButton, webappTinkererRuntime) {
+(function (webappTinkererRuntime) {
     'use strict';
-
-    function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
-
-    var DesignerButton__default = /*#__PURE__*/_interopDefaultLegacy(DesignerButton);
 
     function noop() { }
     function run(fn) {
@@ -33,6 +29,9 @@
     }
     function component_subscribe(component, store, callback) {
         component.$$.on_destroy.push(subscribe(store, callback));
+    }
+    function action_destroyer(action_result) {
+        return action_result && is_function(action_result.destroy) ? action_result.destroy : noop;
     }
 
     // Track which nodes are claimed during hydration. Unclaimed nodes can then be removed from the DOM
@@ -160,6 +159,10 @@
     }
     function empty() {
         return text('');
+    }
+    function listen(node, event, handler, options) {
+        node.addEventListener(event, handler, options);
+        return () => node.removeEventListener(event, handler, options);
     }
     function attr(node, attribute, value) {
         if (value == null)
@@ -489,6 +492,193 @@
     }
 
     //----------------------------------------------------------------------------//
+    //                        JavaScript Interface Library                        //
+    //----------------------------------------------------------------------------//
+    /**** get a reference to the "global" object ****/
+    var global = /*#__PURE__*/ Function('return this')();
+    /**** throwError - simplifies construction of named errors ****/
+    function throwError(Message) {
+        var Match = /^([$a-zA-Z][$a-zA-Z0-9]*):\s*(\S.+)\s*$/.exec(Message);
+        if (Match == null) {
+            throw new Error(Message);
+        }
+        else {
+            var namedError = new Error(Match[2]);
+            namedError.name = Match[1];
+            throw namedError;
+        }
+    }
+    /**** ValueIsFiniteNumber (pure "isFinite" breaks on objects) ****/
+    function ValueIsFiniteNumber(Value) {
+        return ((typeof Value === 'number') || (Value instanceof Number)) && isFinite(Value.valueOf());
+    }
+    /**** ValueIsOrdinal ****/
+    function ValueIsOrdinal(Value) {
+        if ((typeof Value !== 'number') && !(Value instanceof Number)) {
+            return false;
+        }
+        Value = Value.valueOf();
+        return isFinite(Value) && (Math.round(Value) === Value) && (Value >= 0);
+    }
+    /**** ValueIsString ****/
+    function ValueIsString(Value) {
+        return (typeof Value === 'string') || (Value instanceof String);
+    }
+    /**** ValueIs[Non]EmptyString ****/
+    var emptyStringPattern = /^\s*$/;
+    function ValueIsNonEmptyString(Value) {
+        return ((typeof Value === 'string') || (Value instanceof String)) && !emptyStringPattern.test(Value.valueOf());
+    }
+    /**** ValueIsFunction ****/
+    function ValueIsFunction(Value) {
+        return (typeof Value === 'function');
+    }
+    /**** ValueIsPlainObject ****/
+    function ValueIsPlainObject(Value) {
+        return ((Value != null) && (typeof Value === 'object') &&
+            (Object.getPrototypeOf(Value) === Object.prototype));
+    }
+    var acceptNil = true;
+    /**** validatedArgument ****/
+    function validatedArgument(Description, Argument, ValueIsValid, NilIsAcceptable, Expectation) {
+        if (Argument == null) {
+            if (NilIsAcceptable) {
+                return Argument;
+            }
+            else {
+                throwError("MissingArgument: no " + escaped(Description) + " given");
+            }
+        }
+        else {
+            if (ValueIsValid(Argument)) {
+                switch (true) {
+                    case Argument instanceof Boolean:
+                    case Argument instanceof Number:
+                    case Argument instanceof String:
+                        return Argument.valueOf(); // unboxes any primitives
+                    default:
+                        return Argument;
+                }
+            }
+            else {
+                throwError("InvalidArgument: the given " + escaped(Description) + " is no valid " + escaped(Expectation));
+            }
+        }
+    }
+    /**** ValidatorForClassifier ****/
+    function ValidatorForClassifier(Classifier, NilIsAcceptable, Expectation) {
+        var Validator = function (Description, Argument) {
+            return validatedArgument(Description, Argument, Classifier, NilIsAcceptable, Expectation);
+        };
+        var ClassifierName = Classifier.name;
+        if ((ClassifierName != null) && /^ValueIs/.test(ClassifierName)) {
+            var ValidatorName = ClassifierName.replace(// derive name from validator
+            /^ValueIs/, NilIsAcceptable ? 'allow' : 'expect');
+            return FunctionWithName(Validator, ValidatorName);
+        }
+        else {
+            return Validator; // without any specific name
+        }
+    }
+    /**** FunctionWithName (works with older JS engines as well) ****/
+    function FunctionWithName(originalFunction, desiredName) {
+        if (originalFunction == null) {
+            throwError('MissingArgument: no function given');
+        }
+        if (typeof originalFunction !== 'function') {
+            throwError('InvalidArgument: the given 1st Argument is not a JavaScript function');
+        }
+        if (desiredName == null) {
+            throwError('MissingArgument: no desired name given');
+        }
+        if ((typeof desiredName !== 'string') && !(desiredName instanceof String)) {
+            throwError('InvalidArgument: the given desired name is not a string');
+        }
+        if (originalFunction.name === desiredName) {
+            return originalFunction;
+        }
+        try {
+            Object.defineProperty(originalFunction, 'name', { value: desiredName });
+            if (originalFunction.name === desiredName) {
+                return originalFunction;
+            }
+        }
+        catch (signal) { /* ok - let's take the hard way */ }
+        var renamed = new Function('originalFunction', 'return function ' + desiredName + ' () {' +
+            'return originalFunction.apply(this,Array.prototype.slice.apply(arguments))' +
+            '}');
+        return renamed(originalFunction);
+    } // also works with older JavaScript engines
+    /**** allow/expect[ed]FiniteNumber ****/
+    var allowFiniteNumber = /*#__PURE__*/ ValidatorForClassifier(ValueIsFiniteNumber, acceptNil, 'finite numeric value'), allowedFiniteNumber = allowFiniteNumber;
+    /**** allow/expect[ed]Ordinal ****/
+    var allowOrdinal = /*#__PURE__*/ ValidatorForClassifier(ValueIsOrdinal, acceptNil, 'ordinal number'), allowedOrdinal = allowOrdinal;
+    /**** allow/expect[ed]NonEmptyString ****/
+    var allowNonEmptyString = /*#__PURE__*/ ValidatorForClassifier(ValueIsNonEmptyString, acceptNil, 'non-empty literal string'), allowedNonEmptyString = allowNonEmptyString;
+    /**** allow/expect[ed]Function ****/
+    var allowFunction = /*#__PURE__*/ ValidatorForClassifier(ValueIsFunction, acceptNil, 'JavaScript function'), allowedFunction = allowFunction;
+    /**** allow/expect[ed]PlainObject ****/
+    var allowPlainObject = /*#__PURE__*/ ValidatorForClassifier(ValueIsPlainObject, acceptNil, '"plain" JavaScript object'), allowedPlainObject = allowPlainObject;
+    /**** escaped - escapes all control characters in a given string ****/
+    function escaped(Text) {
+        var EscapeSequencePattern = /\\x[0-9a-zA-Z]{2}|\\u[0-9a-zA-Z]{4}|\\[0bfnrtv'"\\\/]?/g;
+        var CtrlCharCodePattern = /[\x00-\x1f\x7f-\x9f]/g;
+        return Text
+            .replace(EscapeSequencePattern, function (Match) {
+            return (Match === '\\' ? '\\\\' : Match);
+        })
+            .replace(CtrlCharCodePattern, function (Match) {
+            switch (Match) {
+                case '\0': return '\\0';
+                case '\b': return '\\b';
+                case '\f': return '\\f';
+                case '\n': return '\\n';
+                case '\r': return '\\r';
+                case '\t': return '\\t';
+                case '\v': return '\\v';
+                default: {
+                    var HexCode = Match.charCodeAt(0).toString(16);
+                    return '\\x' + '00'.slice(HexCode.length) + HexCode;
+                }
+            }
+        });
+    }
+    /**** quotable - makes a given string ready to be put in single/double quotes ****/
+    function quotable(Text, Quote) {
+        if (Quote === void 0) { Quote = '"'; }
+        var EscSeqOrSglQuotePattern = /\\x[0-9a-zA-Z]{2}|\\u[0-9a-zA-Z]{4}|\\[0bfnrtv'"\\\/]?|'/g;
+        var EscSeqOrDblQuotePattern = /\\x[0-9a-zA-Z]{2}|\\u[0-9a-zA-Z]{4}|\\[0bfnrtv'"\\\/]?|"/g;
+        var CtrlCharCodePattern = /[\x00-\x1f\x7f-\x9f]/g;
+        return Text
+            .replace(Quote === "'" ? EscSeqOrSglQuotePattern : EscSeqOrDblQuotePattern, function (Match) {
+            switch (Match) {
+                case "'": return "\\'";
+                case '"': return '\\"';
+                case '\\': return '\\\\';
+                default: return Match;
+            }
+        })
+            .replace(CtrlCharCodePattern, function (Match) {
+            switch (Match) {
+                case '\0': return '\\0';
+                case '\b': return '\\b';
+                case '\f': return '\\f';
+                case '\n': return '\\n';
+                case '\r': return '\\r';
+                case '\t': return '\\t';
+                case '\v': return '\\v';
+                default: {
+                    var HexCode = Match.charCodeAt(0).toString(16);
+                    return '\\x' + '00'.slice(HexCode.length) + HexCode;
+                }
+            }
+        });
+    }
+    /**** quoted ****/
+    function quoted(Text, Quote) {
+        if (Quote === void 0) { Quote = '"'; }
+        return Quote + quotable(Text, Quote) + Quote;
+    }
     /**** ValuesDiffer ****/
     function ValuesDiffer(thisValue, otherValue) {
         if (thisValue === otherValue) {
@@ -554,6 +744,725 @@
             default: return true; // unsupported property type
         }
         return true;
+    }
+    /**** constrained ****/
+    function constrained(Value, Minimum, Maximum) {
+        if (Minimum === void 0) { Minimum = -Infinity; }
+        if (Maximum === void 0) { Maximum = Infinity; }
+        return Math.max(Minimum, Math.min(Value, Maximum));
+    }
+
+    //----------------------------------------------------------------------------//
+    //                        Svelte Coordinate Conversion                        //
+    //----------------------------------------------------------------------------//
+    function fromViewportTo(System, originalPosition, Target) {
+        switch (true) {
+            case (originalPosition == null):
+                throw new Error('no "Position" given');
+            case (typeof originalPosition.left !== 'number') && !(originalPosition.left instanceof Number):
+            case (typeof originalPosition.top !== 'number') && !(originalPosition.top instanceof Number):
+                throw new Error('invalid "Position" given');
+        }
+        switch (System) {
+            case null:
+            case undefined:
+                throw new Error('no coordinate system given');
+            // @ts-ignore the following check is for non-TypeScript applications only
+            case 'viewport':
+                return { left: originalPosition.left, top: originalPosition.top };
+            case 'document':
+                return {
+                    left: originalPosition.left + window.scrollX,
+                    top: originalPosition.top + window.scrollY
+                };
+            case 'local':
+                switch (true) {
+                    case (Target == null):
+                        throw new Error('no target element given');
+                    case (Target instanceof Element):
+                        var computedStyle = window.getComputedStyle(Target);
+                        var leftOffset = parseFloat(computedStyle.borderLeftWidth);
+                        var topOffset = parseFloat(computedStyle.borderTopWidth);
+                        var TargetPositionInViewport = Target.getBoundingClientRect();
+                        return {
+                            left: originalPosition.left - TargetPositionInViewport.left - leftOffset,
+                            top: originalPosition.top - TargetPositionInViewport.top - topOffset
+                        };
+                    default:
+                        throw new Error('invalid target element given');
+                }
+            default:
+                throw new Error('invalid coordinate system given');
+        }
+    }
+    function fromDocumentTo(System, originalPosition, Target) {
+        switch (true) {
+            case (originalPosition == null):
+                throw new Error('no "Position" given');
+            case (typeof originalPosition.left !== 'number') && !(originalPosition.left instanceof Number):
+            case (typeof originalPosition.top !== 'number') && !(originalPosition.top instanceof Number):
+                throw new Error('invalid "Position" given');
+        }
+        switch (System) {
+            case null:
+            case undefined:
+                throw new Error('no coordinate system given');
+            case 'viewport':
+                return {
+                    left: originalPosition.left - window.scrollX,
+                    top: originalPosition.top - window.scrollY
+                };
+            // @ts-ignore the following check is for non-TypeScript applications only
+            case 'document':
+                return { left: originalPosition.left, top: originalPosition.top };
+            case 'local':
+                switch (true) {
+                    case (Target == null):
+                        throw new Error('no target element given');
+                    case (Target instanceof Element):
+                        var computedStyle = window.getComputedStyle(Target);
+                        var leftOffset = parseFloat(computedStyle.borderLeftWidth);
+                        var topOffset = parseFloat(computedStyle.borderTopWidth);
+                        var TargetPositionInViewport = Target.getBoundingClientRect();
+                        return {
+                            left: originalPosition.left + window.scrollX - TargetPositionInViewport.left - leftOffset,
+                            top: originalPosition.top + window.scrollY - TargetPositionInViewport.top - topOffset
+                        };
+                    default:
+                        throw new Error('invalid target element given');
+                }
+            default:
+                throw new Error('invalid coordinate system given');
+        }
+    }
+    function fromLocalTo(System, originalPosition, Source) {
+        switch (true) {
+            case (originalPosition == null):
+                throw new Error('no "Position" given');
+            case (typeof originalPosition.left !== 'number') && !(originalPosition.left instanceof Number):
+            case (typeof originalPosition.top !== 'number') && !(originalPosition.top instanceof Number):
+                throw new Error('invalid "Position" given');
+        }
+        var SourcePositionInViewport, leftPosition, topPosition;
+        switch (true) {
+            case (Source == null):
+                throw new Error('no source element given');
+            case (Source instanceof Element):
+                var computedStyle = window.getComputedStyle(Source);
+                var leftOffset = parseFloat(computedStyle.borderLeftWidth);
+                var topOffset = parseFloat(computedStyle.borderTopWidth);
+                SourcePositionInViewport = Source.getBoundingClientRect();
+                leftPosition = SourcePositionInViewport.left + leftOffset;
+                topPosition = SourcePositionInViewport.top + topOffset;
+                break;
+            default:
+                throw new Error('invalid source element given');
+        }
+        switch (System) {
+            case null:
+            case undefined:
+                throw new Error('no coordinate system given');
+            case 'viewport':
+                return {
+                    left: originalPosition.left + leftPosition,
+                    top: originalPosition.top + topPosition
+                };
+            case 'document':
+                return {
+                    left: originalPosition.left + leftPosition + window.scrollX,
+                    top: originalPosition.top + topPosition + window.scrollY
+                };
+            // @ts-ignore the following check is for non-TypeScript applications only
+            case 'local':
+                return { left: originalPosition.left, top: originalPosition.top };
+            default:
+                throw new Error('invalid coordinate system given');
+        }
+    }
+    var svelteCoordinateConversion = {
+        fromViewportTo: fromViewportTo,
+        fromDocumentTo: fromDocumentTo,
+        fromLocalTo: fromLocalTo
+    };
+
+    //----------------------------------------------------------------------------//
+    var Context = ( // make this package a REAL singleton
+    '__DragAndDropActions' in global
+        ? global.__DragAndDropActions
+        : global.__DragAndDropActions = {});
+    /**** parsedDraggableOptions ****/
+    function parsedDraggableOptions(Options) {
+        Options = allowedPlainObject('drag options', Options) || {};
+        var Extras, relativeTo;
+        var onlyFrom, neverFrom;
+        var Dummy, DummyOffsetX, DummyOffsetY;
+        var minX, minY, maxX, maxY;
+        var Pannable;
+        var PanSensorWidth, PanSensorHeight, PanSpeed;
+        var onDragStart, onDragMove, onDragEnd, onDragCancel;
+        Extras = Options.Extras;
+        switch (true) {
+            case (Options.relativeTo == null):
+                relativeTo = 'parent';
+                break;
+            case (Options.relativeTo === 'parent'):
+            case (Options.relativeTo === 'body'):
+            case ValueIsNonEmptyString(Options.relativeTo):
+            case (Options.relativeTo instanceof HTMLElement):
+            case (Options.relativeTo instanceof SVGElement):
+                //    case (Options.relativeTo instanceof MathMLElement):
+                relativeTo = Options.relativeTo;
+                break;
+            default: throwError('InvalidArgument: invalid position reference given');
+        }
+        onlyFrom = allowedNonEmptyString('"onlyFrom" CSS selector', Options.onlyFrom);
+        neverFrom = allowedNonEmptyString('"neverFrom" CSS selector', Options.neverFrom);
+        switch (true) {
+            case (Options.Dummy == null):
+                Dummy = undefined;
+                break;
+            case (Options.Dummy === 'standard'):
+            case (Options.Dummy === 'none'):
+            case ValueIsNonEmptyString(Options.Dummy):
+            case (Options.Dummy instanceof HTMLElement):
+            case (Options.Dummy instanceof SVGElement):
+            //    case (Options.Dummy instanceof MathMLElement):
+            case ValueIsFunction(Options.Dummy):
+                Dummy = Options.Dummy;
+                break;
+            default: throwError('InvalidArgument: invalid drag dummy specification given');
+        }
+        DummyOffsetX = allowedFiniteNumber('dummy x offset', Options.DummyOffsetX);
+        DummyOffsetY = allowedFiniteNumber('dummy y offset', Options.DummyOffsetY);
+        minX = allowedFiniteNumber('min. x position', Options.minX);
+        if (minX == null) {
+            minX = -Infinity;
+        }
+        minY = allowedFiniteNumber('min. y position', Options.minY);
+        if (minY == null) {
+            minY = -Infinity;
+        }
+        maxX = allowedFiniteNumber('max. x position', Options.maxX);
+        if (maxX == null) {
+            maxX = Infinity;
+        }
+        maxY = allowedFiniteNumber('max. y position', Options.maxY);
+        if (maxY == null) {
+            maxY = Infinity;
+        }
+        switch (true) {
+            case (Options.Pannable == null):
+                Pannable = undefined;
+                break;
+            case ValueIsNonEmptyString(Options.Pannable):
+            case (Options.Pannable instanceof HTMLElement):
+            case (Options.Pannable instanceof SVGElement):
+                //    case (Options.Pannable instanceof MathMLElement):
+                Pannable = Options.Pannable;
+                break;
+            default: throwError('InvalidArgument: invalid "Pannable" specification given');
+        }
+        PanSensorWidth = allowedOrdinal('panning sensor width', Options.PanSensorWidth);
+        if (PanSensorWidth == null) {
+            PanSensorWidth = 20;
+        }
+        PanSensorHeight = allowedOrdinal('panning sensor height', Options.PanSensorHeight);
+        if (PanSensorHeight == null) {
+            PanSensorHeight = 20;
+        }
+        PanSpeed = allowedOrdinal('panning speed', Options.PanSpeed);
+        if (PanSpeed == null) {
+            PanSpeed = 10;
+        }
+        if (ValueIsPosition(Options.onDragStart)) {
+            var _a = Options.onDragStart, x_1 = _a.x, y_1 = _a.y;
+            onDragStart = function () { return ({ x: x_1, y: y_1 }); };
+        }
+        else {
+            onDragStart = allowedFunction('"onDragStart" handler', Options.onDragStart);
+        }
+        onDragMove = allowedFunction('"onDragMove" handler', Options.onDragMove);
+        onDragEnd = allowedFunction('"onDragEnd" handler', Options.onDragEnd);
+        return {
+            Extras: Extras,
+            relativeTo: relativeTo,
+            onlyFrom: onlyFrom,
+            neverFrom: neverFrom,
+            Dummy: Dummy,
+            DummyOffsetX: DummyOffsetX,
+            DummyOffsetY: DummyOffsetY,
+            minX: minX,
+            minY: minY,
+            maxX: maxX,
+            maxY: maxY,
+            Pannable: Pannable,
+            PanSensorWidth: PanSensorWidth,
+            PanSensorHeight: PanSensorHeight,
+            PanSpeed: PanSpeed,
+            // @ts-ignore we cannot validate given functions any further
+            onDragStart: onDragStart,
+            onDragMove: onDragMove,
+            onDragEnd: onDragEnd,
+            onDragCancel: onDragCancel
+        };
+    }
+    /**** use:asDraggable={options} ****/
+    function asDraggable(Element, Options) {
+        var isDragged;
+        var currentDraggableOptions;
+        var PositionReference; // element with user coordinate system
+        var ReferenceDeltaX, ReferenceDeltaY; // mouse -> user coord.s
+        var PositioningWasDelayed; // workaround for prob. with "drag" events
+        var DragImage;
+        var initialPosition; // given in user coordinates
+        var lastPosition; // dto.
+        isDragged = false;
+        currentDraggableOptions = parsedDraggableOptions(Options);
+        /**** startDragging ****/
+        function startDragging(originalEvent) {
+            var Options = currentDraggableOptions;
+            if (fromForbiddenElement(Element, Options, originalEvent)) {
+                originalEvent.stopPropagation();
+                originalEvent.preventDefault();
+                return false;
+            }
+            PositionReference = PositionReferenceFor(Element, Options);
+            var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+            ReferenceDeltaX = ReferenceDeltaY = 0;
+            initialPosition = { x: 0, y: 0 };
+            if (Options.onDragStart == null) {
+                initialPosition = { x: 0, y: 0 }; // given in user coordinates
+            }
+            else {
+                try {
+                    var StartPosition = Options.onDragStart(Options.Extras);
+                    if (ValueIsPlainObject(StartPosition)) {
+                        var x = allowedFiniteNumber('x start position', StartPosition.x);
+                        var y = allowedFiniteNumber('y start position', StartPosition.y);
+                        ReferenceDeltaX = x - relativePosition.left;
+                        ReferenceDeltaY = y - relativePosition.top;
+                        x = constrained(x, Options.minX, Options.maxX);
+                        y = constrained(y, Options.minY, Options.maxY);
+                        initialPosition = { x: x, y: y }; // given in user coordinates
+                    }
+                }
+                catch (Signal) {
+                    console.error('"onDragStart" handler failed', Signal);
+                }
+            }
+            lastPosition = initialPosition;
+            PositioningWasDelayed = false; // initializes workaround
+            if (Options.Dummy == null) {
+                Options.Dummy = 'none'; // this is the default for "use.asDraggable"
+            }
+            DragImage = DragImageFor(Element, Options);
+            if ((DragImage != null) && (originalEvent.dataTransfer != null)) {
+                var OffsetX = Options.DummyOffsetX;
+                var OffsetY = Options.DummyOffsetY;
+                if ((OffsetX == null) || (OffsetY == null)) {
+                    var PositionInDraggable = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element);
+                    if (OffsetX == null) {
+                        OffsetX = PositionInDraggable.left;
+                    }
+                    if (OffsetY == null) {
+                        OffsetY = PositionInDraggable.top;
+                    }
+                }
+                switch (true) {
+                    case (Options.Dummy === 'none'):
+                        originalEvent.dataTransfer.setDragImage(DragImage, 0, 0);
+                        setTimeout(function () {
+                            document.body.removeChild(DragImage);
+                        }, 0);
+                        break;
+                    case ValueIsString(Options.Dummy):
+                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
+                        setTimeout(function () {
+                            document.body.removeChild(DragImage.parentElement);
+                        }, 0);
+                        break;
+                    default:
+                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
+                }
+            }
+            if (originalEvent.dataTransfer != null) {
+                originalEvent.dataTransfer.effectAllowed = 'none';
+            }
+            isDragged = true;
+            setTimeout(function () { return Element.classList.add('dragged'); }, 0);
+            originalEvent.stopPropagation();
+        }
+        /**** continueDragging ****/
+        function continueDragging(originalEvent) {
+            if (!isDragged) {
+                return false;
+            }
+            var Options = currentDraggableOptions;
+            if ((originalEvent.screenX === 0) && (originalEvent.screenY === 0) &&
+                !PositioningWasDelayed) {
+                PositioningWasDelayed = true; // last "drag" event contains wrong coord.s
+            }
+            else {
+                PositioningWasDelayed = false;
+                performPanningFor('draggable', Element, Options, originalEvent.pageX, originalEvent.pageY);
+                var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+                var x = relativePosition.left + ReferenceDeltaX; // in user coordinates
+                var y = relativePosition.top + ReferenceDeltaY;
+                x = constrained(x, Options.minX, Options.maxX);
+                y = constrained(y, Options.minY, Options.maxY);
+                var dx = x - lastPosition.x; // calculated AFTER constraining x,y
+                var dy = y - lastPosition.y; // dto.
+                lastPosition = { x: x, y: y };
+                invokeHandler('onDragMove', Options, x, y, dx, dy, Options.Extras);
+            }
+            originalEvent.stopPropagation();
+        }
+        /**** finishDragging ****/
+        function finishDragging(originalEvent) {
+            if (!isDragged) {
+                return false;
+            }
+            //    continueDragging(originalEvent)           // NO! positions might be wrong!
+            var Options = currentDraggableOptions;
+            if (Options.onDragEnd != null) {
+                var x = constrained(lastPosition.x, Options.minX, Options.maxX);
+                var y = constrained(lastPosition.y, Options.minY, Options.maxY);
+                var dx = x - lastPosition.x;
+                var dy = y - lastPosition.y;
+                invokeHandler('onDragEnd', Options, x, y, dx, dy, Options.Extras);
+            }
+            isDragged = false;
+            Element.classList.remove('dragged');
+            originalEvent.stopPropagation();
+        }
+        /**** updateDraggableOptions ****/
+        function updateDraggableOptions(Options) {
+            Options = parsedDraggableOptions(Options);
+            if ((currentDraggableOptions.Extras == null) && (Options.Extras != null)) {
+                currentDraggableOptions.Extras = Options.Extras;
+            } // Extras may be set with delay, but remain constant afterwards
+            currentDraggableOptions.Dummy = (Options.Dummy || currentDraggableOptions.Dummy);
+            currentDraggableOptions.minX = Options.minX;
+            currentDraggableOptions.minY = Options.minY;
+            currentDraggableOptions.maxX = Options.maxX;
+            currentDraggableOptions.maxY = Options.maxY;
+            currentDraggableOptions.Pannable = Options.Pannable;
+            currentDraggableOptions.PanSensorWidth = Options.PanSensorWidth;
+            currentDraggableOptions.PanSensorHeight = Options.PanSensorHeight;
+            currentDraggableOptions.PanSpeed = Options.PanSpeed;
+            currentDraggableOptions.onDragStart = (Options.onDragStart || currentDraggableOptions.onDragStart); // may be used to update initial position for subsequent drags
+        }
+        Element.setAttribute('draggable', 'true');
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragstart', startDragging);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('drag', continueDragging);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragend', finishDragging);
+        return { update: updateDraggableOptions };
+    }
+    /**** fromForbiddenElement ****/
+    function fromForbiddenElement(Element, Options, originalEvent) {
+        if ((Options.onlyFrom != null) || (Options.neverFrom != null)) {
+            var x = originalEvent.clientX;
+            var y = originalEvent.clientY;
+            var touchedElement = document.elementFromPoint(x, y);
+            //    elementFromPoint considers elements with "pointer-events" <> "none" only
+            //    but sometimes, "pointer-events:none" is needed for proper operation
+            touchedElement = innerElementOf(touchedElement, x, y);
+            if (Options.onlyFrom != null) {
+                var fromElement = touchedElement.closest(Options.onlyFrom);
+                if ((Element !== fromElement) && !Element.contains(fromElement)) {
+                    return true;
+                }
+            }
+            if (Options.neverFrom != null) {
+                var fromElement = touchedElement.closest(Options.neverFrom);
+                if ((Element === fromElement) || Element.contains(fromElement)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /**** innerElementOf ****/
+    function innerElementOf(Candidate, x, y) {
+        var innerElements = Candidate.children;
+        for (var i = 0, l = innerElements.length; i < l; i++) {
+            var innerElement = innerElements[i];
+            var Position = svelteCoordinateConversion.fromLocalTo('viewport', { left: 0, top: 0 }, innerElement);
+            if ((x < Position.left) || (y < Position.top)) {
+                continue;
+            }
+            if (x > Position.left + innerElement.offsetWidth - 1) {
+                continue;
+            }
+            if (y > Position.top + innerElement.offsetHeight - 1) {
+                continue;
+            }
+            return innerElementOf(innerElement, x, y);
+        }
+        return Candidate; // this is the innermost element at (x,y)
+    }
+    /**** ValueIsPosition ****/
+    function ValueIsPosition(Candidate) {
+        return (ValueIsPlainObject(Candidate) &&
+            ValueIsFiniteNumber(Candidate.x) && ValueIsFiniteNumber(Candidate.y));
+    }
+    /**** PositionReferenceFor ****/
+    function PositionReferenceFor(Element, Options) {
+        var PositionReference;
+        switch (true) {
+            case (Options.relativeTo === 'parent'):
+                PositionReference = Element.parentElement;
+                break;
+            case (Options.relativeTo === 'body'):
+                PositionReference = document.body;
+                break;
+            case (Options.relativeTo instanceof HTMLElement):
+            case (Options.relativeTo instanceof SVGElement):
+                //    case (Options.relativeTo instanceof MathMLElement):
+                PositionReference = Options.relativeTo;
+                if ((PositionReference != document.body) &&
+                    !document.body.contains(PositionReference))
+                    throwError('InvalidArgument: the HTML element given as "relativeTo" option ' +
+                        'is not part of this HTML document');
+                break;
+            default: // CSS selector
+                PositionReference = Element.closest(Options.relativeTo);
+        }
+        return (PositionReference == null ? document.body : PositionReference);
+    }
+    /**** DragImageFor ****/
+    function DragImageFor(Element, Options) {
+        switch (true) {
+            case (Options.Dummy === 'standard'):
+                return undefined;
+            case (Options.Dummy === 'none'):
+                var invisibleDragImage = document.createElement('div');
+                invisibleDragImage.setAttribute('style', 'display:block; position:absolute; width:1px; height:1px; ' +
+                    'background:transparent; border:none; margin:0px; padding:0px; ' +
+                    'cursor:auto');
+                document.body.appendChild(invisibleDragImage);
+                return invisibleDragImage;
+            case ValueIsNonEmptyString(Options.Dummy): // may flicker shortly
+                var auxiliaryElement = document.createElement('div');
+                auxiliaryElement.style.display = 'block';
+                auxiliaryElement.style.position = 'absolute';
+                auxiliaryElement.style.left = (document.body.scrollWidth + 100) + 'px';
+                document.body.appendChild(auxiliaryElement);
+                auxiliaryElement.innerHTML = Options.Dummy;
+                return auxiliaryElement.children[0];
+            case (Options.Dummy instanceof HTMLElement):
+            case (Options.Dummy instanceof SVGElement):
+                //    case (Options.Dummy instanceof MathMLElement):
+                return Options.Dummy;
+            case ValueIsFunction(Options.Dummy):
+                var Candidate = undefined;
+                try {
+                    Candidate = Options.Dummy(Options.Extras, Element);
+                }
+                catch (Signal) {
+                    console.error('RuntimeError: creating draggable dummy failed', Signal);
+                }
+                if (Candidate != null) {
+                    if ((Candidate instanceof HTMLElement) || (Candidate instanceof SVGElement)) {
+                        return Candidate;
+                    }
+                    else {
+                        console.error('InvalidArgument: the newly created draggable dummy is ' +
+                            'neither an HTML nor an SVG element');
+                    }
+                }
+        }
+    }
+    /**** performPanningFor ****/
+    function performPanningFor(Type, Element, Options, xOnPage, yOnPage) {
+        if ((Type === 'draggable') && Context.DropZonePanning) {
+            return;
+        }
+        if ((Options.Pannable == null) ||
+            ((Options.PanSensorWidth === 0) && (Options.PanSensorHeight === 0)) ||
+            (Options.PanSpeed === 0)) {
+            Context.DropZonePanning = false;
+            return;
+        }
+        var pannableElement;
+        switch (true) {
+            case ValueIsNonEmptyString(Options.Pannable):
+                pannableElement = Element.parentElement;
+                if (pannableElement != null) {
+                    pannableElement = pannableElement.closest(Options.Pannable);
+                }
+                break;
+            case (Options.Pannable === 'this') && (Type === 'dropzone'):
+                pannableElement = Element;
+                break;
+            case (Options.Pannable instanceof HTMLElement):
+            case (Options.Pannable instanceof SVGElement):
+                //        case (Options.Pannable instanceof MathMLElement):
+                pannableElement = Options.Pannable;
+        }
+        if (pannableElement == null) {
+            Context.DropZonePanning = false;
+            return;
+        }
+        var _a = svelteCoordinateConversion.fromDocumentTo('local', { left: xOnPage, top: yOnPage }, pannableElement), xInPannable = _a.left, yInPannable = _a.top;
+        if ((xInPannable >= 0) && (xInPannable < Options.PanSensorWidth)) {
+            pannableElement.scrollLeft = Math.max(0, pannableElement.scrollLeft - Options.PanSpeed);
+        }
+        var PannableWidth = pannableElement.clientWidth; // w/o scrollbar
+        if ((xInPannable >= PannableWidth - Options.PanSensorWidth) &&
+            (xInPannable < PannableWidth)) {
+            pannableElement.scrollLeft = Math.min(pannableElement.scrollLeft + Options.PanSpeed, pannableElement.scrollWidth - PannableWidth);
+        }
+        if ((yInPannable >= 0) && (yInPannable < Options.PanSensorHeight)) {
+            pannableElement.scrollTop = Math.max(0, pannableElement.scrollTop - Options.PanSpeed);
+        }
+        var PannableHeight = pannableElement.clientHeight; // w/o scrollbar
+        if ((yInPannable >= PannableHeight - Options.PanSensorHeight) &&
+            (yInPannable < PannableHeight)) {
+            pannableElement.scrollTop = Math.min(pannableElement.scrollTop + Options.PanSpeed, pannableElement.scrollHeight - PannableHeight);
+        }
+        Context.DropZonePanning = (Type === 'dropzone');
+    }
+    /**** invokeHandler ****/
+    function invokeHandler(Name, Options) {
+        var Arguments = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            Arguments[_i - 2] = arguments[_i];
+        }
+        if (Options[Name] != null) {
+            try {
+                return Options[Name].apply(null, Arguments);
+            }
+            catch (Signal) {
+                console.error(quoted(Name) + ' handler failed', Signal);
+            }
+        }
+    }
+
+    function styleInject(css, ref) {
+      if ( ref === void 0 ) ref = {};
+      var insertAt = ref.insertAt;
+
+      if (!css || typeof document === 'undefined') { return; }
+
+      var head = document.head || document.getElementsByTagName('head')[0];
+      var style = document.createElement('style');
+      style.type = 'text/css';
+
+      if (insertAt === 'top') {
+        if (head.firstChild) {
+          head.insertBefore(style, head.firstChild);
+        } else {
+          head.appendChild(style);
+        }
+      } else {
+        head.appendChild(style);
+      }
+
+      if (style.styleSheet) {
+        style.styleSheet.cssText = css;
+      } else {
+        style.appendChild(document.createTextNode(css));
+      }
+    }
+
+    var css_248z$1 = ".WAD-DesignerButton.svelte-1bvrktv{display:block;position:absolute;width:32px;height:32px;background:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABA0lEQVRYR82WSw6EMAxD4bo9UK/LiAWjTCYfO6lUWEKwX01ocx6br3Oz/0EDzDmvCHqMQWlCxZmpB4TApADaPBNl610AVkingL5vAsiXsxVnTZxphQBd8wfugbD0/gCi4my10lCbebo/AFlcCICn4d03AarRW7+r1LJSWAYgxb24Q4DOt0fMvYb8JlAFYMxvCO3TAmDNlwJUzJcBVM2XAHTM2wBd8xbACvMQwHqo/125FVd2y/JOiJ7t2VkBA9xC1h6u72eG8jl0GEWfgTGzaqHjGBkgKiDUQCJT6ERuNTA0EXmdz3Y92rjvHcu9DmZ6AEktTUAbWmNXZ4OiAZgEkNrtAB9tuDAwYD8R4wAAAABJRU5ErkJggg==\");cursor:pointer;pointer-events:auto}";
+    styleInject(css_248z$1,{"insertAt":"top"});
+
+    /* src/DesignerButton.svelte generated by Svelte v3.38.3 */
+
+    function create_fragment$1(ctx) {
+    	let div;
+    	let mounted;
+    	let dispose;
+
+    	return {
+    		c() {
+    			div = element("div");
+    			attr(div, "class", "WAD-DesignerButton svelte-1bvrktv");
+    			set_style(div, "left", /*Applet*/ ctx[0].x + /*Offset*/ ctx[1].x + "px");
+    			set_style(div, "top", /*Applet*/ ctx[0].y + /*Offset*/ ctx[1].y + "px\n");
+    		},
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+
+    			if (!mounted) {
+    				dispose = [
+    					action_destroyer(asDraggable.call(null, div, {
+    						onDragStart: /*onDragStart*/ ctx[2],
+    						onDragMove: /*onDragMove*/ ctx[3]
+    					})),
+    					listen(div, "click", onClick)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p(ctx, [dirty]) {
+    			if (dirty & /*Applet, Offset*/ 3) {
+    				set_style(div, "left", /*Applet*/ ctx[0].x + /*Offset*/ ctx[1].x + "px");
+    			}
+
+    			if (dirty & /*Applet, Offset*/ 3) {
+    				set_style(div, "top", /*Applet*/ ctx[0].y + /*Offset*/ ctx[1].y + "px\n");
+    			}
+    		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(div);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+    }
+
+
+    let ButtonOffset = new WeakMap(); // remember positions
+
+    function onClick() {
+    	window.alert("DesignerButton was clicked");
+    }
+
+    function instance$1($$self, $$props, $$invalidate) {
+    	let { Applet } = $$props;
+    	let Offset;
+
+    	function onDragStart() {
+    		return Offset;
+    	}
+
+    	function onDragMove(x, y) {
+    		$$invalidate(1, Offset = { x, y });
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ("Applet" in $$props) $$invalidate(0, Applet = $$props.Applet);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*Applet, Offset*/ 3) {
+    			{
+    				$$invalidate(1, Offset = ButtonOffset.get(Applet));
+
+    				if (Offset == null) {
+    					ButtonOffset.set(Applet, $$invalidate(1, Offset = { x: Applet.Width - 32, y: 0 }));
+    				}
+    			}
+    		}
+    	};
+
+    	return [Applet, Offset, onDragStart, onDragMove];
+    }
+
+    class DesignerButton extends SvelteComponent {
+    	constructor(options) {
+    		super();
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { Applet: 0 });
+    	}
     }
 
     var DragDropTouch;
@@ -951,33 +1860,6 @@
 
     const AppletList = writable([]);
 
-    function styleInject(css, ref) {
-      if ( ref === void 0 ) ref = {};
-      var insertAt = ref.insertAt;
-
-      if (!css || typeof document === 'undefined') { return; }
-
-      var head = document.head || document.getElementsByTagName('head')[0];
-      var style = document.createElement('style');
-      style.type = 'text/css';
-
-      if (insertAt === 'top') {
-        if (head.firstChild) {
-          head.insertBefore(style, head.firstChild);
-        } else {
-          head.appendChild(style);
-        }
-      } else {
-        head.appendChild(style);
-      }
-
-      if (style.styleSheet) {
-        style.styleSheet.cssText = css;
-      } else {
-        style.appendChild(document.createTextNode(css));
-      }
-    }
-
     var css_248z = "[draggable]{-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}";
     styleInject(css_248z,{"insertAt":"top"});
 
@@ -994,7 +1876,7 @@
     	let first;
     	let designerbutton;
     	let current;
-    	designerbutton = new DesignerButton__default['default']({ props: { Applet: /*Applet*/ ctx[7] } });
+    	designerbutton = new DesignerButton({ props: { Applet: /*Applet*/ ctx[7] } });
 
     	return {
     		key: key_1,
@@ -1192,5 +2074,5 @@
         target: document.body
     });
 
-}(DesignerButton, WAT));
+}(WAT));
 //# sourceMappingURL=webapp-tinkerer-designer.js.map
