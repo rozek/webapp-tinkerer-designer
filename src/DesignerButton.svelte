@@ -17,13 +17,10 @@
 <script lang="ts">
   export let Applet:WAT_Applet
 
-  let Offset:WAT_Position
-  $: {
-    Offset = ButtonOffset.get(Applet) as WAT_Position
-    if (Offset == null) {
-      ButtonOffset.set(Applet,Offset = { x:Applet.Width-32-2, y:2 })
-    }
-  }
+  let Offset:WAT_Position = (
+    (ButtonOffset.get(Applet) as WAT_Position) || { x:Applet.Width-32-2, y:2 }
+  )
+  $: ButtonOffset.set(Applet,Offset)
 
   function onDragStart ()                 { return Offset }
   function onDragMove (x:number,y:number) { Offset = { x,y } }
