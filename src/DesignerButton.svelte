@@ -21,7 +21,7 @@
   $: {
     Offset = ButtonOffset.get(Applet) as WAT_Position
     if (Offset == null) {
-      ButtonOffset.set(Applet,Offset = { x:Applet.Width-32, y:0 })
+      ButtonOffset.set(Applet,Offset = { x:Applet.Width-32-2, y:2 })
     }
   }
 
