@@ -1430,6 +1430,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function instance$1($$self, $$props, $$invalidate) {
     	let { Applet } = $$props;
     	let Offset = ButtonOffset.get(Applet) || { x: Applet.Width - 32 - 2, y: 2 };
+    	ButtonOffset.set(Applet, Offset); // reactive statement!
 
     	function onDragStart() {
     		return Offset;
@@ -1441,12 +1442,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	$$self.$$set = $$props => {
     		if ("Applet" in $$props) $$invalidate(0, Applet = $$props.Applet);
-    	};
-
-    	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*Applet, Offset*/ 3) {
-    			ButtonOffset.set(Applet, Offset);
-    		}
     	};
 
     	return [Applet, Offset, onDragStart, onDragMove];
@@ -1865,7 +1860,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (57:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (78:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let designerbutton;
@@ -1985,9 +1980,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		}
     	};
     }
-
-
-
 
     function startDesigning(Applet, Target, Property, x, y) {
     	
