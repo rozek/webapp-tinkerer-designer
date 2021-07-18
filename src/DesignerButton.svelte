@@ -20,7 +20,7 @@
   let Offset:WAT_Position = (
     (ButtonOffset.get(Applet) as WAT_Position) || { x:Applet.Width-32-2, y:2 }
   )
-  $: ButtonOffset.set(Applet,Offset)
+  ButtonOffset.set(Applet,Offset)                         // reactive statement!
 
   function onDragStart ()                 { return Offset }
   function onDragMove (x:number,y:number) { Offset = { x,y } }
