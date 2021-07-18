@@ -59,6 +59,7 @@
 /**** actual WAT methods ****/
 
   import {
+    ready, registerDesigner,
     VisualForElement,
     AppletPeersInDocument
   } from 'webapp-tinkerer-runtime'
@@ -101,8 +102,8 @@
 
 
 
-  WAT.ready(() => {
-    WAT.registerDesigner({ startDesigning,inhibitsEventsFrom })
+  ready(() => {
+    registerDesigner({ startDesigning,inhibitsEventsFrom })
     console.log('WAD is running')
   })
 
@@ -110,13 +111,13 @@
 //                                 Monitoring                                 //
 //----------------------------------------------------------------------------//
 
-/**** monitorApplets ****/
-
   import { AppletList } from './AppletList.js'
 
-  let AppletMonitor:any
-  WAT.ready(() => {
-    AppletMonitor = setInterval(() => {
+  let Monitor:any
+  ready(() => {
+    Monitor = setInterval(() => {
+    /**** monitor Applets ****/
+
       let AppletsInDocument = AppletPeersInDocument().map(
         (AppletPeer:HTMLElement) => VisualForElement(AppletPeer)
       ).filter((Applet:WAT_Visual) => (Applet as WAT_Applet).mayBeDesigned)
@@ -124,26 +125,14 @@
       if (ValuesDiffer(AppletsInDocument,$AppletList)) {
         (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
       }
-    }, 300)
-  })
 
-/**** monitorMasters ****/
+    /**** monitor Masters ****/
 /*
   import { MasterList } from './MasterList.js'
+*/
 
-  let MasterMonitor:any
-  WAT.ready(() => {
-    MasterMonitor = setInterval(() => {
-      let MastersInDocument = AppletPeersInDocument().map(
-        (AppletPeer:HTMLElement) => VisualForElement(AppletPeer)
-      ).filter((Applet:WAT_Visual) => (Applet as WAT_Applet).mayBeDesigned)
-
-      if (ValuesDiffer(AppletsInDocument,$AppletList)) {
-        (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
-      }
     }, 300)
   })
-*/
 
 
 
