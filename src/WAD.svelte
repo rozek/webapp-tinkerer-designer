@@ -60,6 +60,7 @@
 
   import {
     ready, registerDesigner,
+    ValueIsName, ValueIsVisual,
     VisualForElement,
     AppletPeersInDocument
   } from 'webapp-tinkerer-runtime'
@@ -67,6 +68,7 @@
 /**** Svelte Components ****/
 
   import DesignerButton from './DesignerButton.svelte'
+  import ToolboxView    from './ToolboxView.svelte'
 
 </script>
 
@@ -187,6 +189,24 @@
   }
 
 
+/**** preferredPosition ****/
+
+  let preferredPosition:WAT_Position = { x:0,y:0 }
+
+/**** PositionAround ****/
+
+  function PositionAround (
+    preferredPosition:WAT_Position, Width:WAT_Dimension,Height:WAT_Dimension
+  ):WAT_Position {
+    let ViewportWidth  = Math.max(window.innerWidth, document.body.clientWidth)
+    let ViewportHeight = Math.max(window.innerHeight,document.body.clientHeight)
+
+    let x = Math.max(0, Math.min(preferredPosition.x, ViewportWidth-Width))
+    let y = Math.max(0, Math.min(preferredPosition.y,ViewportHeight-Height))
+
+    return { x:Math.round(x),y:Math.round(y) }
+  }
+
 
 
 
@@ -200,8 +220,14 @@
 ">
   {#each $AppletList as Applet (Applet['uniqueId'])}
     {#if $chosenApplet !== Applet}
-      <DesignerButton {Applet} {startDesigning}/>
+      <DesignerButton {Applet} {startDesigning}
+        let:preferredPosition={preferredPosition}
+      />
     {/if}
   {/each}
+
+  {#if $chosenApplet !== null}
+    <ToolboxView Applet={$chosenApplet} {preferredPosition} {PositionAround}/>
+  {/if}
 
 </div>
