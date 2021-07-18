@@ -2182,6 +2182,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     const AppletList = writable([]);
 
+    const chosenApplet = writable(undefined);
+
+    const chosenCardList = writable([]);
+
+    const chosenOverlayList = writable([]);
+
     var css_248z = "[draggable]{-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}";
     styleInject(css_248z,{"insertAt":"top"});
 
@@ -2189,16 +2195,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[5] = list[i];
+    	child_ctx[8] = list[i];
     	return child_ctx;
     }
 
-    // (66:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (95:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let designerbutton;
     	let current;
-    	designerbutton = new DesignerButton({ props: { Applet: /*Applet*/ ctx[5] } });
+    	designerbutton = new DesignerButton({ props: { Applet: /*Applet*/ ctx[8] } });
 
     	return {
     		key: key_1,
@@ -2216,7 +2222,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		p(new_ctx, dirty) {
     			ctx = new_ctx;
     			const designerbutton_changes = {};
-    			if (dirty & /*$AppletList*/ 1) designerbutton_changes.Applet = /*Applet*/ ctx[5];
+    			if (dirty & /*$AppletList*/ 1) designerbutton_changes.Applet = /*Applet*/ ctx[8];
     			designerbutton.$set(designerbutton_changes);
     		},
     		i(local) {
@@ -2241,7 +2247,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let each_1_lookup = new Map();
     	let current;
     	let each_value = /*$AppletList*/ ctx[0];
-    	const get_key = ctx => /*Applet*/ ctx[5]["uniqueId"];
+    	const get_key = ctx => /*Applet*/ ctx[8]["uniqueId"];
 
     	for (let i = 0; i < each_value.length; i += 1) {
     		let child_ctx = get_each_context(ctx, each_value, i);
@@ -2324,7 +2330,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     function instance($$self, $$props, $$invalidate) {
     	let $AppletList;
+    	let $chosenApplet;
     	component_subscribe($$self, AppletList, $$value => $$invalidate(0, $AppletList = $$value));
+    	component_subscribe($$self, chosenApplet, $$value => $$invalidate(5, $chosenApplet = $$value));
     	const Version = "0.1.0";
 
     	webappTinkererRuntime.ready(() => {
@@ -2343,12 +2351,41 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				if (ValuesDiffer(AppletsInDocument, $AppletList)) {
     					AppletList.set(AppletsInDocument);
     				}
+
+    				/**** monitor chosen Applet ****/
+    				if ($chosenApplet != null) {
+    					// @ts-ignore "$chosenApplet" is definitely not undefined
+    					if (AppletsInDocument.indexOf($chosenApplet) < 0) {
+    						chooseApplet(undefined);
+    					}
+    				}
+
+    				updateLayerListsOfApplet($chosenApplet);
     			},
     			300
     		); /**** monitor Masters ****/ /*
       import { MasterList } from './MasterList.js'
     */
     	});
+
+    	/**** chooseApplet ****/
+    	function chooseApplet(Applet) {
+    		if (Applet !== $chosenApplet) {
+    			chosenApplet.set(Applet);
+    			updateLayerListsOfApplet(Applet);
+    		}
+    	}
+
+    	/**** updateLayerListsOfApplet ****/
+    	function updateLayerListsOfApplet(Applet) {
+    		if (Applet == null) {
+    			chosenCardList.set([]); // semicolon is important
+    			chosenOverlayList.set([]);
+    		} else {
+    			chosenCardList.set(Applet.CardList); // dto.
+    			chosenOverlayList.set(Applet.OverlayList);
+    		}
+    	}
 
     	return [$AppletList, Version, startDesigning, inhibitsEventsFrom];
     }
