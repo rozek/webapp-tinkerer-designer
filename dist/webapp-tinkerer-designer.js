@@ -2,6 +2,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     'use strict';
 
     function noop() { }
+    function assign(tar, src) {
+        // @ts-ignore
+        for (const k in src)
+            tar[k] = src[k];
+        return tar;
+    }
     function run(fn) {
         return fn();
     }
@@ -29,6 +35,21 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
     function component_subscribe(component, store, callback) {
         component.$$.on_destroy.push(subscribe(store, callback));
+    }
+    function exclude_internal_props(props) {
+        const result = {};
+        for (const k in props)
+            if (k[0] !== '$')
+                result[k] = props[k];
+        return result;
+    }
+    function compute_rest_props(props, keys) {
+        const rest = {};
+        keys = new Set(keys);
+        for (const k in props)
+            if (!keys.has(k) && k[0] !== '$')
+                rest[k] = props[k];
+        return rest;
     }
     function action_destroyer(action_result) {
         return action_result && is_function(action_result.destroy) ? action_result.destroy : noop;
@@ -170,11 +191,35 @@ var WAD = (function (exports, webappTinkererRuntime) {
         else if (node.getAttribute(attribute) !== value)
             node.setAttribute(attribute, value);
     }
+    function set_attributes(node, attributes) {
+        // @ts-ignore
+        const descriptors = Object.getOwnPropertyDescriptors(node.__proto__);
+        for (const key in attributes) {
+            if (attributes[key] == null) {
+                node.removeAttribute(key);
+            }
+            else if (key === 'style') {
+                node.style.cssText = attributes[key];
+            }
+            else if (key === '__value') {
+                node.value = node[key] = attributes[key];
+            }
+            else if (descriptors[key] && descriptors[key].set) {
+                node[key] = attributes[key];
+            }
+            else {
+                attr(node, key, attributes[key]);
+            }
+        }
+    }
     function children(element) {
         return Array.from(element.childNodes);
     }
     function set_style(node, key, value, important) {
         node.style.setProperty(key, value, important ? 'important' : '');
+    }
+    function toggle_class(element, name, toggle) {
+        element.classList[toggle ? 'add' : 'remove'](name);
     }
 
     let current_component;
@@ -362,6 +407,40 @@ var WAD = (function (exports, webappTinkererRuntime) {
             insert(new_blocks[n - 1]);
         return new_blocks;
     }
+
+    function get_spread_update(levels, updates) {
+        const update = {};
+        const to_null_out = {};
+        const accounted_for = { $$scope: 1 };
+        let i = levels.length;
+        while (i--) {
+            const o = levels[i];
+            const n = updates[i];
+            if (n) {
+                for (const key in o) {
+                    if (!(key in n))
+                        to_null_out[key] = 1;
+                }
+                for (const key in n) {
+                    if (!accounted_for[key]) {
+                        update[key] = n[key];
+                        accounted_for[key] = 1;
+                    }
+                }
+                levels[i] = n;
+            }
+            else {
+                for (const key in o) {
+                    accounted_for[key] = 1;
+                }
+            }
+        }
+        for (const key in to_null_out) {
+            if (!(key in update))
+                update[key] = undefined;
+        }
+        return update;
+    }
     function create_component(block) {
         block && block.c();
     }
@@ -538,6 +617,19 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return ((Value != null) && (typeof Value === 'object') &&
             (Object.getPrototypeOf(Value) === Object.prototype));
     }
+    /**** ValueIsColor ****/
+    function ValueIsColor(Value) {
+        return ValueIsString(Value) && (ColorSet.hasOwnProperty(Value) ||
+            /^#[a-fA-F0-9]{6}$/.test(Value) ||
+            /^#[a-fA-F0-9]{8}$/.test(Value) ||
+            /^rgb\([0-9]+,\s*[0-9]+,\s*[0-9]+\)$/.test(Value) || // not perfect
+            /^rgba\([0-9]+,\s*[0-9]+,\s*[0-9]+,([01]|[0]?[.][0-9]+)\)$/.test(Value) // dto.
+        );
+    }
+    //------------------------------------------------------------------------------
+    //--                      Argument Validation Functions                       --
+    //------------------------------------------------------------------------------
+    var rejectNil = false;
     var acceptNil = true;
     /**** validatedArgument ****/
     function validatedArgument(Description, Argument, ValueIsValid, NilIsAcceptable, Expectation) {
@@ -619,6 +711,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     var allowFunction = /*#__PURE__*/ ValidatorForClassifier(ValueIsFunction, acceptNil, 'JavaScript function'), allowedFunction = allowFunction;
     /**** allow/expect[ed]PlainObject ****/
     var allowPlainObject = /*#__PURE__*/ ValidatorForClassifier(ValueIsPlainObject, acceptNil, '"plain" JavaScript object'), allowedPlainObject = allowPlainObject;
+    /**** expect[ed]InstanceOf ****/
+    function expectInstanceOf(Description, Argument, constructor, Expectation) {
+        if (Argument == null) {
+            throwError("MissingArgument: no " + escaped(Description) + " given");
+        }
+        if (!(Argument instanceof constructor)) {
+            throwError("InvalidArgument: the given " + escaped(Description) + " is no " + escaped(Expectation));
+        }
+        return Argument;
+    }
+    var expectColor = /*#__PURE__*/ ValidatorForClassifier(ValueIsColor, rejectNil, 'valid CSS color specification');
     /**** escaped - escapes all control characters in a given string ****/
     function escaped(Text) {
         var EscapeSequencePattern = /\\x[0-9a-zA-Z]{2}|\\u[0-9a-zA-Z]{4}|\\[0bfnrtv'"\\\/]?/g;
@@ -750,6 +853,248 @@ var WAD = (function (exports, webappTinkererRuntime) {
         if (Minimum === void 0) { Minimum = -Infinity; }
         if (Maximum === void 0) { Maximum = Infinity; }
         return Math.max(Minimum, Math.min(Value, Maximum));
+    }
+    //------------------------------------------------------------------------------
+    //--                             Color Utilities                              --
+    //------------------------------------------------------------------------------
+    // built-in color names (see http://www.w3.org/TR/SVG/types.html#ColorKeywords) ----
+    var ColorSet = {
+        transparent: 'rgba(0,0,0,0,0.0)',
+        aliceblue: 'rgba(240,248,255,1.0)', lightpink: 'rgba(255,182,193,1.0)',
+        antiquewhite: 'rgba(250,235,215,1.0)', lightsalmon: 'rgba(255,160,122,1.0)',
+        aqua: 'rgba(0,255,255,1.0)', lightseagreen: 'rgba(32,178,170,1.0)',
+        aquamarine: 'rgba(127,255,212,1.0)', lightskyblue: 'rgba(135,206,250,1.0)',
+        azure: 'rgba(240,255,255,1.0)', lightslategray: 'rgba(119,136,153,1.0)',
+        beige: 'rgba(245,245,220,1.0)', lightslategrey: 'rgba(119,136,153,1.0)',
+        bisque: 'rgba(255,228,196,1.0)', lightsteelblue: 'rgba(176,196,222,1.0)',
+        black: 'rgba(0,0,0,1.0)', lightyellow: 'rgba(255,255,224,1.0)',
+        blanchedalmond: 'rgba(255,235,205,1.0)', lime: 'rgba(0,255,0,1.0)',
+        blue: 'rgba(0,0,255,1.0)', limegreen: 'rgba(50,205,50,1.0)',
+        blueviolet: 'rgba(138,43,226,1.0)', linen: 'rgba(250,240,230,1.0)',
+        brown: 'rgba(165,42,42,1.0)', magenta: 'rgba(255,0,255,1.0)',
+        burlywood: 'rgba(222,184,135,1.0)', maroon: 'rgba(128,0,0,1.0)',
+        cadetblue: 'rgba(95,158,160,1.0)', mediumaquamarine: 'rgba(102,205,170,1.0)',
+        chartreuse: 'rgba(127,255,0,1.0)', mediumblue: 'rgba(0,0,205,1.0)',
+        chocolate: 'rgba(210,105,30,1.0)', mediumorchid: 'rgba(186,85,211,1.0)',
+        coral: 'rgba(255,127,80,1.0)', mediumpurple: 'rgba(147,112,219,1.0)',
+        cornflowerblue: 'rgba(100,149,237,1.0)', mediumseagreen: 'rgba(60,179,113,1.0)',
+        cornsilk: 'rgba(255,248,220,1.0)', mediumslateblue: 'rgba(123,104,238,1.0)',
+        crimson: 'rgba(220,20,60,1.0)', mediumspringgreen: 'rgba(0,250,154,1.0)',
+        cyan: 'rgba(0,255,255,1.0)', mediumturquoise: 'rgba(72,209,204,1.0)',
+        darkblue: 'rgba(0,0,139,1.0)', mediumvioletred: 'rgba(199,21,133,1.0)',
+        darkcyan: 'rgba(0,139,139,1.0)', midnightblue: 'rgba(25,25,112,1.0)',
+        darkgoldenrod: 'rgba(184,134,11,1.0)', mintcream: 'rgba(245,255,250,1.0)',
+        darkgray: 'rgba(169,169,169,1.0)', mistyrose: 'rgba(255,228,225,1.0)',
+        darkgreen: 'rgba(0,100,0,1.0)', moccasin: 'rgba(255,228,181,1.0)',
+        darkgrey: 'rgba(169,169,169,1.0)', navajowhite: 'rgba(255,222,173,1.0)',
+        darkkhaki: 'rgba(189,183,107,1.0)', navy: 'rgba(0,0,128,1.0)',
+        darkmagenta: 'rgba(139,0,139,1.0)', oldlace: 'rgba(253,245,230,1.0)',
+        darkolivegreen: 'rgba(85,107,47,1.0)', olive: 'rgba(128,128,0,1.0)',
+        darkorange: 'rgba(255,140,0,1.0)', olivedrab: 'rgba(107,142,35,1.0)',
+        darkorchid: 'rgba(153,50,204,1.0)', orange: 'rgba(255,165,0,1.0)',
+        darkred: 'rgba(139,0,0,1.0)', orangered: 'rgba(255,69,0,1.0)',
+        darksalmon: 'rgba(233,150,122,1.0)', orchid: 'rgba(218,112,214,1.0)',
+        darkseagreen: 'rgba(143,188,143,1.0)', palegoldenrod: 'rgba(238,232,170,1.0)',
+        darkslateblue: 'rgba(72,61,139,1.0)', palegreen: 'rgba(152,251,152,1.0)',
+        darkslategray: 'rgba(47,79,79,1.0)', paleturquoise: 'rgba(175,238,238,1.0)',
+        darkslategrey: 'rgba(47,79,79,1.0)', palevioletred: 'rgba(219,112,147,1.0)',
+        darkturquoise: 'rgba(0,206,209,1.0)', papayawhip: 'rgba(255,239,213,1.0)',
+        darkviolet: 'rgba(148,0,211,1.0)', peachpuff: 'rgba(255,218,185,1.0)',
+        deeppink: 'rgba(255,20,147,1.0)', peru: 'rgba(205,133,63,1.0)',
+        deepskyblue: 'rgba(0,191,255,1.0)', pink: 'rgba(255,192,203,1.0)',
+        dimgray: 'rgba(105,105,105,1.0)', plum: 'rgba(221,160,221,1.0)',
+        dimgrey: 'rgba(105,105,105,1.0)', powderblue: 'rgba(176,224,230,1.0)',
+        dodgerblue: 'rgba(30,144,255,1.0)', purple: 'rgba(128,0,128,1.0)',
+        firebrick: 'rgba(178,34,34,1.0)', red: 'rgba(255,0,0,1.0)',
+        floralwhite: 'rgba(255,250,240,1.0)', rosybrown: 'rgba(188,143,143,1.0)',
+        forestgreen: 'rgba(34,139,34,1.0)', royalblue: 'rgba(65,105,225,1.0)',
+        fuchsia: 'rgba(255,0,255,1.0)', saddlebrown: 'rgba(139,69,19,1.0)',
+        gainsboro: 'rgba(220,220,220,1.0)', salmon: 'rgba(250,128,114,1.0)',
+        ghostwhite: 'rgba(248,248,255,1.0)', sandybrown: 'rgba(244,164,96,1.0)',
+        gold: 'rgba(255,215,0,1.0)', seagreen: 'rgba(46,139,87,1.0)',
+        goldenrod: 'rgba(218,165,32,1.0)', seashell: 'rgba(255,245,238,1.0)',
+        gray: 'rgba(128,128,128,1.0)', sienna: 'rgba(160,82,45,1.0)',
+        green: 'rgba(0,128,0,1.0)', silver: 'rgba(192,192,192,1.0)',
+        greenyellow: 'rgba(173,255,47,1.0)', skyblue: 'rgba(135,206,235,1.0)',
+        grey: 'rgba(128,128,128,1.0)', slateblue: 'rgba(106,90,205,1.0)',
+        honeydew: 'rgba(240,255,240,1.0)', slategray: 'rgba(112,128,144,1.0)',
+        hotpink: 'rgba(255,105,180,1.0)', slategrey: 'rgba(112,128,144,1.0)',
+        indianred: 'rgba(205,92,92,1.0)', snow: 'rgba(255,250,250,1.0)',
+        indigo: 'rgba(75,0,130,1.0)', springgreen: 'rgba(0,255,127,1.0)',
+        ivory: 'rgba(255,255,240,1.0)', steelblue: 'rgba(70,130,180,1.0)',
+        khaki: 'rgba(240,230,140,1.0)', tan: 'rgba(210,180,140,1.0)',
+        lavender: 'rgba(230,230,250,1.0)', teal: 'rgba(0,128,128,1.0)',
+        lavenderblush: 'rgba(255,240,245,1.0)', thistle: 'rgba(216,191,216,1.0)',
+        lawngreen: 'rgba(124,252,0,1.0)', tomato: 'rgba(255,99,71,1.0)',
+        lemonchiffon: 'rgba(255,250,205,1.0)', turquoise: 'rgba(64,224,208,1.0)',
+        lightblue: 'rgba(173,216,230,1.0)', violet: 'rgba(238,130,238,1.0)',
+        lightcoral: 'rgba(240,128,128,1.0)', wheat: 'rgba(245,222,179,1.0)',
+        lightcyan: 'rgba(224,255,255,1.0)', white: 'rgba(255,255,255,1.0)',
+        lightgoldenrodyellow: 'rgba(250,250,210,1.0)', whitesmoke: 'rgba(245,245,245,1.0)',
+        lightgray: 'rgba(211,211,211,1.0)', yellow: 'rgba(255,255,0,1.0)',
+        lightgreen: 'rgba(144,238,144,1.0)', yellowgreen: 'rgba(154,205,50,1.0)',
+        lightgrey: 'rgba(211,211,211,1.0)',
+    };
+
+    //----------------------------------------------------------------------------//
+    /**** tintedBitmapAsURL ****/
+    function tintedBitmapAsURL(Bitmap, TintColor) {
+        expectInstanceOf('bitmap', Bitmap, HTMLImageElement, 'HTML image element');
+        expectColor('tint color', TintColor);
+        if (!Bitmap.complete)
+            throwError('InvalidArgument: the given bitmap has not yet been completely loaded');
+        var Canvas = document.createElement('canvas');
+        Canvas.width = Bitmap.width;
+        Canvas.height = Bitmap.height;
+        var Context = Canvas.getContext('2d');
+        Context.drawImage(Bitmap, 0, 0);
+        Context.globalCompositeOperation = 'source-in';
+        Context.fillStyle = TintColor;
+        Context.fillRect(0, 0, Bitmap.width, Bitmap.height);
+        return Canvas.toDataURL('image/png');
+    }
+
+    function styleInject(css, ref) {
+      if ( ref === void 0 ) ref = {};
+      var insertAt = ref.insertAt;
+
+      if (!css || typeof document === 'undefined') { return; }
+
+      var head = document.head || document.getElementsByTagName('head')[0];
+      var style = document.createElement('style');
+      style.type = 'text/css';
+
+      if (insertAt === 'top') {
+        if (head.firstChild) {
+          head.insertBefore(style, head.firstChild);
+        } else {
+          head.appendChild(style);
+        }
+      } else {
+        head.appendChild(style);
+      }
+
+      if (style.styleSheet) {
+        style.styleSheet.cssText = css;
+      } else {
+        style.appendChild(document.createTextNode(css));
+      }
+    }
+
+    var css_248z$2 = ".WAD-IconButton.svelte-1gja2ey{display:block;position:absolute;width:32px;height:32px;background:var(--normal-image-url)}.WAD-IconButton.svelte-1gja2ey:hover{background:var(--hovered-image-url)}.WAD-IconButton.active.svelte-1gja2ey{background:var(--active-image-url)}";
+    styleInject(css_248z$2,{"insertAt":"top"});
+
+    /* src/IconButton.svelte generated by Svelte v3.38.3 */
+
+    function create_fragment$2(ctx) {
+    	let div;
+    	let div_style_value;
+
+    	let div_levels = [
+    		{ class: "WAD-IconButton" },
+    		/*$$restProps*/ ctx[4],
+    		{
+    			style: div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n"
+    		}
+    	];
+
+    	let div_data = {};
+
+    	for (let i = 0; i < div_levels.length; i += 1) {
+    		div_data = assign(div_data, div_levels[i]);
+    	}
+
+    	return {
+    		c() {
+    			div = element("div");
+    			set_attributes(div, div_data);
+    			toggle_class(div, "active", /*active*/ ctx[0]);
+    			toggle_class(div, "svelte-1gja2ey", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+    		},
+    		p(ctx, [dirty]) {
+    			set_attributes(div, div_data = get_spread_update(div_levels, [
+    				{ class: "WAD-IconButton" },
+    				dirty & /*$$restProps*/ 16 && /*$$restProps*/ ctx[4],
+    				dirty & /*normalImageURL, hoveredImageURL, activeImageURL*/ 14 && div_style_value !== (div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n") && { style: div_style_value }
+    			]));
+
+    			toggle_class(div, "active", /*active*/ ctx[0]);
+    			toggle_class(div, "svelte-1gja2ey", true);
+    		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(div);
+    		}
+    	};
+    }
+    const hoveredColor = "#FFEC2E";
+    const activeColor = "#D3FF4B";
+
+    function instance$2($$self, $$props, $$invalidate) {
+    	const omit_props_names = ["ImageURL","active"];
+    	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let { ImageURL } = $$props; // bitmap as Data URL
+    	let { active = false } = $$props;
+    	let normalImageURL = ""; // just for the beginning
+    	let hoveredImageURL = ""; // dto.
+    	let activeImageURL = ""; // dto.
+
+    	function tintOriginalImage() {
+    		$$invalidate(2, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
+    		$$invalidate(3, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
+    		$$invalidate(6, auxImage = undefined);
+    	}
+
+    	let auxImage;
+
+    	$$self.$$set = $$new_props => {
+    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
+    		$$invalidate(4, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("ImageURL" in $$new_props) $$invalidate(5, ImageURL = $$new_props.ImageURL);
+    		if ("active" in $$new_props) $$invalidate(0, active = $$new_props.active);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*ImageURL, auxImage*/ 96) {
+    			{
+    				if (ImageURL == null) {
+    					$$invalidate(1, normalImageURL = $$invalidate(2, hoveredImageURL = $$invalidate(3, activeImageURL = "")));
+    				} else {
+    					$$invalidate(1, normalImageURL = ImageURL);
+    					$$invalidate(6, auxImage = document.createElement("img"));
+    					$$invalidate(6, auxImage.src = ImageURL, auxImage);
+
+    					if (auxImage.complete) {
+    						// just in case
+    						tintOriginalImage();
+    					} else {
+    						auxImage.addEventListener("load", tintOriginalImage);
+    					}
+    				}
+    			}
+    		}
+    	};
+
+    	return [
+    		active,
+    		normalImageURL,
+    		hoveredImageURL,
+    		activeImageURL,
+    		$$restProps,
+    		ImageURL,
+    		auxImage
+    	];
+    }
+
+    class IconButton extends SvelteComponent {
+    	constructor(options) {
+    		super();
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { ImageURL: 5, active: 0 });
+    	}
     }
 
     //----------------------------------------------------------------------------//
@@ -1342,52 +1687,31 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
     }
 
-    function styleInject(css, ref) {
-      if ( ref === void 0 ) ref = {};
-      var insertAt = ref.insertAt;
-
-      if (!css || typeof document === 'undefined') { return; }
-
-      var head = document.head || document.getElementsByTagName('head')[0];
-      var style = document.createElement('style');
-      style.type = 'text/css';
-
-      if (insertAt === 'top') {
-        if (head.firstChild) {
-          head.insertBefore(style, head.firstChild);
-        } else {
-          head.appendChild(style);
-        }
-      } else {
-        head.appendChild(style);
-      }
-
-      if (style.styleSheet) {
-        style.styleSheet.cssText = css;
-      } else {
-        style.appendChild(document.createTextNode(css));
-      }
-    }
-
-    var css_248z$1 = ".WAD-DesignerButton.svelte-1bvrktv{display:block;position:absolute;width:32px;height:32px;background:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABA0lEQVRYR82WSw6EMAxD4bo9UK/LiAWjTCYfO6lUWEKwX01ocx6br3Oz/0EDzDmvCHqMQWlCxZmpB4TApADaPBNl610AVkingL5vAsiXsxVnTZxphQBd8wfugbD0/gCi4my10lCbebo/AFlcCICn4d03AarRW7+r1LJSWAYgxb24Q4DOt0fMvYb8JlAFYMxvCO3TAmDNlwJUzJcBVM2XAHTM2wBd8xbACvMQwHqo/125FVd2y/JOiJ7t2VkBA9xC1h6u72eG8jl0GEWfgTGzaqHjGBkgKiDUQCJT6ERuNTA0EXmdz3Y92rjvHcu9DmZ6AEktTUAbWmNXZ4OiAZgEkNrtAB9tuDAwYD8R4wAAAABJRU5ErkJggg==\");cursor:pointer;pointer-events:auto}";
+    var css_248z$1 = ".WAD-DesignerButton.svelte-uao6lg{display:block;position:absolute;width:32px;height:32px;cursor:pointer;pointer-events:auto}";
     styleInject(css_248z$1,{"insertAt":"top"});
 
     /* src/DesignerButton.svelte generated by Svelte v3.38.3 */
 
     function create_fragment$1(ctx) {
     	let div;
+    	let iconbutton;
+    	let current;
     	let mounted;
     	let dispose;
+    	iconbutton = new IconButton({ props: { ImageURL } });
 
     	return {
     		c() {
     			div = element("div");
-    			attr(div, "class", "WAD-DesignerButton svelte-1bvrktv");
+    			create_component(iconbutton.$$.fragment);
+    			attr(div, "class", "WAD-DesignerButton svelte-uao6lg");
     			set_style(div, "left", /*Applet*/ ctx[0].x + /*Offset*/ ctx[1].x + "px");
     			set_style(div, "top", /*Applet*/ ctx[0].y + /*Offset*/ ctx[1].y + "px\n");
     		},
     		m(target, anchor) {
     			insert(target, div, anchor);
+    			mount_component(iconbutton, div, null);
+    			current = true;
 
     			if (!mounted) {
     				dispose = [
@@ -1402,18 +1726,26 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
     		},
     		p(ctx, [dirty]) {
-    			if (dirty & /*Applet, Offset*/ 3) {
+    			if (!current || dirty & /*Applet, Offset*/ 3) {
     				set_style(div, "left", /*Applet*/ ctx[0].x + /*Offset*/ ctx[1].x + "px");
     			}
 
-    			if (dirty & /*Applet, Offset*/ 3) {
+    			if (!current || dirty & /*Applet, Offset*/ 3) {
     				set_style(div, "top", /*Applet*/ ctx[0].y + /*Offset*/ ctx[1].y + "px\n");
     			}
     		},
-    		i: noop,
-    		o: noop,
+    		i(local) {
+    			if (current) return;
+    			transition_in(iconbutton.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(iconbutton.$$.fragment, local);
+    			current = false;
+    		},
     		d(detaching) {
     			if (detaching) detach(div);
+    			destroy_component(iconbutton);
     			mounted = false;
     			run_all(dispose);
     		}
@@ -1421,6 +1753,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
 
 
+    let ImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABA0lEQVRYR82WSw6EMAxD4bo9UK/LiAWjTCYfO6lUWEKwX01ocx6br3Oz/0EDzDmvCHqMQWlCxZmpB4TApADaPBNl610AVkingL5vAsiXsxVnTZxphQBd8wfugbD0/gCi4my10lCbebo/AFlcCICn4d03AarRW7+r1LJSWAYgxb24Q4DOt0fMvYb8JlAFYMxvCO3TAmDNlwJUzJcBVM2XAHTM2wBd8xbACvMQwHqo/125FVd2y/JOiJ7t2VkBA9xC1h6u72eG8jl0GEWfgTGzaqHjGBkgKiDUQCJT6ERuNTA0EXmdz3Y92rjvHcu9DmZ6AEktTUAbWmNXZ4OiAZgEkNrtAB9tuDAwYD8R4wAAAABJRU5ErkJggg==";
     let ButtonOffset = new WeakMap(); // remember positions
 
     function onClick() {
