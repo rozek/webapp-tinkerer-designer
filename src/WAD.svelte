@@ -72,6 +72,12 @@
 <script lang="ts">
   export const Version = '0.1.0'
 
+/**** Colors ****/
+
+  const normalColor  = '#969696'
+  const hoveredColor = '#FFEC2E'
+  const activeColor  = '#D3FF4B'
+
 //----------------------------------------------------------------------------//
 //                             Designer Interface                             //
 //----------------------------------------------------------------------------//
@@ -121,6 +127,23 @@
     }, 300)
   })
 
+/**** monitorMasters ****/
+/*
+  import { MasterList } from './MasterList.js'
+
+  let MasterMonitor:any
+  WAT.ready(() => {
+    MasterMonitor = setInterval(() => {
+      let MastersInDocument = AppletPeersInDocument().map(
+        (AppletPeer:HTMLElement) => VisualForElement(AppletPeer)
+      ).filter((Applet:WAT_Visual) => (Applet as WAT_Applet).mayBeDesigned)
+
+      if (ValuesDiffer(AppletsInDocument,$AppletList)) {
+        (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
+      }
+    }, 300)
+  })
+*/
 
 
 
