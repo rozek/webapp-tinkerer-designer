@@ -18,6 +18,7 @@
 
 <script lang="ts">
   export let Applet:WAT_Applet
+  export let startDesigning:Function
 
   let Offset:WAT_Position = (
     (ButtonOffset.get(Applet) as WAT_Position) || { x:Applet.Width-32-2, y:2 }
@@ -27,7 +28,7 @@
   function onDragStart ()                 { return Offset }
   function onDragMove (x:number,y:number) { Offset = { x,y } }
 
-  function onClick () { window.alert('DesignerButton was clicked') }
+  function onClick () { startDesigning(Applet) }
 </script>
 
 <div class="WAD-DesignerButton" style="
