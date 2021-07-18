@@ -126,6 +126,17 @@
         (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
       }
 
+    /**** monitor chosen Applet ****/
+
+      if ($chosenApplet != null) {
+// @ts-ignore "$chosenApplet" is definitely not undefined
+        if (AppletsInDocument.indexOf($chosenApplet) < 0) {
+          chooseApplet(undefined)
+        }
+      }
+
+      updateLayerListsOfApplet($chosenApplet)
+
     /**** monitor Masters ****/
 /*
   import { MasterList } from './MasterList.js'
@@ -133,6 +144,36 @@
 
     }, 300)
   })
+
+//----------------------------------------------------------------------------//
+//                                  Choices                                   //
+//----------------------------------------------------------------------------//
+
+  import { chosenApplet }      from './chosenApplet.js'
+  import { chosenCardList }    from './chosenCardList.js'
+  import { chosenOverlayList } from './chosenOverlayList.js'
+
+/**** chooseApplet ****/
+
+  function chooseApplet (Applet:WAT_Applet | undefined):void {
+    if (Applet !== $chosenApplet) {
+      (chosenApplet as Writable<WAT_Applet | undefined>).set(Applet)
+      updateLayerListsOfApplet(Applet)
+    }
+  }
+
+/**** updateLayerListsOfApplet ****/
+
+  function updateLayerListsOfApplet (Applet:WAT_Applet | undefined):void {
+    if (Applet == null) {
+      (chosenCardList as Writable<WAT_Card[]>).set([]);// semicolon is important
+      (chosenOverlayList as Writable<WAT_Overlay[]>).set([])
+    } else {
+      (chosenCardList as Writable<WAT_Card[]>).set(Applet.CardList);     // dto.
+      (chosenOverlayList as Writable<WAT_Overlay[]>).set(Applet.OverlayList)
+    }
+  }
+
 
 
 
