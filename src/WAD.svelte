@@ -86,11 +86,23 @@
 /**** startDesigning ****/
 
   export function startDesigning (
-    Applet:WAT_Applet, Target?:WAT_Visual|WAT_Name, Property?:WAT_Identifier,
-    x?:number, y?:number
+    Applet:WAT_Applet | undefined, Target?:WAT_Visual|WAT_Name, Property?:WAT_Identifier
   ):void {
+    if (Applet == null) {
+      chooseApplet(undefined)
+    } else {
+      chooseApplet(Applet)
 
-
+      switch (true) {
+        case (Target == null):
+          break
+        case ValueIsName(Target):
+          break
+        case ValueIsVisual(Target):
+          break
+        default: throwError('InvalidArgument: WAT master name or visual expected')
+      }
+    }
   }
 /**** inhibitsEventsFrom ****/
 
@@ -187,7 +199,9 @@
   margin:0px; padding:0px; border:none; background:transparent;
 ">
   {#each $AppletList as Applet (Applet['uniqueId'])}
-    <DesignerButton {Applet}/>
+    {#if $chosenApplet !== Applet}
+      <DesignerButton {Applet} {startDesigning}/>
+    {/if}
   {/each}
 
 </div>
