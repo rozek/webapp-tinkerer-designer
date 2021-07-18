@@ -1719,7 +1719,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						onDragStart: /*onDragStart*/ ctx[2],
     						onDragMove: /*onDragMove*/ ctx[3]
     					})),
-    					listen(div, "click", onClick)
+    					listen(div, "click", /*onClick*/ ctx[4])
     				];
 
     				mounted = true;
@@ -1756,12 +1756,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     let ImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABA0lEQVRYR82WSw6EMAxD4bo9UK/LiAWjTCYfO6lUWEKwX01ocx6br3Oz/0EDzDmvCHqMQWlCxZmpB4TApADaPBNl610AVkingL5vAsiXsxVnTZxphQBd8wfugbD0/gCi4my10lCbebo/AFlcCICn4d03AarRW7+r1LJSWAYgxb24Q4DOt0fMvYb8JlAFYMxvCO3TAmDNlwJUzJcBVM2XAHTM2wBd8xbACvMQwHqo/125FVd2y/JOiJ7t2VkBA9xC1h6u72eG8jl0GEWfgTGzaqHjGBkgKiDUQCJT6ERuNTA0EXmdz3Y92rjvHcu9DmZ6AEktTUAbWmNXZ4OiAZgEkNrtAB9tuDAwYD8R4wAAAABJRU5ErkJggg==";
     let ButtonOffset = new WeakMap(); // remember positions
 
-    function onClick() {
-    	window.alert("DesignerButton was clicked");
-    }
-
     function instance$1($$self, $$props, $$invalidate) {
     	let { Applet } = $$props;
+    	let { startDesigning } = $$props;
     	let Offset = ButtonOffset.get(Applet) || { x: Applet.Width - 32 - 2, y: 2 };
     	ButtonOffset.set(Applet, Offset); // reactive statement!
 
@@ -1773,17 +1770,22 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		$$invalidate(1, Offset = { x, y });
     	}
 
+    	function onClick() {
+    		startDesigning(Applet);
+    	}
+
     	$$self.$$set = $$props => {
     		if ("Applet" in $$props) $$invalidate(0, Applet = $$props.Applet);
+    		if ("startDesigning" in $$props) $$invalidate(5, startDesigning = $$props.startDesigning);
     	};
 
-    	return [Applet, Offset, onDragStart, onDragMove];
+    	return [Applet, Offset, onDragStart, onDragMove, onClick, startDesigning];
     }
 
     class DesignerButton extends SvelteComponent {
     	constructor(options) {
     		super();
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { Applet: 0 });
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { Applet: 0, startDesigning: 5 });
     	}
     }
 
@@ -2199,30 +2201,29 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (95:2) {#each $AppletList as Applet (Applet['uniqueId'])}
-    function create_each_block(key_1, ctx) {
-    	let first;
+    // (111:4) {#if $chosenApplet !== Applet}
+    function create_if_block(ctx) {
     	let designerbutton;
     	let current;
-    	designerbutton = new DesignerButton({ props: { Applet: /*Applet*/ ctx[8] } });
+
+    	designerbutton = new DesignerButton({
+    			props: {
+    				Applet: /*Applet*/ ctx[8],
+    				startDesigning: /*startDesigning*/ ctx[0]
+    			}
+    		});
 
     	return {
-    		key: key_1,
-    		first: null,
     		c() {
-    			first = empty();
     			create_component(designerbutton.$$.fragment);
-    			this.first = first;
     		},
     		m(target, anchor) {
-    			insert(target, first, anchor);
     			mount_component(designerbutton, target, anchor);
     			current = true;
     		},
-    		p(new_ctx, dirty) {
-    			ctx = new_ctx;
+    		p(ctx, dirty) {
     			const designerbutton_changes = {};
-    			if (dirty & /*$AppletList*/ 1) designerbutton_changes.Applet = /*Applet*/ ctx[8];
+    			if (dirty & /*$AppletList*/ 2) designerbutton_changes.Applet = /*Applet*/ ctx[8];
     			designerbutton.$set(designerbutton_changes);
     		},
     		i(local) {
@@ -2235,8 +2236,72 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			current = false;
     		},
     		d(detaching) {
-    			if (detaching) detach(first);
     			destroy_component(designerbutton, detaching);
+    		}
+    	};
+    }
+
+    // (110:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    function create_each_block(key_1, ctx) {
+    	let first;
+    	let if_block_anchor;
+    	let current;
+    	let if_block = /*$chosenApplet*/ ctx[2] !== /*Applet*/ ctx[8] && create_if_block(ctx);
+
+    	return {
+    		key: key_1,
+    		first: null,
+    		c() {
+    			first = empty();
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    			this.first = first;
+    		},
+    		m(target, anchor) {
+    			insert(target, first, anchor);
+    			if (if_block) if_block.m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(new_ctx, dirty) {
+    			ctx = new_ctx;
+
+    			if (/*$chosenApplet*/ ctx[2] !== /*Applet*/ ctx[8]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*$chosenApplet, $AppletList*/ 6) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (detaching) detach(first);
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach(if_block_anchor);
     		}
     	};
     }
@@ -2246,7 +2311,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let each_blocks = [];
     	let each_1_lookup = new Map();
     	let current;
-    	let each_value = /*$AppletList*/ ctx[0];
+    	let each_value = /*$AppletList*/ ctx[1];
     	const get_key = ctx => /*Applet*/ ctx[8]["uniqueId"];
 
     	for (let i = 0; i < each_value.length; i += 1) {
@@ -2287,8 +2352,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			current = true;
     		},
     		p(ctx, [dirty]) {
-    			if (dirty & /*$AppletList*/ 1) {
-    				each_value = /*$AppletList*/ ctx[0];
+    			if (dirty & /*$AppletList, startDesigning, $chosenApplet*/ 7) {
+    				each_value = /*$AppletList*/ ctx[1];
     				group_outros();
     				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, null, get_each_context);
     				check_outros();
@@ -2320,10 +2385,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    function startDesigning(Applet, Target, Property, x, y) {
-    	
-    }
-
     function inhibitsEventsFrom(Visual) {
     	return false;
     }
@@ -2331,9 +2392,28 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function instance($$self, $$props, $$invalidate) {
     	let $AppletList;
     	let $chosenApplet;
-    	component_subscribe($$self, AppletList, $$value => $$invalidate(0, $AppletList = $$value));
-    	component_subscribe($$self, chosenApplet, $$value => $$invalidate(5, $chosenApplet = $$value));
+    	component_subscribe($$self, AppletList, $$value => $$invalidate(1, $AppletList = $$value));
+    	component_subscribe($$self, chosenApplet, $$value => $$invalidate(2, $chosenApplet = $$value));
     	const Version = "0.1.0";
+
+    	function startDesigning(Applet, Target, Property) {
+    		if (Applet == null) {
+    			chooseApplet(undefined);
+    		} else {
+    			chooseApplet(Applet);
+
+    			switch (true) {
+    				case Target == null:
+    					break;
+    				case ValueIsName(Target):
+    					break;
+    				case ValueIsVisual(Target):
+    					break;
+    				default:
+    					throwError("InvalidArgument: WAT master name or visual expected");
+    			}
+    		}
+    	}
 
     	webappTinkererRuntime.ready(() => {
     		webappTinkererRuntime.registerDesigner({ startDesigning, inhibitsEventsFrom });
@@ -2387,7 +2467,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		}
     	}
 
-    	return [$AppletList, Version, startDesigning, inhibitsEventsFrom];
+    	return [startDesigning, $AppletList, $chosenApplet, Version, inhibitsEventsFrom];
     }
 
     class WAD extends SvelteComponent {
@@ -2395,18 +2475,18 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		super();
 
     		init(this, options, instance, create_fragment, safe_not_equal, {
-    			Version: 1,
-    			startDesigning: 2,
-    			inhibitsEventsFrom: 3
+    			Version: 3,
+    			startDesigning: 0,
+    			inhibitsEventsFrom: 4
     		});
     	}
 
     	get Version() {
-    		return this.$$.ctx[1];
+    		return this.$$.ctx[3];
     	}
 
     	get startDesigning() {
-    		return startDesigning;
+    		return this.$$.ctx[0];
     	}
 
     	get inhibitsEventsFrom() {
