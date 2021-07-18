@@ -1860,7 +1860,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (78:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (66:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let designerbutton;
@@ -1994,22 +1994,27 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	component_subscribe($$self, AppletList, $$value => $$invalidate(0, $AppletList = $$value));
     	const Version = "0.1.0";
 
-    	WAT.ready(() => {
-    		WAT.registerDesigner({ startDesigning, inhibitsEventsFrom });
+    	webappTinkererRuntime.ready(() => {
+    		webappTinkererRuntime.registerDesigner({ startDesigning, inhibitsEventsFrom });
     		console.log("WAD is running");
     	});
 
-    	WAT.ready(() => {
+    	webappTinkererRuntime.ready(() => {
     		setInterval(
     			() => {
-    				let AppletsInDocument = webappTinkererRuntime.AppletPeersInDocument().map(AppletPeer => webappTinkererRuntime.VisualForElement(AppletPeer)).filter(Applet => Applet.mayBeDesigned);
+    				/**** monitor Applets ****/
+    				let AppletsInDocument = webappTinkererRuntime.AppletPeersInDocument().map(AppletPeer => webappTinkererRuntime.VisualForElement(AppletPeer)).filter(Applet => Applet.mayBeDesigned); /**** monitor Masters ****/ /*
+      import { MasterList } from './MasterList.js'
+    */
 
     				if (ValuesDiffer(AppletsInDocument, $AppletList)) {
     					AppletList.set(AppletsInDocument);
     				}
     			},
     			300
-    		);
+    		); /**** monitor Masters ****/ /*
+      import { MasterList } from './MasterList.js'
+    */
     	});
 
     	return [$AppletList, Version, startDesigning, inhibitsEventsFrom];
@@ -2048,14 +2053,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     var global = /*#__PURE__*/ Function('return this')();
     // see https://stackoverflow.com/questions/3277182/how-to-get-the-global-object-in-javascript
     /**** check WAT presence ****/
-    var WAT$1 = global.WAT;
-    if (typeof (WAT$1 === null || WAT$1 === void 0 ? void 0 : WAT$1.ready) !== 'function') {
+    var WAT = global.WAT;
+    if (typeof (WAT === null || WAT === void 0 ? void 0 : WAT.ready) !== 'function') {
         window.alert('"WebApp Tinkerer" not found\n\n' +
             'The WAT Designer needs the WAT Runtime to be loaded first');
         throw new Error('MissingDependency: "WAT" not found');
     }
     /**** ready to attach designer ****/
-    WAT$1.ready(function () {
+    WAT.ready(function () {
         new WAD({
             target: document.body
         });
