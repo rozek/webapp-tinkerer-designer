@@ -1184,9 +1184,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	let div_levels = [
     		{ class: "WAD-IconButton" },
-    		/*$$restProps*/ ctx[4],
+    		/*$$restProps*/ ctx[5],
     		{
-    			style: div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n"
+    			style: div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]
     		}
     	];
 
@@ -1209,8 +1209,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		p(ctx, [dirty]) {
     			set_attributes(div, div_data = get_spread_update(div_levels, [
     				{ class: "WAD-IconButton" },
-    				dirty & /*$$restProps*/ 16 && /*$$restProps*/ ctx[4],
-    				dirty & /*normalImageURL, hoveredImageURL, activeImageURL*/ 14 && div_style_value !== (div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n") && { style: div_style_value }
+    				dirty & /*$$restProps*/ 32 && /*$$restProps*/ ctx[5],
+    				dirty & /*normalImageURL, hoveredImageURL, activeImageURL, style*/ 30 && div_style_value !== (div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]) && { style: div_style_value }
     			]));
 
     			toggle_class(div, "active", /*active*/ ctx[0]);
@@ -1227,38 +1227,40 @@ var WAD = (function (exports, webappTinkererRuntime) {
     const activeColor = "#D3FF4B";
 
     function instance$4($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["ImageURL","active"];
+    	const omit_props_names = ["ImageURL","active","style"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
     	let { ImageURL } = $$props; // bitmap as Data URL
     	let { active = false } = $$props;
+    	let { style = "" } = $$props; // because {...$$restProps} does not help here
     	let normalImageURL = ""; // just for the beginning
     	let hoveredImageURL = ""; // dto.
     	let activeImageURL = ""; // dto.
 
     	function tintOriginalImage() {
-    		$$invalidate(2, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
-    		$$invalidate(3, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
-    		$$invalidate(6, auxImage = undefined);
+    		$$invalidate(3, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
+    		$$invalidate(4, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
+    		$$invalidate(7, auxImage = undefined);
     	}
 
     	let auxImage;
 
     	$$self.$$set = $$new_props => {
     		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(4, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("ImageURL" in $$new_props) $$invalidate(5, ImageURL = $$new_props.ImageURL);
+    		$$invalidate(5, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("ImageURL" in $$new_props) $$invalidate(6, ImageURL = $$new_props.ImageURL);
     		if ("active" in $$new_props) $$invalidate(0, active = $$new_props.active);
+    		if ("style" in $$new_props) $$invalidate(1, style = $$new_props.style);
     	};
 
     	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*ImageURL, auxImage*/ 96) {
+    		if ($$self.$$.dirty & /*ImageURL, auxImage*/ 192) {
     			{
     				if (ImageURL == null) {
-    					$$invalidate(1, normalImageURL = $$invalidate(2, hoveredImageURL = $$invalidate(3, activeImageURL = "")));
+    					$$invalidate(2, normalImageURL = $$invalidate(3, hoveredImageURL = $$invalidate(4, activeImageURL = "")));
     				} else {
-    					$$invalidate(1, normalImageURL = ImageURL);
-    					$$invalidate(6, auxImage = document.createElement("img"));
-    					$$invalidate(6, auxImage.src = ImageURL, auxImage);
+    					$$invalidate(2, normalImageURL = ImageURL);
+    					$$invalidate(7, auxImage = document.createElement("img"));
+    					$$invalidate(7, auxImage.src = ImageURL, auxImage);
 
     					if (auxImage.complete) {
     						// just in case
@@ -1273,6 +1275,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	return [
     		active,
+    		style,
     		normalImageURL,
     		hoveredImageURL,
     		activeImageURL,
@@ -1285,7 +1288,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     class IconButton extends SvelteComponent {
     	constructor(options) {
     		super();
-    		init(this, options, instance$4, create_fragment$4, safe_not_equal, { ImageURL: 5, active: 0 });
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, { ImageURL: 6, active: 0, style: 1 });
     	}
     }
 
@@ -2279,7 +2282,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		Applet: /*Applet*/ ctx[0],
     		Title: "WAT-Designer",
     		resizable: false,
-    		PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[1]
+    		PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[1],
+    		$$slots: { default: [create_default_slot] },
+    		$$scope: { ctx }
     	};
 
     	if (/*$ToolboxState*/ ctx[2] !== void 0) {
@@ -2303,6 +2308,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (dirty & /*Applet*/ 1) dialog_changes.Applet = /*Applet*/ ctx[0];
     			if (dirty & /*PositionAroundPreferredPosition*/ 2) dialog_changes.PositionAroundPreferredPosition = /*PositionAroundPreferredPosition*/ ctx[1];
 
+    			if (dirty & /*$$scope*/ 32) {
+    				dialog_changes.$$scope = { dirty, ctx };
+    			}
+
     			if (!updating_State && dirty & /*$ToolboxState*/ 4) {
     				updating_State = true;
     				dialog_changes.State = /*$ToolboxState*/ ctx[2];
@@ -2322,6 +2331,416 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		d(detaching) {
     			destroy_component(dialog, detaching);
+    		}
+    	};
+    }
+
+    // (60:2) <Dialog class="WAD-Toolbox" {Applet} Title="WAT-Designer" resizable={false}     {PositionAroundPreferredPosition} bind:State={$ToolboxState}     on:close={onClose}   >
+    function create_default_slot(ctx) {
+    	let iconbutton0;
+    	let t0;
+    	let iconbutton1;
+    	let t1;
+    	let iconbutton2;
+    	let t2;
+    	let iconbutton3;
+    	let t3;
+    	let iconbutton4;
+    	let t4;
+    	let iconbutton5;
+    	let t5;
+    	let iconbutton6;
+    	let t6;
+    	let iconbutton7;
+    	let t7;
+    	let iconbutton8;
+    	let t8;
+    	let iconbutton9;
+    	let t9;
+    	let iconbutton10;
+    	let t10;
+    	let iconbutton11;
+    	let t11;
+    	let iconbutton12;
+    	let t12;
+    	let iconbutton13;
+    	let t13;
+    	let iconbutton14;
+    	let t14;
+    	let iconbutton15;
+    	let t15;
+    	let iconbutton16;
+    	let t16;
+    	let iconbutton17;
+    	let t17;
+    	let iconbutton18;
+    	let t18;
+    	let iconbutton19;
+    	let t19;
+    	let iconbutton20;
+    	let t20;
+    	let iconbutton21;
+    	let t21;
+    	let iconbutton22;
+    	let current;
+
+    	iconbutton0 = new IconButton({
+    			props: {
+    				style: "left:4px;   top:4px",
+    				ImageURL: LayouterImageURL
+    			}
+    		});
+
+    	iconbutton1 = new IconButton({
+    			props: {
+    				style: "left:44px;  top:4px",
+    				ImageURL: EventLockImageURL
+    			}
+    		});
+
+    	iconbutton2 = new IconButton({
+    			props: {
+    				style: "left:84px;  top:4px",
+    				ImageURL: NudgerImageURL
+    			}
+    		});
+
+    	iconbutton3 = new IconButton({
+    			props: {
+    				style: "left:124px; top:4px",
+    				ImageURL: InspectorImageURL
+    			}
+    		});
+
+    	iconbutton4 = new IconButton({
+    			props: {
+    				style: "left:4px;   top:44px",
+    				ImageURL: UndoImageURL
+    			}
+    		});
+
+    	iconbutton5 = new IconButton({
+    			props: {
+    				style: "left:44px;  top:44px",
+    				ImageURL: RedoImageURL
+    			}
+    		});
+
+    	iconbutton6 = new IconButton({
+    			props: {
+    				style: "left:84px;  top:44px",
+    				ImageURL: SaveImageURL
+    			}
+    		});
+
+    	iconbutton7 = new IconButton({
+    			props: {
+    				style: "left:124px; top:44px",
+    				ImageURL: SettingsImageURL
+    			}
+    		});
+
+    	iconbutton8 = new IconButton({
+    			props: {
+    				style: "left:4px;   top:84px",
+    				ImageURL: CreateImageURL
+    			}
+    		});
+
+    	iconbutton9 = new IconButton({
+    			props: {
+    				style: "left:44px;  top:84px",
+    				ImageURL: DuplicateImageURL
+    			}
+    		});
+
+    	iconbutton10 = new IconButton({
+    			props: {
+    				style: "left:124px; top:84px",
+    				ImageURL: SnapToGridImageURL
+    			}
+    		});
+
+    	iconbutton11 = new IconButton({
+    			props: {
+    				style: "left:4px;   top:124px",
+    				ImageURL: CutImageURL
+    			}
+    		});
+
+    	iconbutton12 = new IconButton({
+    			props: {
+    				style: "left:44px;  top:124px",
+    				ImageURL: CopyImageURL
+    			}
+    		});
+
+    	iconbutton13 = new IconButton({
+    			props: {
+    				style: "left:84px;  top:124px",
+    				ImageURL: PasteImageURL
+    			}
+    		});
+
+    	iconbutton14 = new IconButton({
+    			props: {
+    				style: "left:124px; top:124px",
+    				ImageURL: DeleteImageURL
+    			}
+    		});
+
+    	iconbutton15 = new IconButton({
+    			props: {
+    				style: "left:4px;   top:164px",
+    				ImageURL: ToTopImageURL
+    			}
+    		});
+
+    	iconbutton16 = new IconButton({
+    			props: {
+    				style: "left:44px;  top:164px",
+    				ImageURL: UpImageURL
+    			}
+    		});
+
+    	iconbutton17 = new IconButton({
+    			props: {
+    				style: "left:84px;  top:164px",
+    				ImageURL: DownImageURL
+    			}
+    		});
+
+    	iconbutton18 = new IconButton({
+    			props: {
+    				style: "left:124px; top:164px",
+    				ImageURL: ToBottomImageURL
+    			}
+    		});
+
+    	iconbutton19 = new IconButton({
+    			props: {
+    				style: "left:4px;   top:204px",
+    				ImageURL: ChooseContainerImageURL
+    			}
+    		});
+
+    	iconbutton20 = new IconButton({
+    			props: {
+    				style: "left:44px;  top:204px",
+    				ImageURL: ChooseContentImageURL
+    			}
+    		});
+
+    	iconbutton21 = new IconButton({
+    			props: {
+    				style: "left:84px;  top:204px",
+    				ImageURL: ImportExportImageURL
+    			}
+    		});
+
+    	iconbutton22 = new IconButton({
+    			props: {
+    				style: "left:124px; top:204px",
+    				ImageURL: SearchImageURL
+    			}
+    		});
+
+    	return {
+    		c() {
+    			create_component(iconbutton0.$$.fragment);
+    			t0 = space();
+    			create_component(iconbutton1.$$.fragment);
+    			t1 = space();
+    			create_component(iconbutton2.$$.fragment);
+    			t2 = space();
+    			create_component(iconbutton3.$$.fragment);
+    			t3 = space();
+    			create_component(iconbutton4.$$.fragment);
+    			t4 = space();
+    			create_component(iconbutton5.$$.fragment);
+    			t5 = space();
+    			create_component(iconbutton6.$$.fragment);
+    			t6 = space();
+    			create_component(iconbutton7.$$.fragment);
+    			t7 = space();
+    			create_component(iconbutton8.$$.fragment);
+    			t8 = space();
+    			create_component(iconbutton9.$$.fragment);
+    			t9 = space();
+    			create_component(iconbutton10.$$.fragment);
+    			t10 = space();
+    			create_component(iconbutton11.$$.fragment);
+    			t11 = space();
+    			create_component(iconbutton12.$$.fragment);
+    			t12 = space();
+    			create_component(iconbutton13.$$.fragment);
+    			t13 = space();
+    			create_component(iconbutton14.$$.fragment);
+    			t14 = space();
+    			create_component(iconbutton15.$$.fragment);
+    			t15 = space();
+    			create_component(iconbutton16.$$.fragment);
+    			t16 = space();
+    			create_component(iconbutton17.$$.fragment);
+    			t17 = space();
+    			create_component(iconbutton18.$$.fragment);
+    			t18 = space();
+    			create_component(iconbutton19.$$.fragment);
+    			t19 = space();
+    			create_component(iconbutton20.$$.fragment);
+    			t20 = space();
+    			create_component(iconbutton21.$$.fragment);
+    			t21 = space();
+    			create_component(iconbutton22.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(iconbutton0, target, anchor);
+    			insert(target, t0, anchor);
+    			mount_component(iconbutton1, target, anchor);
+    			insert(target, t1, anchor);
+    			mount_component(iconbutton2, target, anchor);
+    			insert(target, t2, anchor);
+    			mount_component(iconbutton3, target, anchor);
+    			insert(target, t3, anchor);
+    			mount_component(iconbutton4, target, anchor);
+    			insert(target, t4, anchor);
+    			mount_component(iconbutton5, target, anchor);
+    			insert(target, t5, anchor);
+    			mount_component(iconbutton6, target, anchor);
+    			insert(target, t6, anchor);
+    			mount_component(iconbutton7, target, anchor);
+    			insert(target, t7, anchor);
+    			mount_component(iconbutton8, target, anchor);
+    			insert(target, t8, anchor);
+    			mount_component(iconbutton9, target, anchor);
+    			insert(target, t9, anchor);
+    			mount_component(iconbutton10, target, anchor);
+    			insert(target, t10, anchor);
+    			mount_component(iconbutton11, target, anchor);
+    			insert(target, t11, anchor);
+    			mount_component(iconbutton12, target, anchor);
+    			insert(target, t12, anchor);
+    			mount_component(iconbutton13, target, anchor);
+    			insert(target, t13, anchor);
+    			mount_component(iconbutton14, target, anchor);
+    			insert(target, t14, anchor);
+    			mount_component(iconbutton15, target, anchor);
+    			insert(target, t15, anchor);
+    			mount_component(iconbutton16, target, anchor);
+    			insert(target, t16, anchor);
+    			mount_component(iconbutton17, target, anchor);
+    			insert(target, t17, anchor);
+    			mount_component(iconbutton18, target, anchor);
+    			insert(target, t18, anchor);
+    			mount_component(iconbutton19, target, anchor);
+    			insert(target, t19, anchor);
+    			mount_component(iconbutton20, target, anchor);
+    			insert(target, t20, anchor);
+    			mount_component(iconbutton21, target, anchor);
+    			insert(target, t21, anchor);
+    			mount_component(iconbutton22, target, anchor);
+    			current = true;
+    		},
+    		p: noop,
+    		i(local) {
+    			if (current) return;
+    			transition_in(iconbutton0.$$.fragment, local);
+    			transition_in(iconbutton1.$$.fragment, local);
+    			transition_in(iconbutton2.$$.fragment, local);
+    			transition_in(iconbutton3.$$.fragment, local);
+    			transition_in(iconbutton4.$$.fragment, local);
+    			transition_in(iconbutton5.$$.fragment, local);
+    			transition_in(iconbutton6.$$.fragment, local);
+    			transition_in(iconbutton7.$$.fragment, local);
+    			transition_in(iconbutton8.$$.fragment, local);
+    			transition_in(iconbutton9.$$.fragment, local);
+    			transition_in(iconbutton10.$$.fragment, local);
+    			transition_in(iconbutton11.$$.fragment, local);
+    			transition_in(iconbutton12.$$.fragment, local);
+    			transition_in(iconbutton13.$$.fragment, local);
+    			transition_in(iconbutton14.$$.fragment, local);
+    			transition_in(iconbutton15.$$.fragment, local);
+    			transition_in(iconbutton16.$$.fragment, local);
+    			transition_in(iconbutton17.$$.fragment, local);
+    			transition_in(iconbutton18.$$.fragment, local);
+    			transition_in(iconbutton19.$$.fragment, local);
+    			transition_in(iconbutton20.$$.fragment, local);
+    			transition_in(iconbutton21.$$.fragment, local);
+    			transition_in(iconbutton22.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(iconbutton0.$$.fragment, local);
+    			transition_out(iconbutton1.$$.fragment, local);
+    			transition_out(iconbutton2.$$.fragment, local);
+    			transition_out(iconbutton3.$$.fragment, local);
+    			transition_out(iconbutton4.$$.fragment, local);
+    			transition_out(iconbutton5.$$.fragment, local);
+    			transition_out(iconbutton6.$$.fragment, local);
+    			transition_out(iconbutton7.$$.fragment, local);
+    			transition_out(iconbutton8.$$.fragment, local);
+    			transition_out(iconbutton9.$$.fragment, local);
+    			transition_out(iconbutton10.$$.fragment, local);
+    			transition_out(iconbutton11.$$.fragment, local);
+    			transition_out(iconbutton12.$$.fragment, local);
+    			transition_out(iconbutton13.$$.fragment, local);
+    			transition_out(iconbutton14.$$.fragment, local);
+    			transition_out(iconbutton15.$$.fragment, local);
+    			transition_out(iconbutton16.$$.fragment, local);
+    			transition_out(iconbutton17.$$.fragment, local);
+    			transition_out(iconbutton18.$$.fragment, local);
+    			transition_out(iconbutton19.$$.fragment, local);
+    			transition_out(iconbutton20.$$.fragment, local);
+    			transition_out(iconbutton21.$$.fragment, local);
+    			transition_out(iconbutton22.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(iconbutton0, detaching);
+    			if (detaching) detach(t0);
+    			destroy_component(iconbutton1, detaching);
+    			if (detaching) detach(t1);
+    			destroy_component(iconbutton2, detaching);
+    			if (detaching) detach(t2);
+    			destroy_component(iconbutton3, detaching);
+    			if (detaching) detach(t3);
+    			destroy_component(iconbutton4, detaching);
+    			if (detaching) detach(t4);
+    			destroy_component(iconbutton5, detaching);
+    			if (detaching) detach(t5);
+    			destroy_component(iconbutton6, detaching);
+    			if (detaching) detach(t6);
+    			destroy_component(iconbutton7, detaching);
+    			if (detaching) detach(t7);
+    			destroy_component(iconbutton8, detaching);
+    			if (detaching) detach(t8);
+    			destroy_component(iconbutton9, detaching);
+    			if (detaching) detach(t9);
+    			destroy_component(iconbutton10, detaching);
+    			if (detaching) detach(t10);
+    			destroy_component(iconbutton11, detaching);
+    			if (detaching) detach(t11);
+    			destroy_component(iconbutton12, detaching);
+    			if (detaching) detach(t12);
+    			destroy_component(iconbutton13, detaching);
+    			if (detaching) detach(t13);
+    			destroy_component(iconbutton14, detaching);
+    			if (detaching) detach(t14);
+    			destroy_component(iconbutton15, detaching);
+    			if (detaching) detach(t15);
+    			destroy_component(iconbutton16, detaching);
+    			if (detaching) detach(t16);
+    			destroy_component(iconbutton17, detaching);
+    			if (detaching) detach(t17);
+    			destroy_component(iconbutton18, detaching);
+    			if (detaching) detach(t18);
+    			destroy_component(iconbutton19, detaching);
+    			if (detaching) detach(t19);
+    			destroy_component(iconbutton20, detaching);
+    			if (detaching) detach(t20);
+    			destroy_component(iconbutton21, detaching);
+    			if (detaching) detach(t21);
+    			destroy_component(iconbutton22, detaching);
     		}
     	};
     }
@@ -2383,6 +2802,35 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
 
 
+
+    /**** normal IconButton images as Data URLs ****/
+    let LayouterImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABA0lEQVRYR82WSw6EMAxD4bo9UK/LiAWjTCYfO6lUWEKwX01ocx6br3Oz/0EDzDmvCHqMQWlCxZmpB4TApADaPBNl610AVkingL5vAsiXsxVnTZxphQBd8wfugbD0/gCi4my10lCbebo/AFlcCICn4d03AarRW7+r1LJSWAYgxb24Q4DOt0fMvYb8JlAFYMxvCO3TAmDNlwJUzJcBVM2XAHTM2wBd8xbACvMQwHqo/125FVd2y/JOiJ7t2VkBA9xC1h6u72eG8jl0GEWfgTGzaqHjGBkgKiDUQCJT6ERuNTA0EXmdz3Y92rjvHcu9DmZ6AEktTUAbWmNXZ4OiAZgEkNrtAB9tuDAwYD8R4wAAAABJRU5ErkJggg==";
+
+    let EventLockImageURL = "";
+    let NudgerImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAo0lEQVRYR+2WUQ7AIAhD9boeiOtu8YPEmG1CIUEX9g32WYuuluCvBuuXBEgHTA4Q0dVD3FqD14Ebu3AoAIvzGKMuwA6EAsziFhcgB8IBPK9vsQPSxEvreBNLAG3YtPWvAOg5a/v2BeAz0lqqrV9mYAZZ3XjuIfQcuae1xA6MzdqgfW3iTIDxKba8A70XcmALgPAfki0APEYUzoCHuCmECfAbB26pGWAhx+HZtAAAAABJRU5ErkJggg==";
+    let InspectorImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA6UlEQVRYR+2WSw6AIAxE9bociOtqWDTBSjvTotEF7gyh8zr9hH37+Ns/1t8WwHIg5UCt9Rg1byklHC90wRLWMBEQGmAkLkLeGRpzCgBZjs49CAjQB9cZo/8mjMrhAujMkKBVEg9iAZgOMF2PStI3n1WGKQBr/iNjGQJAM+2d0w6w2y4Lo0EuDrwtLtA9xK0Eb0O4DmRtnbnnNiFao6xwc5VuQgnqXWKFmVhwFc+6gBL5N0CzEGXglYO5C98DWQhGvMWmAASCeWDIHmF7hwboO3oEEhWWeGEADTJar5ExTQNERKYepU8JWXFOXsLIIZeR3YwAAAAASUVORK5CYII=";
+    let UndoImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAz0lEQVRYR+2WUQrAIAxD53U9kNfd8KNQRG0a3crA/Y1p85ZUbLqCnxSsfx2ALQ6UUu6cM1WL2qT7porX9xAAEQ8B0OKfA7TiEgkTA9UDIwAGhAKoQr0ImFhogBZC2+9pziUADdHmjx7PZQCB6DUgArEFYHShhQPMIhLoVx34NwCSHzLMWHWGEVgbEfGlCMIBEHrLBeQnpqcAKTCDQPabxxAp0oNA98EAnqFj+2WEXrPoOu2Y6UBvALWazzMZuQBEOHwksxzwfKcc8AhYaw/AA7TnkCErkZMFAAAAAElFTkSuQmCC";
+    let RedoImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAwklEQVRYR+2WSw7AIAhE63U9kNdtw4LEEHX4+OnCLm1wHkMA03P4S4f1nwvgdqCU8uac3fFcevcFBECXRCHCAFGIKQARCBcA2y9b2FMOE0BPmEGWAUhhEmqdeYYadKAWqjPsnVsh1ADS3i1tOBLZMohmZTkqS7cEO8QJ7AIsdwCV8gIMBxGyD009Tfy/AShDTRYtJ7Rx6l1geXRYFhUEqF1Ae9+zolUALIweJAiwVSoTAAJZ9iJC7Rb573IgIihjL8AHRW6QIYYSsiYAAAAASUVORK5CYII=";
+    let SaveImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAoUlEQVRYR+2W2w6AIAhA9Xf9IH+3xoObYwl4YVDRW4vwcJQiJ+MrG6+fAiAM+DVQa712OqSUIipuGIQBqIQttsXge6oQVQBYmDOhDsBBfAMA7/HM+REb0OoI/wDcKabMSNqRNeAGoD9YACWpThLzHgMrXXDUQJ/sqc/xFgHwUQBzA/8FWKkcv0N9S8ipZXcq4n7F8Fw0Np2wMMoRAGHA3MAN5uOoIQ8aGmQAAAAASUVORK5CYII=";
+    let SettingsImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAApklEQVRYR+1WQQ6AIAyD7/IgvqvhQLJMsNsk4KHejKOt7ZzL6fCVD/MnCgg7UGu9enyllDCO+aAmRPfW3goJQOAeR14FyLdEpLPnSAwFDB1YYb2OZBYFBUybEMUgLfXU6mgeAhBYAxjlGT1HAf/rgZaxJU/vaOYccDnQ7V0RBf+GnxyQne6JA5FK3NBK1gi274T6u9++FXsHj7XeHIEV0FtHAccduAHWc4AhlpaqkQAAAABJRU5ErkJggg==";
+    let CreateImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAYUlEQVRYR+2WyQ0AIAgEpV0Kol1tQELWh2gyfj0YJ27QRvOw5voDAAz8ZyAi5i457n50GXkTABi4ZiArpPaOKh1pCgDAQLuB7LVfiyEAGHjWgNoLqvXyj6g6UJ0HAAPtBhZrOEghA+jrggAAAABJRU5ErkJggg==";
+    let DuplicateImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAtElEQVRYR+2VUQ7AIAhD9boeyOtu8YOEbTJQS1gW9+vEZws1p+AvB5+fNsBDgVrrYbGllAJR71KkHW4tzP/l0Nb9dEk4ABW2gkAAuGWjasABGgxBWFRwARiB+BeANsI9S+AKSBBSP8ABuP+WkXQBmG7CHr0Uy5YRs0Q6JM9XwCEAs29IA/8vgBTHd7XcFAgD0ILIXYFwAJr9MAs+AyCloHsPaPHrAhAexdqt39YhQbQBVhQ4AVM68CG5nMXXAAAAAElFTkSuQmCC";
+
+    //let ImageURL = ''
+    let SnapToGridImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAArklEQVRYR+1WQQ7AIAjT7/ogv7vFAwkxaquZk2zstghY24LGcPiLh/cPDgAykHO+UkrNuNU1LbsDgAzs7hIIYFXnUZ5NDxTEgqy4fvSPZEH5uqugBGUzDQZtrg/BxEIANROo6Gw8DaA3jFqABASTYwcAMh1zGmGj9kzLlBJrh4GeuWb0rBlgWKMZKMWZgo93wWtzwOwk/M9lhEbsrnWqC/xNeJSBXdrTd4ED+DwDNzGk6CEizJfHAAAAAElFTkSuQmCC";
+
+    let CutImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7UlEQVRYR+2WXQ7EIAiE2+t6IK+7Gx9IKBFm0Bq3zfa1CJ/Dn+ex+Ts3xz9uB6i1fkoptF/akFFKgmcg3gHQbuwphNIxrUAUXKAiiCEAJiirSBrAFhgDoxWw558PwLSntrldgT/ATyogndHrf1gDTFu1W3vDxZ63diFAZon0bD14eg7MACDlBGKpAlKQwzUwo4AdNl6d0AqgfHqw0e0b1FIADR11if53WUajKUCtR++CWQD0+kmlAI3YDOxyBRAsDSASMQ4ZuXt+4C5AwUel10PK7QIUvFdEzJlUChiHaO5HPmzq0o9SBjBjsx3gC2HxLDBU8TlfAAAAAElFTkSuQmCC";
+    let CopyImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA20lEQVRYR+2WSw7AIAhE7XU9kNdt44LEEoVBSmxNu/XDcxigR1r8HYvjp8cBSilnzhm+F96IKEXBLRB7ANQXjxTS0uFWQApOUBLEFAASFFXEDMANhsC0CvDz3wdAyrPd87gCP8ArFaDK6NW/6gGkrOqrR82Fn+f7RADLEOntHcHDfcADoClHEKEKkCGnPeBRgDebkU/CFZBeX6FCAVofSFXSrt2G0WwKtNKDZ4EXQPv7CU8B0pZDPeAGIImQixC5e/eos0ALbvHJngCWNPUU4Kkz/5RqKbKuLwe4ABMeJDCe+pJbAAAAAElFTkSuQmCC";
+    let PasteImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA50lEQVRYR+2XQRaDMAhE9bo5UK7bvix4j1KIM5ZIFu3SRvgMjOh5FP/O4vwHBdB7f7XWqHuuCoSDSfJsiP0BRsWRjBntmCowSy5Qv0J8ASBJMxX5ALADhsBoBe4M6N4AVx62/6cr8AcoVUAcwPg8dQZYAMSyQ1FbUGhDBoCp3J6lAbxkSwCGXJ4K0TUrbaQgrIAG0L3TvZakkSpezykAC+HZckDooNEwRrDTXaATzgI/AiAwj7fAWzi2t0tnANl4y2yI7oJyAMQt0Tsk7AJEDUYJibcXACNl9FBClNJn4C8jNjB6vhzgDQIzTDDVGLxnAAAAAElFTkSuQmCC";
+    let DeleteImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAT0lEQVRYR+3VwQ0AIAhDUVi3A3VdnUDDgQQO36sGy0vQjOGVw/cHARBAAAEE9grYPh3/hKRvk89NAiAwLtAxAZUae9+BSvqOMwgggAACCFwbXBghpjcrJwAAAABJRU5ErkJggg==";
+    let ToTopImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAfElEQVRYR+2VQQoAIQwD9bt9UL/rsgcvgjYpQhHiVSHDmGpvxasX5zcByMDRgLuPGyU1s22OAN4u4ezI6Y6jDqUNrAXNQqQAdtORgaABotFkISiAKHzeNwMBA6DhLAQMsLa5tIQ/jABkQAZkIPpm0f30S4gGROcEIAPlBj7GtEgh19O+fAAAAABJRU5ErkJggg==";
+    let UpImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAbklEQVRYR+2WQQoAIQzE9Lt9UL/r4sGLsNjOCmUh3iUxSLW34tWL+Q0BClDg3wXcfcw5YmbyQeSNC74GmSohCezwLxJpgTe4KpESOMEVibBAFJ6VCAvsr2bpJZwyCFCAAhS49Z2XJyECFKDArQIPSvI8IYSMDKYAAAAASUVORK5CYII=";
+    let DownImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAd0lEQVRYR+2WQQ6AIAwE4bt9UL+r4UBCiBF2L5g4XAnudCzVWg6veji/AIABDNgGMvMar3BEWM+yDrVgADCAgf8ZmCte/UfsDiZpEO1C7Ia3IiSApwk4m1DCLYA3CDXcBvjEt2CEcCrvr07ugVX3q/sAYAADGLgBiLQ8IQWkMTAAAAAASUVORK5CYII=";
+    let ToBottomImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAg0lEQVRYR+2VUQoAIQhE67oeyOvu0sdCRKgjQS1NvxHzfJnVsnnVzfmFADTwXwOq+vQvSERSxaQOtWAC0AAN3GdgrNj7xqODCRpEUYhoeCsCAphNwNEEEp4CsCDQ8DTAEX9BD5Gp/Ls6uAe87kf3TYBo13uhliECnN0D3t2u2KcBGngBrgBIIbNZDX8AAAAASUVORK5CYII=";
+    let ChooseContainerImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAn0lEQVRYR+3WQQrAIAwEQP2uD/K7LR4EkWiyoboU0mvFHZIo5kT+Mjk/BeCfFai1PqWUT/DwJi28DS4F0MMpgDH8OmAOvwqQwleXl2cutkOIhI8oBHIEgLRIPYbeKlgRKqBtZBlCyxppdkwACSH12YMwA2bEatDQ+wICjAgaoCOogN0r6ngLtCdcAKICUQF6BbRjOv+Hr2I0QFsfAHoFXqYLbCHp/EtEAAAAAElFTkSuQmCC";
+    let ChooseContentImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAmUlEQVRYR+3X3QqAIAwFYH3dPdBet/BCiLD9nA00WPe1b0en1Nvmp2+u3wpQCZydADNf0pQQUbgB8QMaYOIikBTAgKCINACKgNdwtTxICjBgdJyBCAFWCG8KBagE/pWA9Wh+3x/SZLgT8CK0sXQDvg6g1a2pFR/vQAALwlI8BJAQ1uJhwBFH8RPh6XzuGXgPZP3QFKAS2J7ADQIZTCGjWjAzAAAAAElFTkSuQmCC";
+    let ImportExportImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA0klEQVRYR+2VYQ6AIAiF67oeyOvWbKPRExCdaW32p5qO94Hw3LfJzz5Zf1sA/61AjPEIIVwJpO/0pv+avmqqAAoOBSAxnvEwAC4+HADFhwJI4p8EwO73TEXXKeAAHvG0XwWQup0EtDGkdfQHyyNEAG4ykqlYAFrmWswMAB1OClhjRKV4D4BS5tYReM8cNW4Ayc28QJb3YwzUMQFqLhXv3iqAKRXAUfJmVtqn3SPZEZQC9Vqnps2moJeAFYdPjGpEb4BIo9p0F/SEWwCrAqsC0ytwArCqxCFYK1feAAAAAElFTkSuQmCC";
+    let SearchImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA00lEQVRYR+2WQRKAIAgA87s+yO/WcHCGEBAV8WKnmqxdkKD0HD7SYf7jLlBKeWlQOWeR4ybAgS0iLgIYzkWr3V8W6MFrFqR1bgLaPlMJvHZJoEZlgUsSV+BmYCkDUFi0EOFaKkquaN0EQKaCuW/etQ9obXd7J8Rp5M616crJDW0Bt9849bgmsIjLNJSKTSs6y7+GKQO74CDYFdgJ7wrshqsCEXBRIArOCkTCG4Fo+E/gBLwRwMMEzlebzFAjotMqAi7WAO3vlkhm13Q74eyLrc9dgQ9itQQwkRB2awAAAABJRU5ErkJggg==";
 
     function instance$2($$self, $$props, $$invalidate) {
     	let $ToolboxState;
@@ -2922,7 +3370,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (93:4) {#if $chosenApplet !== Applet}
+    // (92:4) {#if $chosenApplet !== Applet}
     function create_if_block_1(ctx) {
     	let designerbutton;
     	let updating_preferredPosition;
@@ -2979,7 +3427,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (92:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (91:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let if_block_anchor;
@@ -3044,7 +3492,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (100:2) {#if $chosenApplet !== null}
+    // (99:2) {#if $chosenApplet !== null}
     function create_if_block(ctx) {
     	let toolboxview;
     	let current;
@@ -3255,7 +3703,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	/**** PositionAroundPreferredPosition ****/
     	function PositionAroundPreferredPosition(Width, Height) {
-    		console.log("PositionAroundPreferredPosition", preferredPosition);
     		return PositionAround(preferredPosition, Width, Height);
     	}
 
