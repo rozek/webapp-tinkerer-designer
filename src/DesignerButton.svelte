@@ -50,6 +50,6 @@
 " use:asDraggable={{ onDragStart, onDragMove }}
   on:click={onClick}
 >
-  <IconButton {ImageURL}></IconButton>
+  <IconButton {ImageURL}/>
 </div>
 
