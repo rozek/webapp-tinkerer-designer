@@ -165,7 +165,6 @@
   function PositionAroundPreferredPosition (
     Width:WAT_Dimension,Height:WAT_Dimension
   ):WAT_Position {
-console.log('PositionAroundPreferredPosition',preferredPosition)
     return PositionAround(preferredPosition, Width,Height)
   }
 
