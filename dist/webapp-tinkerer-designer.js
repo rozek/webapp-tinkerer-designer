@@ -36,6 +36,42 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function component_subscribe(component, store, callback) {
         component.$$.on_destroy.push(subscribe(store, callback));
     }
+    function create_slot(definition, ctx, $$scope, fn) {
+        if (definition) {
+            const slot_ctx = get_slot_context(definition, ctx, $$scope, fn);
+            return definition[0](slot_ctx);
+        }
+    }
+    function get_slot_context(definition, ctx, $$scope, fn) {
+        return definition[1] && fn
+            ? assign($$scope.ctx.slice(), definition[1](fn(ctx)))
+            : $$scope.ctx;
+    }
+    function get_slot_changes(definition, $$scope, dirty, fn) {
+        if (definition[2] && fn) {
+            const lets = definition[2](fn(dirty));
+            if ($$scope.dirty === undefined) {
+                return lets;
+            }
+            if (typeof lets === 'object') {
+                const merged = [];
+                const len = Math.max($$scope.dirty.length, lets.length);
+                for (let i = 0; i < len; i += 1) {
+                    merged[i] = $$scope.dirty[i] | lets[i];
+                }
+                return merged;
+            }
+            return $$scope.dirty | lets;
+        }
+        return $$scope.dirty;
+    }
+    function update_slot(slot, slot_definition, ctx, $$scope, dirty, get_slot_changes_fn, get_slot_context_fn) {
+        const slot_changes = get_slot_changes(slot_definition, $$scope, dirty, get_slot_changes_fn);
+        if (slot_changes) {
+            const slot_context = get_slot_context(slot_definition, ctx, $$scope, get_slot_context_fn);
+            slot.p(slot_context, slot_changes);
+        }
+    }
     function exclude_internal_props(props) {
         const result = {};
         for (const k in props)
@@ -218,16 +254,45 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function children(element) {
         return Array.from(element.childNodes);
     }
+    function set_data(text, data) {
+        data = '' + data;
+        if (text.wholeText !== data)
+            text.data = data;
+    }
     function set_style(node, key, value, important) {
         node.style.setProperty(key, value, important ? 'important' : '');
     }
     function toggle_class(element, name, toggle) {
         element.classList[toggle ? 'add' : 'remove'](name);
     }
+    function custom_event(type, detail) {
+        const e = document.createEvent('CustomEvent');
+        e.initCustomEvent(type, false, false, detail);
+        return e;
+    }
 
     let current_component;
     function set_current_component(component) {
         current_component = component;
+    }
+    function get_current_component() {
+        if (!current_component)
+            throw new Error('Function called outside component initialization');
+        return current_component;
+    }
+    function createEventDispatcher() {
+        const component = get_current_component();
+        return (type, detail) => {
+            const callbacks = component.$$.callbacks[type];
+            if (callbacks) {
+                // TODO are there situations where events could be dispatched
+                // in a server (non-DOM) environment?
+                const event = custom_event(type, detail);
+                callbacks.slice().forEach(fn => {
+                    fn.call(component, event);
+                });
+            }
+        };
     }
 
     const dirty_components = [];
@@ -244,6 +309,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
     function add_render_callback(fn) {
         render_callbacks.push(fn);
+    }
+    function add_flush_callback(fn) {
+        flush_callbacks.push(fn);
     }
     let flushing = false;
     const seen_callbacks = new Set();
@@ -444,6 +512,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
         return update;
     }
+
+    function bind(component, name, callback) {
+        const index = component.$$.props[name];
+        if (index !== undefined) {
+            component.$$.bound[index] = callback;
+            callback(component.$$.ctx[index]);
+        }
+    }
     function create_component(block) {
         block && block.c();
     }
@@ -572,6 +648,185 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
         }
     }
+
+    const subscriber_queue = [];
+    /**
+     * Creates a `Readable` store that allows reading by subscription.
+     * @param value initial value
+     * @param {StartStopNotifier}start start and stop notifications for subscriptions
+     */
+    function readable(value, start) {
+        return {
+            subscribe: writable(value, start).subscribe
+        };
+    }
+    /**
+     * Create a `Writable` store that allows both updating and reading by subscription.
+     * @param {*=}value initial value
+     * @param {StartStopNotifier=}start start and stop notifications for subscriptions
+     */
+    function writable(value, start = noop) {
+        let stop;
+        const subscribers = [];
+        function set(new_value) {
+            if (safe_not_equal(value, new_value)) {
+                value = new_value;
+                if (stop) { // store is ready
+                    const run_queue = !subscriber_queue.length;
+                    for (let i = 0; i < subscribers.length; i += 1) {
+                        const s = subscribers[i];
+                        s[1]();
+                        subscriber_queue.push(s, value);
+                    }
+                    if (run_queue) {
+                        for (let i = 0; i < subscriber_queue.length; i += 2) {
+                            subscriber_queue[i][0](subscriber_queue[i + 1]);
+                        }
+                        subscriber_queue.length = 0;
+                    }
+                }
+            }
+        }
+        function update(fn) {
+            set(fn(value));
+        }
+        function subscribe(run, invalidate = noop) {
+            const subscriber = [run, invalidate];
+            subscribers.push(subscriber);
+            if (subscribers.length === 1) {
+                stop = start(set) || noop;
+            }
+            run(value);
+            return () => {
+                const index = subscribers.indexOf(subscriber);
+                if (index !== -1) {
+                    subscribers.splice(index, 1);
+                }
+                if (subscribers.length === 0) {
+                    stop();
+                    stop = null;
+                }
+            };
+        }
+        return { set, update, subscribe };
+    }
+
+    let currentAppletList$1 = [];
+
+      const AppletList = readable(currentAppletList$1, (set) => {
+        function updateAppletList () {
+          let newAppletList = webappTinkererRuntime.AppletPeersInDocument()
+            .map((AppletPeer) => webappTinkererRuntime.VisualForElement(AppletPeer))
+            .filter((Applet) => Applet.mayBeDesigned);
+          if (webappTinkererRuntime.ValuesDiffer(currentAppletList$1,newAppletList)) {
+            currentAppletList$1 = newAppletList;
+            set(newAppletList);
+          }
+
+          setTimeout(updateAppletList, 300);
+        }
+
+        if (
+          (document.readyState === 'complete') ||
+          (document.readyState === 'interactive')
+        ) {
+          updateAppletList();
+        } else {
+          window.addEventListener('DOMContentLoaded', updateAppletList);
+        }
+
+        return () => {}
+      });
+
+    let currentAppletList     = [];
+      let currentlyChosenApplet$1 = undefined;
+
+      const chosenAppletStore = writable(undefined);   // for subscription management
+
+    /**** keep track of changes in "AppletList" ****/
+
+      AppletList.subscribe((newAppletList) => {      // implements a "derived" store
+        currentAppletList = newAppletList;
+        if (
+          (currentlyChosenApplet$1 != null) &&
+          (newAppletList.indexOf(currentlyChosenApplet$1) < 0)
+        ) {
+          currentlyChosenApplet$1 = undefined;
+          chosenAppletStore.set(undefined);
+        }
+      });
+
+    /**** validate changes to "chosenApplet" ****/
+
+      function setChosenApplet (Applet) {
+        if (                   // "Applet" must be in the list of designable applets
+          (Applet != null) &&
+          (currentAppletList.indexOf(Applet) < 0)
+        ) {
+          Applet = undefined;
+        }
+
+        if (currentlyChosenApplet$1 !== Applet) {
+          currentlyChosenApplet$1 = Applet;
+          chosenAppletStore.set(Applet);
+        }
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const chosenApplet = {
+        subscribe: (Subscription) => chosenAppletStore.subscribe(Subscription),
+        set:       setChosenApplet
+      };
+
+    const initialToolboxState = {
+        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN
+      };
+
+      let currentlyChosenApplet = undefined;
+      let currentToolboxState   = Object.assign({}, initialToolboxState);
+
+      const ToolboxStateStore = writable(currentToolboxState);   // subscription mgmt
+      const ToolboxStateSet   = new WeakMap();      // applet-specific Toolbox states
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet !== newChosenApplet) {
+          currentlyChosenApplet = newChosenApplet;
+
+          if (currentlyChosenApplet == null) {
+            currentToolboxState = Object.assign({}, initialToolboxState);
+          } else {
+            if (ToolboxStateSet.has(currentlyChosenApplet)) {
+              currentToolboxState = ToolboxStateSet.get(currentlyChosenApplet);
+            } else {
+              currentToolboxState = Object.assign({}, initialToolboxState);
+              ToolboxStateSet.set(currentlyChosenApplet,currentToolboxState);
+            }
+            ToolboxStateStore.set(currentToolboxState);
+          }
+        }
+      });
+
+    /**** validate changes to "ToolboxState" ****/
+
+      function setToolboxState (newToolboxState) {
+        if (currentlyChosenApplet !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentToolboxState,newToolboxState)) {
+            currentToolboxState = Object.assign({}, newToolboxState);
+            ToolboxStateSet.set(currentlyChosenApplet,newToolboxState);
+            ToolboxStateStore.set(newToolboxState);
+          }
+        }
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const ToolboxState = {
+        subscribe: (Callback) => ToolboxStateStore.subscribe(Callback),
+        set:       setToolboxState
+      };
 
     //----------------------------------------------------------------------------//
     //                        JavaScript Interface Library                        //
@@ -785,72 +1040,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
         if (Quote === void 0) { Quote = '"'; }
         return Quote + quotable(Text, Quote) + Quote;
     }
-    /**** ValuesDiffer ****/
-    function ValuesDiffer(thisValue, otherValue) {
-        if (thisValue === otherValue) {
-            return false;
-        }
-        var thisType = typeof thisValue;
-        if (thisType !== typeof otherValue) {
-            return true;
-        }
-        /**** ArraysDiffer ****/
-        function ArraysDiffer(thisArray, otherArray) {
-            if (!Array.isArray(otherArray)) {
-                return true;
-            }
-            if (thisArray.length !== otherArray.length) {
-                return true;
-            }
-            for (var i = 0, l = thisArray.length; i < l; i++) {
-                if (ValuesDiffer(thisArray[i], otherArray[i])) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        /**** ObjectsDiffer ****/
-        function ObjectsDiffer(thisObject, otherObject) {
-            if (Object.getPrototypeOf(thisObject) !== Object.getPrototypeOf(otherObject)) {
-                return true;
-            }
-            for (var key in thisObject) {
-                if (!(key in otherObject)) {
-                    return true;
-                }
-            }
-            for (var key in otherObject) {
-                if (!(key in thisObject)) {
-                    return true;
-                }
-                if (ValuesDiffer(thisObject[key], otherObject[key])) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        switch (thisType) {
-            case 'undefined':
-            case 'boolean':
-            case 'string':
-            case 'function': return true; // most primitives are compared using "==="
-            case 'number': return ((isNaN(thisValue) !== isNaN(otherValue)) ||
-                (Math.abs(thisValue - otherValue) > Number.EPSILON));
-            case 'object':
-                if (thisValue == null) {
-                    return true;
-                } // since "other_value" != null!
-                if (otherValue == null) {
-                    return true;
-                } // since "this_value" != null!
-                if (Array.isArray(thisValue)) {
-                    return ArraysDiffer(thisValue, otherValue);
-                }
-                return ObjectsDiffer(thisValue, otherValue);
-            default: return true; // unsupported property type
-        }
-        return true;
-    }
     /**** constrained ****/
     function constrained(Value, Minimum, Maximum) {
         if (Minimum === void 0) { Minimum = -Infinity; }
@@ -938,6 +1127,167 @@ var WAD = (function (exports, webappTinkererRuntime) {
         lightgreen: 'rgba(144,238,144,1.0)', yellowgreen: 'rgba(154,205,50,1.0)',
         lightgrey: 'rgba(211,211,211,1.0)',
     };
+
+    //----------------------------------------------------------------------------//
+    /**** tintedBitmapAsURL ****/
+    function tintedBitmapAsURL(Bitmap, TintColor) {
+        expectInstanceOf('bitmap', Bitmap, HTMLImageElement, 'HTML image element');
+        expectColor('tint color', TintColor);
+        if (!Bitmap.complete)
+            throwError('InvalidArgument: the given bitmap has not yet been completely loaded');
+        var Canvas = document.createElement('canvas');
+        Canvas.width = Bitmap.width;
+        Canvas.height = Bitmap.height;
+        var Context = Canvas.getContext('2d');
+        Context.drawImage(Bitmap, 0, 0);
+        Context.globalCompositeOperation = 'source-in';
+        Context.fillStyle = TintColor;
+        Context.fillRect(0, 0, Bitmap.width, Bitmap.height);
+        return Canvas.toDataURL('image/png');
+    }
+
+    function styleInject(css, ref) {
+      if ( ref === void 0 ) ref = {};
+      var insertAt = ref.insertAt;
+
+      if (!css || typeof document === 'undefined') { return; }
+
+      var head = document.head || document.getElementsByTagName('head')[0];
+      var style = document.createElement('style');
+      style.type = 'text/css';
+
+      if (insertAt === 'top') {
+        if (head.firstChild) {
+          head.insertBefore(style, head.firstChild);
+        } else {
+          head.appendChild(style);
+        }
+      } else {
+        head.appendChild(style);
+      }
+
+      if (style.styleSheet) {
+        style.styleSheet.cssText = css;
+      } else {
+        style.appendChild(document.createTextNode(css));
+      }
+    }
+
+    var css_248z$3 = ".WAD-IconButton.svelte-1gja2ey{display:block;position:absolute;width:32px;height:32px;background:var(--normal-image-url)}.WAD-IconButton.svelte-1gja2ey:hover{background:var(--hovered-image-url)}.WAD-IconButton.active.svelte-1gja2ey{background:var(--active-image-url)}";
+    styleInject(css_248z$3,{"insertAt":"top"});
+
+    /* src/IconButton.svelte generated by Svelte v3.38.3 */
+
+    function create_fragment$4(ctx) {
+    	let div;
+    	let div_style_value;
+
+    	let div_levels = [
+    		{ class: "WAD-IconButton" },
+    		/*$$restProps*/ ctx[4],
+    		{
+    			style: div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n"
+    		}
+    	];
+
+    	let div_data = {};
+
+    	for (let i = 0; i < div_levels.length; i += 1) {
+    		div_data = assign(div_data, div_levels[i]);
+    	}
+
+    	return {
+    		c() {
+    			div = element("div");
+    			set_attributes(div, div_data);
+    			toggle_class(div, "active", /*active*/ ctx[0]);
+    			toggle_class(div, "svelte-1gja2ey", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+    		},
+    		p(ctx, [dirty]) {
+    			set_attributes(div, div_data = get_spread_update(div_levels, [
+    				{ class: "WAD-IconButton" },
+    				dirty & /*$$restProps*/ 16 && /*$$restProps*/ ctx[4],
+    				dirty & /*normalImageURL, hoveredImageURL, activeImageURL*/ 14 && div_style_value !== (div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n") && { style: div_style_value }
+    			]));
+
+    			toggle_class(div, "active", /*active*/ ctx[0]);
+    			toggle_class(div, "svelte-1gja2ey", true);
+    		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(div);
+    		}
+    	};
+    }
+    const hoveredColor = "#FFEC2E";
+    const activeColor = "#D3FF4B";
+
+    function instance$4($$self, $$props, $$invalidate) {
+    	const omit_props_names = ["ImageURL","active"];
+    	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let { ImageURL } = $$props; // bitmap as Data URL
+    	let { active = false } = $$props;
+    	let normalImageURL = ""; // just for the beginning
+    	let hoveredImageURL = ""; // dto.
+    	let activeImageURL = ""; // dto.
+
+    	function tintOriginalImage() {
+    		$$invalidate(2, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
+    		$$invalidate(3, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
+    		$$invalidate(6, auxImage = undefined);
+    	}
+
+    	let auxImage;
+
+    	$$self.$$set = $$new_props => {
+    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
+    		$$invalidate(4, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("ImageURL" in $$new_props) $$invalidate(5, ImageURL = $$new_props.ImageURL);
+    		if ("active" in $$new_props) $$invalidate(0, active = $$new_props.active);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*ImageURL, auxImage*/ 96) {
+    			{
+    				if (ImageURL == null) {
+    					$$invalidate(1, normalImageURL = $$invalidate(2, hoveredImageURL = $$invalidate(3, activeImageURL = "")));
+    				} else {
+    					$$invalidate(1, normalImageURL = ImageURL);
+    					$$invalidate(6, auxImage = document.createElement("img"));
+    					$$invalidate(6, auxImage.src = ImageURL, auxImage);
+
+    					if (auxImage.complete) {
+    						// just in case
+    						tintOriginalImage();
+    					} else {
+    						auxImage.addEventListener("load", tintOriginalImage);
+    					}
+    				}
+    			}
+    		}
+    	};
+
+    	return [
+    		active,
+    		normalImageURL,
+    		hoveredImageURL,
+    		activeImageURL,
+    		$$restProps,
+    		ImageURL,
+    		auxImage
+    	];
+    }
+
+    class IconButton extends SvelteComponent {
+    	constructor(options) {
+    		super();
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, { ImageURL: 5, active: 0 });
+    	}
+    }
 
     //----------------------------------------------------------------------------//
     //                        Svelte Coordinate Conversion                        //
@@ -1529,184 +1879,179 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
     }
 
-    const subscriber_queue = [];
-    /**
-     * Create a `Writable` store that allows both updating and reading by subscription.
-     * @param {*=}value initial value
-     * @param {StartStopNotifier=}start start and stop notifications for subscriptions
-     */
-    function writable(value, start = noop) {
-        let stop;
-        const subscribers = [];
-        function set(new_value) {
-            if (safe_not_equal(value, new_value)) {
-                value = new_value;
-                if (stop) { // store is ready
-                    const run_queue = !subscriber_queue.length;
-                    for (let i = 0; i < subscribers.length; i += 1) {
-                        const s = subscribers[i];
-                        s[1]();
-                        subscriber_queue.push(s, value);
-                    }
-                    if (run_queue) {
-                        for (let i = 0; i < subscriber_queue.length; i += 2) {
-                            subscriber_queue[i][0](subscriber_queue[i + 1]);
-                        }
-                        subscriber_queue.length = 0;
-                    }
-                }
-            }
-        }
-        function update(fn) {
-            set(fn(value));
-        }
-        function subscribe(run, invalidate = noop) {
-            const subscriber = [run, invalidate];
-            subscribers.push(subscriber);
-            if (subscribers.length === 1) {
-                stop = start(set) || noop;
-            }
-            run(value);
-            return () => {
-                const index = subscribers.indexOf(subscriber);
-                if (index !== -1) {
-                    subscribers.splice(index, 1);
-                }
-                if (subscribers.length === 0) {
-                    stop();
-                    stop = null;
-                }
-            };
-        }
-        return { set, update, subscribe };
-    }
+    var css_248z$2 = ".WAD-Dialog.svelte-lpux1e{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-lpux1e{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-lpux1e{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-lpux1e{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-lpux1e:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-lpux1e{display:inline-block;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ResizeHandle.svelte-lpux1e{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-lpux1e:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
+    styleInject(css_248z$2,{"insertAt":"top"});
 
-    function styleInject(css, ref) {
-      if ( ref === void 0 ) ref = {};
-      var insertAt = ref.insertAt;
+    /* src/Dialog.svelte generated by Svelte v3.38.3 */
 
-      if (!css || typeof document === 'undefined') { return; }
+    function create_if_block$2(ctx) {
+    	let div4;
+    	let div2;
+    	let div0;
+    	let t0;
+    	let t1;
+    	let div1;
+    	let iconbutton;
+    	let asDraggable_action;
+    	let t2;
+    	let div3;
+    	let t3;
+    	let current;
+    	let mounted;
+    	let dispose;
 
-      var head = document.head || document.getElementsByTagName('head')[0];
-      var style = document.createElement('style');
-      style.type = 'text/css';
+    	iconbutton = new IconButton({
+    			props: {
+    				style: "width:24px; height:24px",
+    				ImageURL: CloseButton_ImageURL
+    			}
+    		});
 
-      if (insertAt === 'top') {
-        if (head.firstChild) {
-          head.insertBefore(style, head.firstChild);
-        } else {
-          head.appendChild(style);
-        }
-      } else {
-        head.appendChild(style);
-      }
-
-      if (style.styleSheet) {
-        style.styleSheet.cssText = css;
-      } else {
-        style.appendChild(document.createTextNode(css));
-      }
-    }
-
-    var css_248z$3 = ".WAD-Toolbox.svelte-k071o4{display:block;position:absolute}";
-    styleInject(css_248z$3,{"insertAt":"top"});
-
-    /* src/ToolboxView.svelte generated by Svelte v3.38.3 */
-
-    function create_fragment$3(ctx) {
-    	let div;
+    	const default_slot_template = /*#slots*/ ctx[12].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[11], null);
+    	let if_block = /*resizable*/ ctx[3] && create_if_block_1$1(ctx);
 
     	return {
     		c() {
-    			div = element("div");
-    			attr(div, "class", "WAD-Toolbox svelte-k071o4");
+    			div4 = element("div");
+    			div2 = element("div");
+    			div0 = element("div");
+    			t0 = text(/*Title*/ ctx[2]);
+    			t1 = space();
+    			div1 = element("div");
+    			create_component(iconbutton.$$.fragment);
+    			t2 = space();
+    			div3 = element("div");
+    			if (default_slot) default_slot.c();
+    			t3 = space();
+    			if (if_block) if_block.c();
+    			attr(div0, "class", "WAD-Title svelte-lpux1e");
+    			attr(div1, "class", "WAD-CloseButton svelte-lpux1e");
+    			attr(div2, "class", "WAD-Titlebar svelte-lpux1e");
+    			attr(div3, "class", "WAD-ContentArea svelte-lpux1e");
+    			attr(div4, "class", "WAD-Dialog svelte-lpux1e");
+    			set_style(div4, "left", /*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x + "px");
+    			set_style(div4, "top", /*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y + "px");
+    			set_style(div4, "width", /*State*/ ctx[0].Width + "px");
+    			set_style(div4, "height", /*State*/ ctx[0].Height + "px\n  ");
     		},
     		m(target, anchor) {
-    			insert(target, div, anchor);
+    			insert(target, div4, anchor);
+    			append(div4, div2);
+    			append(div2, div0);
+    			append(div0, t0);
+    			append(div2, t1);
+    			append(div2, div1);
+    			mount_component(iconbutton, div1, null);
+    			append(div4, t2);
+    			append(div4, div3);
+
+    			if (default_slot) {
+    				default_slot.m(div3, null);
+    			}
+
+    			append(div4, t3);
+    			if (if_block) if_block.m(div4, null);
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen(div1, "click", /*closeDialog*/ ctx[8]),
+    					action_destroyer(asDraggable_action = asDraggable.call(null, div2, {
+    						relativeTo: document.body,
+    						onDragStart: /*onDragStart*/ ctx[4],
+    						onDragMove: /*onDragMove*/ ctx[5]
+    					}))
+    				];
+
+    				mounted = true;
+    			}
     		},
-    		p: noop,
-    		i: noop,
-    		o: noop,
+    		p(ctx, dirty) {
+    			if (!current || dirty & /*Title*/ 4) set_data(t0, /*Title*/ ctx[2]);
+
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty & /*$$scope*/ 2048)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[11], !current ? -1 : dirty, null, null);
+    				}
+    			}
+
+    			if (/*resizable*/ ctx[3]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*resizable*/ 8) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block_1$1(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(div4, null);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+
+    			if (!current || dirty & /*Applet, State*/ 3) {
+    				set_style(div4, "left", /*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x + "px");
+    			}
+
+    			if (!current || dirty & /*Applet, State*/ 3) {
+    				set_style(div4, "top", /*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y + "px");
+    			}
+
+    			if (!current || dirty & /*State*/ 1) {
+    				set_style(div4, "width", /*State*/ ctx[0].Width + "px");
+    			}
+
+    			if (!current || dirty & /*State*/ 1) {
+    				set_style(div4, "height", /*State*/ ctx[0].Height + "px\n  ");
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(iconbutton.$$.fragment, local);
+    			transition_in(default_slot, local);
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(iconbutton.$$.fragment, local);
+    			transition_out(default_slot, local);
+    			transition_out(if_block);
+    			current = false;
+    		},
     		d(detaching) {
-    			if (detaching) detach(div);
+    			if (detaching) detach(div4);
+    			destroy_component(iconbutton);
+    			if (default_slot) default_slot.d(detaching);
+    			if (if_block) if_block.d();
+    			mounted = false;
+    			run_all(dispose);
     		}
     	};
     }
 
-
-    let ToolboxStateSet = new WeakMap();
-
-    function instance$3($$self, $$props, $$invalidate) {
-    	var _a;
-    	let { Applet } = $$props;
-    	let { preferredPosition } = $$props;
-    	let { PositionAround } = $$props;
-    	let Offset;
-
-    	if (Applet != null) {
-    		Offset = ((_a = ToolboxStateSet.get(Applet)) === null || _a === void 0
-    		? void 0
-    		: _a.Offset) || PositionAround(preferredPosition, 32, 32);
-
-    		ToolboxStateSet.set(Applet, { Offset }); // reactive statement!
-    	}
-
-    	$$self.$$set = $$props => {
-    		if ("Applet" in $$props) $$invalidate(0, Applet = $$props.Applet);
-    		if ("preferredPosition" in $$props) $$invalidate(1, preferredPosition = $$props.preferredPosition);
-    		if ("PositionAround" in $$props) $$invalidate(2, PositionAround = $$props.PositionAround);
-    	};
-
-    	return [Applet, preferredPosition, PositionAround];
-    }
-
-    class ToolboxView extends SvelteComponent {
-    	constructor(options) {
-    		super();
-
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
-    			Applet: 0,
-    			preferredPosition: 1,
-    			PositionAround: 2
-    		});
-    	}
-    }
-
-    //----------------------------------------------------------------------------//
-    /**** tintedBitmapAsURL ****/
-    function tintedBitmapAsURL(Bitmap, TintColor) {
-        expectInstanceOf('bitmap', Bitmap, HTMLImageElement, 'HTML image element');
-        expectColor('tint color', TintColor);
-        if (!Bitmap.complete)
-            throwError('InvalidArgument: the given bitmap has not yet been completely loaded');
-        var Canvas = document.createElement('canvas');
-        Canvas.width = Bitmap.width;
-        Canvas.height = Bitmap.height;
-        var Context = Canvas.getContext('2d');
-        Context.drawImage(Bitmap, 0, 0);
-        Context.globalCompositeOperation = 'source-in';
-        Context.fillStyle = TintColor;
-        Context.fillRect(0, 0, Bitmap.width, Bitmap.height);
-        return Canvas.toDataURL('image/png');
-    }
-
-    var css_248z$2 = ".WAD-IconButton.svelte-1gja2ey{display:block;position:absolute;width:32px;height:32px;background:var(--normal-image-url)}.WAD-IconButton.svelte-1gja2ey:hover{background:var(--hovered-image-url)}.WAD-IconButton.active.svelte-1gja2ey{background:var(--active-image-url)}";
-    styleInject(css_248z$2,{"insertAt":"top"});
-
-    /* src/IconButton.svelte generated by Svelte v3.38.3 */
-
-    function create_fragment$2(ctx) {
+    // (138:4) {#if resizable}
+    function create_if_block_1$1(ctx) {
     	let div;
-    	let div_style_value;
+    	let iconbutton;
+    	let current;
+    	let mounted;
+    	let dispose;
 
-    	let div_levels = [
-    		{ class: "WAD-IconButton" },
-    		/*$$restProps*/ ctx[4],
-    		{
-    			style: div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n"
-    		}
-    	];
+    	iconbutton = new IconButton({
+    			props: { ImageURL: ResizeHandle_ImageURL }
+    		});
 
+    	let div_levels = [{ class: "WAD-ResizeHandle" }, /*$$restProps*/ ctx[9]];
     	let div_data = {};
 
     	for (let i = 0; i < div_levels.length; i += 1) {
@@ -1716,93 +2061,385 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return {
     		c() {
     			div = element("div");
+    			create_component(iconbutton.$$.fragment);
     			set_attributes(div, div_data);
-    			toggle_class(div, "active", /*active*/ ctx[0]);
-    			toggle_class(div, "svelte-1gja2ey", true);
+    			toggle_class(div, "svelte-lpux1e", true);
     		},
     		m(target, anchor) {
     			insert(target, div, anchor);
+    			mount_component(iconbutton, div, null);
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = action_destroyer(asDraggable.call(null, div, {
+    					onDragStart: /*startResizing*/ ctx[6],
+    					onDragMove: /*continueResizing*/ ctx[7],
+    					minX: 120,
+    					minY: 80
+    				}));
+
+    				mounted = true;
+    			}
     		},
-    		p(ctx, [dirty]) {
+    		p(ctx, dirty) {
     			set_attributes(div, div_data = get_spread_update(div_levels, [
-    				{ class: "WAD-IconButton" },
-    				dirty & /*$$restProps*/ 16 && /*$$restProps*/ ctx[4],
-    				dirty & /*normalImageURL, hoveredImageURL, activeImageURL*/ 14 && div_style_value !== (div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[1] + ");\n  --hovered-image-url:url(" + /*hoveredImageURL*/ ctx[2] + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[3] + ");\n") && { style: div_style_value }
+    				{ class: "WAD-ResizeHandle" },
+    				dirty & /*$$restProps*/ 512 && /*$$restProps*/ ctx[9]
     			]));
 
-    			toggle_class(div, "active", /*active*/ ctx[0]);
-    			toggle_class(div, "svelte-1gja2ey", true);
+    			toggle_class(div, "svelte-lpux1e", true);
     		},
-    		i: noop,
-    		o: noop,
+    		i(local) {
+    			if (current) return;
+    			transition_in(iconbutton.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(iconbutton.$$.fragment, local);
+    			current = false;
+    		},
     		d(detaching) {
     			if (detaching) detach(div);
+    			destroy_component(iconbutton);
+    			mounted = false;
+    			dispose();
     		}
     	};
     }
-    const hoveredColor = "#FFEC2E";
-    const activeColor = "#D3FF4B";
 
-    function instance$2($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["ImageURL","active"];
+    function create_fragment$3(ctx) {
+    	let if_block_anchor;
+    	let current;
+    	let if_block = /*Applet*/ ctx[1] != null && /*State*/ ctx[0].isVisible && create_if_block$2(ctx);
+
+    	return {
+    		c() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, [dirty]) {
+    			if (/*Applet*/ ctx[1] != null && /*State*/ ctx[0].isVisible) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*Applet, State*/ 3) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block$2(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach(if_block_anchor);
+    		}
+    	};
+    }
+
+
+
+    /**** normal CloseButton and ResizeHandle image as Data URL ****/
+    let CloseButton_ImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC";
+
+    let ResizeHandle_ImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC";
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	const omit_props_names = ["Applet","Title","resizable","State","PositionAroundPreferredPosition"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
-    	let { ImageURL } = $$props; // bitmap as Data URL
-    	let { active = false } = $$props;
-    	let normalImageURL = ""; // just for the beginning
-    	let hoveredImageURL = ""; // dto.
-    	let activeImageURL = ""; // dto.
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	const dispatch = createEventDispatcher();
+    	let { Applet } = $$props;
+    	let { Title } = $$props;
+    	let { resizable = false } = $$props;
+    	let { State } = $$props;
+    	let { PositionAroundPreferredPosition } = $$props;
 
-    	function tintOriginalImage() {
-    		$$invalidate(2, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
-    		$$invalidate(3, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
-    		$$invalidate(6, auxImage = undefined);
+    	/**** Event Handling ****/
+    	function onDragStart() {
+    		return State.Offset;
     	}
 
-    	let auxImage;
+    	function onDragMove(x, y) {
+    		$$invalidate(0, State.Offset = { x, y }, State);
+    	}
+
+    	function startResizing() {
+    		return { x: State.Width, y: State.Height };
+    	}
+
+    	function continueResizing(x, y) {
+    		$$invalidate(0, State.Width = x, State);
+    		$$invalidate(0, State.Height = y, State);
+    	}
+
+    	function closeDialog() {
+    		$$invalidate(0, State.isVisible = false, State);
+    		dispatch("close");
+    	}
 
     	$$self.$$set = $$new_props => {
     		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(4, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("ImageURL" in $$new_props) $$invalidate(5, ImageURL = $$new_props.ImageURL);
-    		if ("active" in $$new_props) $$invalidate(0, active = $$new_props.active);
+    		$$invalidate(9, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("Applet" in $$new_props) $$invalidate(1, Applet = $$new_props.Applet);
+    		if ("Title" in $$new_props) $$invalidate(2, Title = $$new_props.Title);
+    		if ("resizable" in $$new_props) $$invalidate(3, resizable = $$new_props.resizable);
+    		if ("State" in $$new_props) $$invalidate(0, State = $$new_props.State);
+    		if ("PositionAroundPreferredPosition" in $$new_props) $$invalidate(10, PositionAroundPreferredPosition = $$new_props.PositionAroundPreferredPosition);
+    		if ("$$scope" in $$new_props) $$invalidate(11, $$scope = $$new_props.$$scope);
     	};
 
     	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*ImageURL, auxImage*/ 96) {
-    			{
-    				if (ImageURL == null) {
-    					$$invalidate(1, normalImageURL = $$invalidate(2, hoveredImageURL = $$invalidate(3, activeImageURL = "")));
-    				} else {
-    					$$invalidate(1, normalImageURL = ImageURL);
-    					$$invalidate(6, auxImage = document.createElement("img"));
-    					$$invalidate(6, auxImage.src = ImageURL, auxImage);
+    		if ($$self.$$.dirty & /*Applet, State, PositionAroundPreferredPosition*/ 1027) {
+    			if (Applet != null && isNaN(State.Offset.x)) {
+    				// requires "$:"
+    				let GeometryOnDisplay = Applet.GeometryOnDisplay;
 
-    					if (auxImage.complete) {
-    						// just in case
-    						tintOriginalImage();
-    					} else {
-    						auxImage.addEventListener("load", tintOriginalImage);
+    				let PositionOnDisplay = PositionAroundPreferredPosition(State.Width, State.Height);
+
+    				$$invalidate(0, State = Object.assign(Object.assign({}, State), {
+    					Offset: {
+    						x: PositionOnDisplay.x - GeometryOnDisplay.x,
+    						y: PositionOnDisplay.y - GeometryOnDisplay.y
     					}
+    				}));
+    			}
+    		}
+    	};
+
+    	return [
+    		State,
+    		Applet,
+    		Title,
+    		resizable,
+    		onDragStart,
+    		onDragMove,
+    		startResizing,
+    		continueResizing,
+    		closeDialog,
+    		$$restProps,
+    		PositionAroundPreferredPosition,
+    		$$scope,
+    		slots
+    	];
+    }
+
+    class Dialog extends SvelteComponent {
+    	constructor(options) {
+    		super();
+
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
+    			Applet: 1,
+    			Title: 2,
+    			resizable: 3,
+    			State: 0,
+    			PositionAroundPreferredPosition: 10
+    		});
+    	}
+    }
+
+    /* src/ToolboxView.svelte generated by Svelte v3.38.3 */
+
+    function create_if_block$1(ctx) {
+    	let dialog;
+    	let updating_State;
+    	let current;
+
+    	function dialog_State_binding(value) {
+    		/*dialog_State_binding*/ ctx[4](value);
+    	}
+
+    	let dialog_props = {
+    		class: "WAD-Toolbox",
+    		Applet: /*Applet*/ ctx[0],
+    		Title: "WAT-Designer",
+    		resizable: false,
+    		PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[1]
+    	};
+
+    	if (/*$ToolboxState*/ ctx[2] !== void 0) {
+    		dialog_props.State = /*$ToolboxState*/ ctx[2];
+    	}
+
+    	dialog = new Dialog({ props: dialog_props });
+    	binding_callbacks.push(() => bind(dialog, "State", dialog_State_binding));
+    	dialog.$on("close", /*onClose*/ ctx[3]);
+
+    	return {
+    		c() {
+    			create_component(dialog.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(dialog, target, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			const dialog_changes = {};
+    			if (dirty & /*Applet*/ 1) dialog_changes.Applet = /*Applet*/ ctx[0];
+    			if (dirty & /*PositionAroundPreferredPosition*/ 2) dialog_changes.PositionAroundPreferredPosition = /*PositionAroundPreferredPosition*/ ctx[1];
+
+    			if (!updating_State && dirty & /*$ToolboxState*/ 4) {
+    				updating_State = true;
+    				dialog_changes.State = /*$ToolboxState*/ ctx[2];
+    				add_flush_callback(() => updating_State = false);
+    			}
+
+    			dialog.$set(dialog_changes);
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(dialog.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(dialog.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(dialog, detaching);
+    		}
+    	};
+    }
+
+    function create_fragment$2(ctx) {
+    	let if_block_anchor;
+    	let current;
+    	let if_block = /*$ToolboxState*/ ctx[2].isVisible && create_if_block$1(ctx);
+
+    	return {
+    		c() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, [dirty]) {
+    			if (/*$ToolboxState*/ ctx[2].isVisible) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*$ToolboxState*/ 4) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block$1(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach(if_block_anchor);
+    		}
+    	};
+    }
+
+
+
+
+    function instance$2($$self, $$props, $$invalidate) {
+    	let $ToolboxState;
+    	component_subscribe($$self, ToolboxState, $$value => $$invalidate(2, $ToolboxState = $$value));
+    	let { Applet } = $$props;
+    	let { PositionAroundPreferredPosition } = $$props;
+
+    	function onClose() {
+    		let currentToolboxState = $ToolboxState;
+    		ToolboxState.set(Object.assign(Object.assign({}, currentToolboxState), { isVisible: true })); // because...
+    		chosenApplet.set(undefined); // ..."chosenApplet" decides about visibility
+    	}
+
+    	function dialog_State_binding(value) {
+    		$ToolboxState = value;
+    		ToolboxState.set($ToolboxState);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ("Applet" in $$props) $$invalidate(0, Applet = $$props.Applet);
+    		if ("PositionAroundPreferredPosition" in $$props) $$invalidate(1, PositionAroundPreferredPosition = $$props.PositionAroundPreferredPosition);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*Applet, $ToolboxState*/ 5) {
+    			if (Applet != null) {
+    				// needs "$:"
+    				if (isNaN($ToolboxState.Width)) {
+    					ToolboxState.set({
+    						isVisible: true,
+    						Width: 160,
+    						Height: 264,
+    						Offset: { x: NaN, y: NaN }, // but let "Dialog" compute actual position
+    						
+    					});
     				}
     			}
     		}
     	};
 
     	return [
-    		active,
-    		normalImageURL,
-    		hoveredImageURL,
-    		activeImageURL,
-    		$$restProps,
-    		ImageURL,
-    		auxImage
+    		Applet,
+    		PositionAroundPreferredPosition,
+    		$ToolboxState,
+    		onClose,
+    		dialog_State_binding
     	];
     }
 
-    class IconButton extends SvelteComponent {
+    class ToolboxView extends SvelteComponent {
     	constructor(options) {
     		super();
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { ImageURL: 5, active: 0 });
+
+    		init(this, options, instance$2, create_fragment$2, safe_not_equal, {
+    			Applet: 0,
+    			PositionAroundPreferredPosition: 1
+    		});
     	}
     }
 
@@ -2274,14 +2911,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     //----------------------------------------------------------------------------//
     DragDropTouch$1.DragDropTouch;
 
-    const AppletList = writable([]);
-
-    const chosenApplet = writable(undefined);
-
-    const chosenCardList = writable([]);
-
-    const chosenOverlayList = writable([]);
-
     var css_248z = "[draggable]{-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}";
     styleInject(css_248z,{"insertAt":"top"});
 
@@ -2293,17 +2922,27 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (122:4) {#if $chosenApplet !== Applet}
+    // (93:4) {#if $chosenApplet !== Applet}
     function create_if_block_1(ctx) {
     	let designerbutton;
+    	let updating_preferredPosition;
     	let current;
 
-    	designerbutton = new DesignerButton({
-    			props: {
-    				Applet: /*Applet*/ ctx[9],
-    				startDesigning: /*startDesigning*/ ctx[0]
-    			}
-    		});
+    	function designerbutton_preferredPosition_binding(value) {
+    		/*designerbutton_preferredPosition_binding*/ ctx[7](value);
+    	}
+
+    	let designerbutton_props = {
+    		Applet: /*Applet*/ ctx[9],
+    		startDesigning: /*startDesigning*/ ctx[0]
+    	};
+
+    	if (/*preferredPosition*/ ctx[1] !== void 0) {
+    		designerbutton_props.preferredPosition = /*preferredPosition*/ ctx[1];
+    	}
+
+    	designerbutton = new DesignerButton({ props: designerbutton_props });
+    	binding_callbacks.push(() => bind(designerbutton, "preferredPosition", designerbutton_preferredPosition_binding));
 
     	return {
     		c() {
@@ -2315,7 +2954,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		p(ctx, dirty) {
     			const designerbutton_changes = {};
-    			if (dirty & /*$AppletList*/ 2) designerbutton_changes.Applet = /*Applet*/ ctx[9];
+    			if (dirty & /*$AppletList*/ 8) designerbutton_changes.Applet = /*Applet*/ ctx[9];
+
+    			if (!updating_preferredPosition && dirty & /*preferredPosition*/ 2) {
+    				updating_preferredPosition = true;
+    				designerbutton_changes.preferredPosition = /*preferredPosition*/ ctx[1];
+    				add_flush_callback(() => updating_preferredPosition = false);
+    			}
+
     			designerbutton.$set(designerbutton_changes);
     		},
     		i(local) {
@@ -2333,7 +2979,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (121:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (92:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let if_block_anchor;
@@ -2362,7 +3008,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				if (if_block) {
     					if_block.p(ctx, dirty);
 
-    					if (dirty & /*$chosenApplet, $AppletList*/ 6) {
+    					if (dirty & /*$chosenApplet, $AppletList*/ 12) {
     						transition_in(if_block, 1);
     					}
     				} else {
@@ -2398,7 +3044,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (129:2) {#if $chosenApplet !== null}
+    // (100:2) {#if $chosenApplet !== null}
     function create_if_block(ctx) {
     	let toolboxview;
     	let current;
@@ -2406,8 +3052,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	toolboxview = new ToolboxView({
     			props: {
     				Applet: /*$chosenApplet*/ ctx[2],
-    				preferredPosition: /*preferredPosition*/ ctx[3],
-    				PositionAround
+    				PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[4]
     			}
     		});
 
@@ -2445,7 +3090,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let each_1_lookup = new Map();
     	let t;
     	let current;
-    	let each_value = /*$AppletList*/ ctx[1];
+    	let each_value = /*$AppletList*/ ctx[3];
     	const get_key = ctx => /*Applet*/ ctx[9]["uniqueId"];
 
     	for (let i = 0; i < each_value.length; i += 1) {
@@ -2492,8 +3137,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			current = true;
     		},
     		p(ctx, [dirty]) {
-    			if (dirty & /*$AppletList, startDesigning, $chosenApplet*/ 7) {
-    				each_value = /*$AppletList*/ ctx[1];
+    			if (dirty & /*$AppletList, startDesigning, preferredPosition, $chosenApplet*/ 15) {
+    				each_value = /*$AppletList*/ ctx[3];
     				group_outros();
     				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, t, get_each_context);
     				check_outros();
@@ -2566,10 +3211,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
 
     function instance($$self, $$props, $$invalidate) {
-    	let $AppletList;
     	let $chosenApplet;
-    	component_subscribe($$self, AppletList, $$value => $$invalidate(1, $AppletList = $$value));
+    	let $AppletList;
     	component_subscribe($$self, chosenApplet, $$value => $$invalidate(2, $chosenApplet = $$value));
+    	component_subscribe($$self, AppletList, $$value => $$invalidate(3, $AppletList = $$value));
     	const Version = "0.1.0";
 
     	function startDesigning(Applet, Target, Property) {
@@ -2582,8 +3227,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				case Target == null:
     					break;
     				case webappTinkererRuntime.ValueIsName(Target):
+    					//        chooseMaster
     					break;
     				case webappTinkererRuntime.ValueIsVisual(Target):
+    					//        chooseVisual
     					break;
     				default:
     					throwError("InvalidArgument: WAT master name or visual expected");
@@ -2596,63 +3243,36 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		console.log("WAD is running");
     	});
 
-    	webappTinkererRuntime.ready(() => {
-    		setInterval(
-    			() => {
-    				/**** monitor Applets ****/
-    				let AppletsInDocument = webappTinkererRuntime.AppletPeersInDocument().map(AppletPeer => webappTinkererRuntime.VisualForElement(AppletPeer)).filter(Applet => Applet.mayBeDesigned); /**** monitor Masters ****/ /*
-      import { MasterList } from './MasterList.js'
-    */
-
-    				if (ValuesDiffer(AppletsInDocument, $AppletList)) {
-    					AppletList.set(AppletsInDocument);
-    				}
-
-    				/**** monitor chosen Applet ****/
-    				if ($chosenApplet != null) {
-    					// @ts-ignore "$chosenApplet" is definitely not undefined
-    					if (AppletsInDocument.indexOf($chosenApplet) < 0) {
-    						chooseApplet(undefined);
-    					}
-    				}
-
-    				updateLayerListsOfApplet($chosenApplet);
-    			},
-    			300
-    		); /**** monitor Masters ****/ /*
-      import { MasterList } from './MasterList.js'
-    */
-    	});
-
     	/**** chooseApplet ****/
     	function chooseApplet(Applet) {
     		if (Applet !== $chosenApplet) {
     			chosenApplet.set(Applet);
-    			updateLayerListsOfApplet(Applet);
     		}
     	}
 
-    	/**** updateLayerListsOfApplet ****/
-    	function updateLayerListsOfApplet(Applet) {
-    		if (Applet == null) {
-    			chosenCardList.set([]); // semicolon is important
-    			chosenOverlayList.set([]);
-    		} else {
-    			chosenCardList.set(Applet.CardList); // dto.
-    			chosenOverlayList.set(Applet.OverlayList);
-    		}
-    	}
-
-    	/**** preferredPosition ****/
+    	/**** preferredPosition - relative to Viewport ****/
     	let preferredPosition = { x: 0, y: 0 };
+
+    	/**** PositionAroundPreferredPosition ****/
+    	function PositionAroundPreferredPosition(Width, Height) {
+    		console.log("PositionAroundPreferredPosition", preferredPosition);
+    		return PositionAround(preferredPosition, Width, Height);
+    	}
+
+    	function designerbutton_preferredPosition_binding(value) {
+    		preferredPosition = value;
+    		$$invalidate(1, preferredPosition);
+    	}
 
     	return [
     		startDesigning,
-    		$AppletList,
-    		$chosenApplet,
     		preferredPosition,
+    		$chosenApplet,
+    		$AppletList,
+    		PositionAroundPreferredPosition,
     		Version,
-    		inhibitsEventsFrom
+    		inhibitsEventsFrom,
+    		designerbutton_preferredPosition_binding
     	];
     }
 
@@ -2661,14 +3281,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		super();
 
     		init(this, options, instance, create_fragment, safe_not_equal, {
-    			Version: 4,
+    			Version: 5,
     			startDesigning: 0,
-    			inhibitsEventsFrom: 5
+    			inhibitsEventsFrom: 6
     		});
     	}
 
     	get Version() {
-    		return this.$$.ctx[4];
+    		return this.$$.ctx[5];
     	}
 
     	get startDesigning() {
