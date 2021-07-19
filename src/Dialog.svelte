@@ -11,6 +11,8 @@
     font-size:14px; line-height:normal; text-align:left;
     color:#CCCCCC;
 
+    pointer-events:auto;
+
     -webkit-touch-callout:none;
     -ms-touch-action:none; touch-action:none;
     -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; user-select:none;
@@ -36,7 +38,7 @@
     padding:0px 4px 0px 4px;
     background-color:transparent;
     line-height:24px; color:#7FFF00; /* chartreuse */
-    pointer-events:none;
+    /* pointer-events:none; */
   }
 
 /**** CloseButton ****/
@@ -106,15 +108,17 @@
 
   export let Applet:WAT_Applet
   export let Title:string
-  export let preferredPosition:WAT_Position
-  export let PositionAround:(preferredPosition:WAT_Position, Width:WAT_Dimension,Height:WAT_Dimension) => WAT_Position
-  export let State:WAD_DialogState
   export let resizable:boolean = false
+  export let State:WAD_DialogState
+  export let PositionAroundPreferredPosition:(Width:WAT_Dimension,Height:WAT_Dimension) => WAT_Position
 
-  if (Applet != null) {
-    State.Offset = (
-      State.Offset || PositionAround(preferredPosition, State.Width,State.Height)
-    )
+$:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
+    let GeometryOnDisplay = Applet.GeometryOnDisplay
+    let PositionOnDisplay = PositionAroundPreferredPosition(State.Width,State.Height)
+    State = { ...State, Offset:{
+      x: PositionOnDisplay.x - GeometryOnDisplay.x,
+      y: PositionOnDisplay.y - GeometryOnDisplay.y
+    }}
   }
 
 /**** Event Handling ****/
@@ -150,7 +154,7 @@
     </div>
 
     {#if resizable}
-      <div class="WAD-ResizeHandle"use:asDraggable={{
+      <div class="WAD-ResizeHandle" {...$$restProps} use:asDraggable={{
         onDragStart:startResizing, onDragMove:continueResizing,
         minX:120,minY:80
       }}>
