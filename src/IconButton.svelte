@@ -29,6 +29,7 @@
 <script lang="ts">
   export let ImageURL:string                               // bitmap as Data URL
   export let active:boolean = false
+  export let style:string   = ''  // because {...$$restProps} does not help here
 
   let normalImageURL:string  = ''                      // just for the beginning
   let hoveredImageURL:string = ''                                        // dto.
@@ -59,9 +60,10 @@
   }
 </script>
 
-<div class="WAD-IconButton" class:active={active} {...$$restProps} style="
-  --normal-image-url:url({normalImageURL});
-  --hovered-image-url:url({hoveredImageURL});
-  --active-image-url:url({activeImageURL});
-"></div>
+<div class="WAD-IconButton" class:active={active} {...$$restProps} style={
+  `--normal-image-url:url(${normalImageURL});`   +
+  `--hovered-image-url:url(${hoveredImageURL});` +
+  `--active-image-url:url(${activeImageURL});`   +
+  style
+}></div>
 
