@@ -65,6 +65,10 @@
     AppletPeersInDocument
   } from 'webapp-tinkerer-runtime'
 
+/**** Svelte Stores ****/
+
+  import { AppletList } from './AppletList.js'
+
 /**** Svelte Components ****/
 
   import DesignerButton from './DesignerButton.svelte'
@@ -99,8 +103,10 @@
         case (Target == null):
           break
         case ValueIsName(Target):
+//        chooseMaster
           break
         case ValueIsVisual(Target):
+//        chooseVisual
           break
         default: throwError('InvalidArgument: WAT master name or visual expected')
       }
@@ -122,74 +128,21 @@
   })
 
 //----------------------------------------------------------------------------//
-//                                 Monitoring                                 //
-//----------------------------------------------------------------------------//
-
-  import { AppletList } from './AppletList.js'
-
-  let Monitor:any
-  ready(() => {
-    Monitor = setInterval(() => {
-    /**** monitor Applets ****/
-
-      let AppletsInDocument = AppletPeersInDocument().map(
-        (AppletPeer:HTMLElement) => VisualForElement(AppletPeer)
-      ).filter((Applet:WAT_Visual) => (Applet as WAT_Applet).mayBeDesigned)
-
-      if (ValuesDiffer(AppletsInDocument,$AppletList)) {
-        (AppletList as Writable<WAT_Visual[]>).set(AppletsInDocument)
-      }
-
-    /**** monitor chosen Applet ****/
-
-      if ($chosenApplet != null) {
-// @ts-ignore "$chosenApplet" is definitely not undefined
-        if (AppletsInDocument.indexOf($chosenApplet) < 0) {
-          chooseApplet(undefined)
-        }
-      }
-
-      updateLayerListsOfApplet($chosenApplet)
-
-    /**** monitor Masters ****/
-/*
-  import { MasterList } from './MasterList.js'
-*/
-
-    }, 300)
-  })
-
-//----------------------------------------------------------------------------//
 //                                  Choices                                   //
 //----------------------------------------------------------------------------//
 
-  import { chosenApplet }      from './chosenApplet.js'
-  import { chosenCardList }    from './chosenCardList.js'
-  import { chosenOverlayList } from './chosenOverlayList.js'
+  import { chosenApplet } from './chosenApplet.js'
 
 /**** chooseApplet ****/
 
   function chooseApplet (Applet:WAT_Applet | undefined):void {
     if (Applet !== $chosenApplet) {
       (chosenApplet as Writable<WAT_Applet | undefined>).set(Applet)
-      updateLayerListsOfApplet(Applet)
-    }
-  }
-
-/**** updateLayerListsOfApplet ****/
-
-  function updateLayerListsOfApplet (Applet:WAT_Applet | undefined):void {
-    if (Applet == null) {
-      (chosenCardList as Writable<WAT_Card[]>).set([]);// semicolon is important
-      (chosenOverlayList as Writable<WAT_Overlay[]>).set([])
-    } else {
-      (chosenCardList as Writable<WAT_Card[]>).set(Applet.CardList);     // dto.
-      (chosenOverlayList as Writable<WAT_Overlay[]>).set(Applet.OverlayList)
     }
   }
 
 
-/**** preferredPosition ****/
+/**** preferredPosition - relative to Viewport ****/
 
   let preferredPosition:WAT_Position = { x:0,y:0 }
 
@@ -207,6 +160,15 @@
     return { x:Math.round(x),y:Math.round(y) }
   }
 
+/**** PositionAroundPreferredPosition ****/
+
+  function PositionAroundPreferredPosition (
+    Width:WAT_Dimension,Height:WAT_Dimension
+  ):WAT_Position {
+console.log('PositionAroundPreferredPosition',preferredPosition)
+    return PositionAround(preferredPosition, Width,Height)
+  }
+
 
 
 
@@ -221,13 +183,13 @@
   {#each $AppletList as Applet (Applet['uniqueId'])}
     {#if $chosenApplet !== Applet}
       <DesignerButton {Applet} {startDesigning}
-        let:preferredPosition={preferredPosition}
+        bind:preferredPosition={preferredPosition}
       />
     {/if}
   {/each}
 
   {#if $chosenApplet !== null}
-    <ToolboxView Applet={$chosenApplet} {preferredPosition} {PositionAround}/>
+    <ToolboxView Applet={$chosenApplet} {PositionAroundPreferredPosition}/>
   {/if}
 
 </div>
