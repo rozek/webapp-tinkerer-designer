@@ -1,21 +1,15 @@
-<style>
-  .WAD-Toolbox {
-    display:block; position:absolute;
-    width:160px; height:264px;
-  }
-</style>
-
 <script context="module" lang="ts">
   import type {
     WAT_Applet, WAT_Dimension, WAT_Position
   } from 'webapp-tinkerer-runtime'
   import type { WAD_DialogState } from './Dialog.svelte'
 
-  import      Dialog      from './Dialog.svelte'
-  import    IconButton    from './IconButton.svelte'
-  import { chosenApplet } from './chosenApplet.js'
-  import { ToolboxState } from './ToolboxState.js'
-  import {  NudgerState } from './NudgerState.js'
+  import       Dialog       from './Dialog.svelte'
+  import     IconButton     from './IconButton.svelte'
+  import {  chosenApplet  } from './chosenApplet.js'
+  import {  ToolboxState  } from './ToolboxState.js'
+  import {  NudgerState   } from './NudgerState.js'
+  import { InspectorState } from './InspectorState.js'
 
 /**** normal IconButton images as Data URLs ****/
 
@@ -78,6 +72,11 @@ $:if (Applet != null) {                                            // needs "$:"
     let currentState = $NudgerState
     NudgerState.set({ ...currentState, isVisible:! currentState.isVisible })
   }
+
+  function toggleInspectorView () {
+    let currentState = $InspectorState
+    InspectorState.set({ ...currentState, isVisible:! currentState.isVisible })
+  }
 </script>
 
 {#if $ToolboxState.isVisible}
@@ -89,7 +88,8 @@ $:if (Applet != null) {                                            // needs "$:"
     <IconButton style="left:44px;  top:4px" ImageURL={UnlockedImageURL} activeURL={LockedImageURL}/>
     <IconButton style="left:84px;  top:4px" ImageURL={NudgerImageURL}
       active={$NudgerState.isVisible} on:click={toggleNudgerView}/>
-    <IconButton style="left:124px; top:4px" ImageURL={InspectorImageURL}/>
+    <IconButton style="left:124px; top:4px" ImageURL={InspectorImageURL}
+      active={$InspectorState.isVisible} on:click={toggleInspectorView}/>
 
     <IconButton style="left:4px;   top:44px" ImageURL={UndoImageURL}/>
     <IconButton style="left:44px;  top:44px" ImageURL={RedoImageURL}/>
