@@ -67,12 +67,14 @@
 
 /**** Svelte Stores ****/
 
-  import { AppletList } from './AppletList.js'
+  import { AppletList  } from './AppletList.js'
+  import { NudgerState } from './NudgerState.js'
 
 /**** Svelte Components ****/
 
   import DesignerButton from './DesignerButton.svelte'
   import ToolboxView    from './ToolboxView.svelte'
+  import NudgerView     from './NudgerView.svelte'
 
 </script>
 
@@ -187,8 +189,12 @@
     {/if}
   {/each}
 
-  {#if $chosenApplet !== null}
+  {#if ($chosenApplet !== null)}
     <ToolboxView Applet={$chosenApplet} {PositionAroundPreferredPosition}/>
+  {/if}
+
+  {#if ($chosenApplet !== null) && $NudgerState.isVisible }
+    <NudgerView Applet={$chosenApplet} {PositionAroundPreferredPosition}/>
   {/if}
 
 </div>
