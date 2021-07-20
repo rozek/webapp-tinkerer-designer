@@ -41,6 +41,12 @@ $:if (Applet != null) {                                            // needs "$:"
 {#if $InspectorState.isVisible}
   <Dialog class="WAD-Inspector" {Applet} Title="WAT-Designer: Inspector" resizable={true}
     {PositionAroundPreferredPosition} bind:State={$InspectorState}
+    minWidth={300} minHeight={420}
   >
+    <div name="TabStrip" style="
+      display:block; position:relative;
+      height:74px; overflow:visible;
+      border-bottom: solid 1px #454545;
+    "></div>
   </Dialog>
 {/if}
