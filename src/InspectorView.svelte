@@ -14,6 +14,8 @@
   import     IconButton     from './IconButton.svelte'
   import {  chosenApplet  } from './chosenApplet.js'
   import { InspectorState } from './InspectorState.js'
+  import {  MessageState  } from './MessageState.js'
+  import    MessageView     from './MessageView.svelte'
 
 /**** normal IconButton images as Data URLs ****/
 
@@ -78,5 +80,13 @@ $:if (Applet != null) {                                            // needs "$:"
       <IconButton style="left:210px; top:40px" ImageURL={SelectionScriptImageURL}/>
       <IconButton style="left:250px; top:40px" ImageURL={SelectionContentsImageURL}/>
     </div>
+
+    <div name="PaneArea" style="
+      display:block; position:relative; flex:1 1 auto;
+      border:none; border-top:solid 1px #969696; border-bottom:solid 1px #454545;
+    ">
+    </div>
+
+    <MessageView/>
   </Dialog>
 {/if}
