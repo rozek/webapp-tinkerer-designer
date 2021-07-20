@@ -87,7 +87,7 @@
 
   const normalColor  = '#969696'
   const hoveredColor = '#FFEC2E'
-  const activeColor  = '#D3FF4B'
+  const activeColor  = '#7FFF00' /* chartreuse */
 
 //----------------------------------------------------------------------------//
 //                             Designer Interface                             //
