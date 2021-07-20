@@ -2431,7 +2431,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	iconbutton1 = new IconButton({
     			props: {
     				style: "left:44px;  top:4px",
-    				active: true,
     				ImageURL: UnlockedImageURL,
     				activeURL: LockedImageURL
     			}
