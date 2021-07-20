@@ -8,10 +8,10 @@
   }
 
   let currentlyChosenApplet = undefined
-  let currentNudgerState   = Object.assign({}, initialNudgerState)
+  let currentNudgerState    = Object.assign({}, initialNudgerState)
 
-  const NudgerStateStore = writable(currentNudgerState)   // subscription mgmt
-  const NudgerStateSet   = new WeakMap()      // applet-specific Nudger states
+  const NudgerStateStore = writable(currentNudgerState)    // subscription mgmt.
+  const NudgerStateSet   = new WeakMap()        // applet-specific Nudger states
 
 /**** keep track of changes in "chosenApplet" ****/
 
