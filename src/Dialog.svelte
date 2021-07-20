@@ -136,7 +136,7 @@ $:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
 </script>
 
 {#if (Applet != null) && State.isVisible}
-  <div class="WAD-Dialog" style="
+  <div {...$$restProps} class="WAD-Dialog" style="
     left:{Applet.x + State.Offset.x}px; top:{Applet.y + State.Offset.y}px;
     width:{State.Width}px; height:{State.Height}px
   ">
@@ -154,7 +154,7 @@ $:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
     </div>
 
     {#if resizable}
-      <div class="WAD-ResizeHandle" {...$$restProps} use:asDraggable={{
+      <div class="WAD-ResizeHandle" use:asDraggable={{
         onDragStart:startResizing, onDragMove:continueResizing,
         minX:120,minY:80
       }}>
