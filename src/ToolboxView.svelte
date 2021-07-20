@@ -15,6 +15,7 @@
   import    IconButton    from './IconButton.svelte'
   import { chosenApplet } from './chosenApplet.js'
   import { ToolboxState } from './ToolboxState.js'
+  import {  NudgerState } from './NudgerState.js'
 
 /**** normal IconButton images as Data URLs ****/
 
@@ -72,6 +73,11 @@ $:if (Applet != null) {                                            // needs "$:"
     ToolboxState.set({ ...currentToolboxState,isVisible:true })    // because...
     chosenApplet.set(undefined)    // ..."chosenApplet" decides about visibility
   }
+
+  function toggleNudgerView () {
+    let currentState = $NudgerState
+    NudgerState.set({ ...currentState, isVisible:! currentState.isVisible })
+  }
 </script>
 
 {#if $ToolboxState.isVisible}
@@ -81,7 +87,8 @@ $:if (Applet != null) {                                            // needs "$:"
   >
     <IconButton style="left:4px;   top:4px" ImageURL={LayouterImageURL}/>
     <IconButton style="left:44px;  top:4px" ImageURL={UnlockedImageURL} activeURL={LockedImageURL}/>
-    <IconButton style="left:84px;  top:4px" ImageURL={NudgerImageURL}/>
+    <IconButton style="left:84px;  top:4px" ImageURL={NudgerImageURL}
+      active={$NudgerState.isVisible} on:click={toggleNudgerView}/>
     <IconButton style="left:124px; top:4px" ImageURL={InspectorImageURL}/>
 
     <IconButton style="left:4px;   top:44px" ImageURL={UndoImageURL}/>
