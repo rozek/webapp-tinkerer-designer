@@ -5,13 +5,17 @@
     background:var(--normal-image-url);
   }
 
-  .WAD-IconButton:hover {
+  .WAD-IconButton:not([disabled]):hover,
+  .WAD-IconButton[disabled="false"]:hover {
     background:var(--hovered-image-url);
   }
 
-  .WAD-IconButton.active:not(:hover) {
+  .WAD-IconButton.active:not([disabled]):not(:hover),
+  .WAD-IconButton.active[disabled="false"]:not(:hover) {
     background:var(--active-image-url);
   }
+
+  .WAD-IconButton[disabled="true"] { opacity:0.3 }
 </style>
 
 <script context="module" lang="ts">
@@ -21,7 +25,7 @@
 
   const normalColor  = '#969696'
   const hoveredColor = '#FFEC2E'
-  const activeColor  = '#D3FF4B'
+  const activeColor  = '#7FFF00' /* chartreuse */
 
 
 </script>
@@ -82,7 +86,7 @@
   }
 </script>
 
-<div class="WAD-IconButton" class:active={active} {...$$restProps} style={
+<div {...$$restProps} class="WAD-IconButton" class:active={active} style={
   `--normal-image-url:url(${normalImageURL});`   +
   `--hovered-image-url:url(${active ? activeHoveredImageURL : hoveredImageURL});` +
   `--active-image-url:url(${activeImageURL});`   +
