@@ -9,7 +9,7 @@
     background:var(--hovered-image-url);
   }
 
-  .WAD-IconButton.active {
+  .WAD-IconButton.active:not(:hover) {
     background:var(--active-image-url);
   }
 </style>
@@ -28,41 +28,63 @@
 
 <script lang="ts">
   export let ImageURL:string                               // bitmap as Data URL
-  export let active:boolean = false
-  export let style:string   = ''  // because {...$$restProps} does not help here
+  export let active:boolean   = false
+  export let activeURL:string = undefined     // opt. image URL for active state
+  export let style:string     = ''  // since {...$$restProps} does not help here
 
-  let normalImageURL:string  = ''                      // just for the beginning
-  let hoveredImageURL:string = ''                                        // dto.
-  let activeImageURL:string  = ''                                        // dto.
-
-  function tintOriginalImage () {
-    hoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,hoveredColor)
-    activeImageURL  = tintedBitmapAsURL(auxImage as HTMLImageElement,activeColor)
-
-    auxImage = undefined
-  }
+  let normalImageURL:string         = ''               // just for the beginning
+  let hoveredImageURL:string        = ''                                 // dto.
+  let activeImageURL:string         = ''                                 // dto.
+  let activeHoveredImageURL:string  = ''                                 // dto.
 
   let auxImage:HTMLImageElement | undefined
   $:{
-    if (ImageURL == null) {
-      normalImageURL = hoveredImageURL = activeImageURL = ''
-    } else {
-      normalImageURL = ImageURL
+    switch (true) {
+      case (ImageURL == null):
+        normalImageURL = hoveredImageURL = activeImageURL = ''
+      case (ImageURL === normalImageURL):       // prevents multiple conversions
+        break
+      default:
+        normalImageURL = ImageURL
 
-      auxImage = document.createElement('img')
-        auxImage.src = ImageURL as string
+        auxImage = document.createElement('img')
+          auxImage.src = ImageURL as string
+        if (auxImage.complete) {                                 // just in case
+          tintOriginalImage()
+        } else {
+          auxImage.addEventListener('load', tintOriginalImage)
+        }
+    }
+  }
+
+  function tintOriginalImage () {
+    hoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,hoveredColor)
+
+    if (activeURL == null) {
+      activeImageURL        = tintedBitmapAsURL(auxImage as HTMLImageElement,activeColor)
+      activeHoveredImageURL = hoveredImageURL
+      auxImage = undefined
+    } else {
+      auxImage = document.createElement('img')    // new image element necessary
+        auxImage.src = activeURL as string
       if (auxImage.complete) {                                   // just in case
-        tintOriginalImage()
+        tintActiveImage()
       } else {
-        auxImage.addEventListener('load', tintOriginalImage)
+        auxImage.addEventListener('load', tintActiveImage)
       }
     }
+  }
+
+  function tintActiveImage () {
+    activeImageURL        = tintedBitmapAsURL(auxImage as HTMLImageElement,activeColor)
+    activeHoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,hoveredColor)
+    auxImage = undefined
   }
 </script>
 
 <div class="WAD-IconButton" class:active={active} {...$$restProps} style={
   `--normal-image-url:url(${normalImageURL});`   +
-  `--hovered-image-url:url(${hoveredImageURL});` +
+  `--hovered-image-url:url(${active ? activeHoveredImageURL : hoveredImageURL});` +
   `--active-image-url:url(${activeImageURL});`   +
   style
 }></div>
