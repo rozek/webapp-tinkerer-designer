@@ -90,7 +90,7 @@ $:if (Applet != null) {                                            // needs "$:"
 
     <IconButton style="left:4px;   top:84px" ImageURL={CreateImageURL}/>
     <IconButton style="left:44px;  top:84px" ImageURL={DuplicateImageURL}/>
-    <!-- -->
+<!--<IconButton style="left:84px;  top:84px" ImageURL={}/>-->
     <IconButton style="left:124px; top:84px" ImageURL={SnapToGridImageURL}/>
 
     <IconButton style="left:4px;   top:124px" ImageURL={CutImageURL}/>
