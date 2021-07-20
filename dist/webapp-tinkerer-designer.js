@@ -294,6 +294,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
         };
     }
+    // TODO figure out if we still want to support
+    // shorthand events, or if we want to implement
+    // a real bubbling mechanism
+    function bubble(component, event) {
+        const callbacks = component.$$.callbacks[event.type];
+        if (callbacks) {
+            // @ts-ignore
+            callbacks.slice().forEach(fn => fn.call(this, event));
+        }
+    }
 
     const dirty_components = [];
     const binding_callbacks = [];
@@ -739,7 +749,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
       });
 
     let currentAppletList     = [];
-      let currentlyChosenApplet$1 = undefined;
+      let currentlyChosenApplet$2 = undefined;
 
       const chosenAppletStore = writable(undefined);   // for subscription management
 
@@ -748,10 +758,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
       AppletList.subscribe((newAppletList) => {      // implements a "derived" store
         currentAppletList = newAppletList;
         if (
-          (currentlyChosenApplet$1 != null) &&
-          (newAppletList.indexOf(currentlyChosenApplet$1) < 0)
+          (currentlyChosenApplet$2 != null) &&
+          (newAppletList.indexOf(currentlyChosenApplet$2) < 0)
         ) {
-          currentlyChosenApplet$1 = undefined;
+          currentlyChosenApplet$2 = undefined;
           chosenAppletStore.set(undefined);
         }
       });
@@ -766,8 +776,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
           Applet = undefined;
         }
 
-        if (currentlyChosenApplet$1 !== Applet) {
-          currentlyChosenApplet$1 = Applet;
+        if (currentlyChosenApplet$2 !== Applet) {
+          currentlyChosenApplet$2 = Applet;
           chosenAppletStore.set(Applet);
         }
       }
@@ -779,53 +789,53 @@ var WAD = (function (exports, webappTinkererRuntime) {
         set:       setChosenApplet
       };
 
-    const initialToolboxState = {
+    const initialNudgerState = {
         isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN
       };
 
-      let currentlyChosenApplet = undefined;
-      let currentToolboxState   = Object.assign({}, initialToolboxState);
+      let currentlyChosenApplet$1 = undefined;
+      let currentNudgerState    = Object.assign({}, initialNudgerState);
 
-      const ToolboxStateStore = writable(currentToolboxState);   // subscription mgmt
-      const ToolboxStateSet   = new WeakMap();      // applet-specific Toolbox states
+      const NudgerStateStore = writable(currentNudgerState);    // subscription mgmt.
+      const NudgerStateSet   = new WeakMap();        // applet-specific Nudger states
 
     /**** keep track of changes in "chosenApplet" ****/
 
       chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet !== newChosenApplet) {
-          currentlyChosenApplet = newChosenApplet;
+        if (currentlyChosenApplet$1 !== newChosenApplet) {
+          currentlyChosenApplet$1 = newChosenApplet;
 
-          if (currentlyChosenApplet == null) {
-            currentToolboxState = Object.assign({}, initialToolboxState);
+          if (currentlyChosenApplet$1 == null) {
+            currentNudgerState = Object.assign({}, initialNudgerState);
           } else {
-            if (ToolboxStateSet.has(currentlyChosenApplet)) {
-              currentToolboxState = ToolboxStateSet.get(currentlyChosenApplet);
+            if (NudgerStateSet.has(currentlyChosenApplet$1)) {
+              currentNudgerState = NudgerStateSet.get(currentlyChosenApplet$1);
             } else {
-              currentToolboxState = Object.assign({}, initialToolboxState);
-              ToolboxStateSet.set(currentlyChosenApplet,currentToolboxState);
+              currentNudgerState = Object.assign({}, initialNudgerState);
+              NudgerStateSet.set(currentlyChosenApplet$1,currentNudgerState);
             }
-            ToolboxStateStore.set(currentToolboxState);
+            NudgerStateStore.set(currentNudgerState);
           }
         }
       });
 
-    /**** validate changes to "ToolboxState" ****/
+    /**** validate changes to "NudgerState" ****/
 
-      function setToolboxState (newToolboxState) {
-        if (currentlyChosenApplet !== null) {
-          if (webappTinkererRuntime.ValuesDiffer(currentToolboxState,newToolboxState)) {
-            currentToolboxState = Object.assign({}, newToolboxState);
-            ToolboxStateSet.set(currentlyChosenApplet,newToolboxState);
-            ToolboxStateStore.set(newToolboxState);
+      function setNudgerState (newNudgerState) {
+        if (currentlyChosenApplet$1 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentNudgerState,newNudgerState)) {
+            currentNudgerState = Object.assign({}, newNudgerState);
+            NudgerStateSet.set(currentlyChosenApplet$1,newNudgerState);
+            NudgerStateStore.set(newNudgerState);
           }
         }
       }
 
     /**** export an explicitly implemented store ****/
 
-      const ToolboxState = {
-        subscribe: (Callback) => ToolboxStateStore.subscribe(Callback),
-        set:       setToolboxState
+      const NudgerState = {
+        subscribe: (Callback) => NudgerStateStore.subscribe(Callback),
+        set:       setNudgerState
       };
 
     //----------------------------------------------------------------------------//
@@ -1178,9 +1188,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     /* src/IconButton.svelte generated by Svelte v3.38.3 */
 
-    function create_fragment$4(ctx) {
+    function create_fragment$5(ctx) {
     	let div;
     	let div_style_value;
+    	let mounted;
+    	let dispose;
 
     	let div_levels = [
     		{ class: "WAD-IconButton" },
@@ -1207,6 +1219,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		m(target, anchor) {
     			insert(target, div, anchor);
+
+    			if (!mounted) {
+    				dispose = listen(div, "click", /*click_handler*/ ctx[10]);
+    				mounted = true;
+    			}
     		},
     		p(ctx, [dirty]) {
     			set_attributes(div, div_data = get_spread_update(div_levels, [
@@ -1224,13 +1241,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		o: noop,
     		d(detaching) {
     			if (detaching) detach(div);
+    			mounted = false;
+    			dispose();
     		}
     	};
     }
     const hoveredColor = "#FFEC2E";
     const activeColor = "#D3FF4B";
 
-    function instance$4($$self, $$props, $$invalidate) {
+    function instance$5($$self, $$props, $$invalidate) {
     	const omit_props_names = ["ImageURL","active","activeURL","style"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
     	let { ImageURL } = $$props; // bitmap as Data URL
@@ -1267,6 +1286,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		$$invalidate(4, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
     		$$invalidate(5, activeHoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
     		$$invalidate(9, auxImage = undefined);
+    	}
+
+    	function click_handler(event) {
+    		bubble.call(this, $$self, event);
     	}
 
     	$$self.$$set = $$new_props => {
@@ -1312,7 +1335,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		$$restProps,
     		ImageURL,
     		activeURL,
-    		auxImage
+    		auxImage,
+    		click_handler
     	];
     }
 
@@ -1320,7 +1344,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	constructor(options) {
     		super();
 
-    		init(this, options, instance$4, create_fragment$4, safe_not_equal, {
+    		init(this, options, instance$5, create_fragment$5, safe_not_equal, {
     			ImageURL: 7,
     			active: 0,
     			activeURL: 8,
@@ -1924,7 +1948,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     /* src/Dialog.svelte generated by Svelte v3.38.3 */
 
-    function create_if_block$2(ctx) {
+    function create_if_block$3(ctx) {
     	let div4;
     	let div2;
     	let div0;
@@ -2147,10 +2171,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    function create_fragment$3(ctx) {
+    function create_fragment$4(ctx) {
     	let if_block_anchor;
     	let current;
-    	let if_block = /*Applet*/ ctx[1] != null && /*State*/ ctx[0].isVisible && create_if_block$2(ctx);
+    	let if_block = /*Applet*/ ctx[1] != null && /*State*/ ctx[0].isVisible && create_if_block$3(ctx);
 
     	return {
     		c() {
@@ -2171,7 +2195,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$2(ctx);
+    					if_block = create_if_block$3(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(if_block_anchor.parentNode, if_block_anchor);
@@ -2209,7 +2233,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     let ResizeHandle_ImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC";
 
-    function instance$3($$self, $$props, $$invalidate) {
+    function instance$4($$self, $$props, $$invalidate) {
     	const omit_props_names = ["Applet","Title","resizable","State","PositionAroundPreferredPosition"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
     	let { $$slots: slots = {}, $$scope } = $$props;
@@ -2293,7 +2317,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	constructor(options) {
     		super();
 
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
+    		init(this, options, instance$4, create_fragment$4, safe_not_equal, {
     			Applet: 1,
     			Title: 2,
     			resizable: 3,
@@ -2303,6 +2327,394 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
     }
 
+    /* src/NudgerView.svelte generated by Svelte v3.38.3 */
+
+    function create_if_block$2(ctx) {
+    	let dialog;
+    	let updating_State;
+    	let current;
+
+    	function dialog_State_binding(value) {
+    		/*dialog_State_binding*/ ctx[3](value);
+    	}
+
+    	let dialog_props = {
+    		class: "WAD-Nudger",
+    		Applet: /*Applet*/ ctx[0],
+    		Title: "WAT-Designer: Nudger",
+    		resizable: false,
+    		PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[1],
+    		$$slots: { default: [create_default_slot$1] },
+    		$$scope: { ctx }
+    	};
+
+    	if (/*$NudgerState*/ ctx[2] !== void 0) {
+    		dialog_props.State = /*$NudgerState*/ ctx[2];
+    	}
+
+    	dialog = new Dialog({ props: dialog_props });
+    	binding_callbacks.push(() => bind(dialog, "State", dialog_State_binding));
+
+    	return {
+    		c() {
+    			create_component(dialog.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(dialog, target, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			const dialog_changes = {};
+    			if (dirty & /*Applet*/ 1) dialog_changes.Applet = /*Applet*/ ctx[0];
+    			if (dirty & /*PositionAroundPreferredPosition*/ 2) dialog_changes.PositionAroundPreferredPosition = /*PositionAroundPreferredPosition*/ ctx[1];
+
+    			if (dirty & /*$$scope*/ 16) {
+    				dialog_changes.$$scope = { dirty, ctx };
+    			}
+
+    			if (!updating_State && dirty & /*$NudgerState*/ 4) {
+    				updating_State = true;
+    				dialog_changes.State = /*$NudgerState*/ ctx[2];
+    				add_flush_callback(() => updating_State = false);
+    			}
+
+    			dialog.$set(dialog_changes);
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(dialog.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(dialog.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(dialog, detaching);
+    		}
+    	};
+    }
+
+    // (39:2) <Dialog class="WAD-Nudger" {Applet} Title="WAT-Designer: Nudger" resizable={false}     {PositionAroundPreferredPosition} bind:State={$NudgerState}   >
+    function create_default_slot$1(ctx) {
+    	let iconbutton0;
+    	let t0;
+    	let iconbutton1;
+    	let t1;
+    	let iconbutton2;
+    	let t2;
+    	let iconbutton3;
+    	let t3;
+    	let iconbutton4;
+    	let t4;
+    	let iconbutton5;
+    	let t5;
+    	let iconbutton6;
+    	let t6;
+    	let iconbutton7;
+    	let current;
+
+    	iconbutton0 = new IconButton({
+    			props: {
+    				style: "left:44px; top:4px",
+    				ImageURL: MoveUpImageURL
+    			}
+    		});
+
+    	iconbutton1 = new IconButton({
+    			props: {
+    				style: "left:4px;  top:44px",
+    				ImageURL: MoveLeftImageURL
+    			}
+    		});
+
+    	iconbutton2 = new IconButton({
+    			props: {
+    				style: "left:84px; top:44px",
+    				ImageURL: MoveRightImageURL
+    			}
+    		});
+
+    	iconbutton3 = new IconButton({
+    			props: {
+    				style: "left:44px; top:84px",
+    				ImageURL: MoveDownImageURL
+    			}
+    		});
+
+    	iconbutton4 = new IconButton({
+    			props: {
+    				style: "left:184px; top:4px",
+    				ImageURL: DecreaseHeightImageURL
+    			}
+    		});
+
+    	iconbutton5 = new IconButton({
+    			props: {
+    				style: "left:144px; top:44px",
+    				ImageURL: DecreaseWidthImageURL
+    			}
+    		});
+
+    	iconbutton6 = new IconButton({
+    			props: {
+    				style: "left:224px; top:44px",
+    				ImageURL: IncreaseWidthImageURL
+    			}
+    		});
+
+    	iconbutton7 = new IconButton({
+    			props: {
+    				style: "left:184px; top:84px",
+    				ImageURL: IncreaseHeightImageURL
+    			}
+    		});
+
+    	return {
+    		c() {
+    			create_component(iconbutton0.$$.fragment);
+    			t0 = space();
+    			create_component(iconbutton1.$$.fragment);
+    			t1 = space();
+    			create_component(iconbutton2.$$.fragment);
+    			t2 = space();
+    			create_component(iconbutton3.$$.fragment);
+    			t3 = space();
+    			create_component(iconbutton4.$$.fragment);
+    			t4 = space();
+    			create_component(iconbutton5.$$.fragment);
+    			t5 = space();
+    			create_component(iconbutton6.$$.fragment);
+    			t6 = space();
+    			create_component(iconbutton7.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(iconbutton0, target, anchor);
+    			insert(target, t0, anchor);
+    			mount_component(iconbutton1, target, anchor);
+    			insert(target, t1, anchor);
+    			mount_component(iconbutton2, target, anchor);
+    			insert(target, t2, anchor);
+    			mount_component(iconbutton3, target, anchor);
+    			insert(target, t3, anchor);
+    			mount_component(iconbutton4, target, anchor);
+    			insert(target, t4, anchor);
+    			mount_component(iconbutton5, target, anchor);
+    			insert(target, t5, anchor);
+    			mount_component(iconbutton6, target, anchor);
+    			insert(target, t6, anchor);
+    			mount_component(iconbutton7, target, anchor);
+    			current = true;
+    		},
+    		p: noop,
+    		i(local) {
+    			if (current) return;
+    			transition_in(iconbutton0.$$.fragment, local);
+    			transition_in(iconbutton1.$$.fragment, local);
+    			transition_in(iconbutton2.$$.fragment, local);
+    			transition_in(iconbutton3.$$.fragment, local);
+    			transition_in(iconbutton4.$$.fragment, local);
+    			transition_in(iconbutton5.$$.fragment, local);
+    			transition_in(iconbutton6.$$.fragment, local);
+    			transition_in(iconbutton7.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(iconbutton0.$$.fragment, local);
+    			transition_out(iconbutton1.$$.fragment, local);
+    			transition_out(iconbutton2.$$.fragment, local);
+    			transition_out(iconbutton3.$$.fragment, local);
+    			transition_out(iconbutton4.$$.fragment, local);
+    			transition_out(iconbutton5.$$.fragment, local);
+    			transition_out(iconbutton6.$$.fragment, local);
+    			transition_out(iconbutton7.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(iconbutton0, detaching);
+    			if (detaching) detach(t0);
+    			destroy_component(iconbutton1, detaching);
+    			if (detaching) detach(t1);
+    			destroy_component(iconbutton2, detaching);
+    			if (detaching) detach(t2);
+    			destroy_component(iconbutton3, detaching);
+    			if (detaching) detach(t3);
+    			destroy_component(iconbutton4, detaching);
+    			if (detaching) detach(t4);
+    			destroy_component(iconbutton5, detaching);
+    			if (detaching) detach(t5);
+    			destroy_component(iconbutton6, detaching);
+    			if (detaching) detach(t6);
+    			destroy_component(iconbutton7, detaching);
+    		}
+    	};
+    }
+
+    function create_fragment$3(ctx) {
+    	let if_block_anchor;
+    	let current;
+    	let if_block = /*$NudgerState*/ ctx[2].isVisible && create_if_block$2(ctx);
+
+    	return {
+    		c() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, [dirty]) {
+    			if (/*$NudgerState*/ ctx[2].isVisible) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*$NudgerState*/ 4) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block$2(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach(if_block_anchor);
+    		}
+    	};
+    }
+
+
+
+
+    /**** normal IconButton images as Data URLs ****/
+    let MoveUpImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAh0lEQVRYR+3XQQqAMAxE0fa6PVCuq3TRjaBJpuhHiHuZ78MK9gZfHd5vFVAC/xYws2OeojGG/CDyjXMYDVjj6zuiKsgCaMB1fEdBEkAD7sZVhbQAGuCNKwopATQgOp5VCAugAdnxjEJIAA1Qx6MKrgAasDseUXgUwAO++Gdw34G3IyqgBHCBE0spSCFzAkqKAAAAAElFTkSuQmCC";
+
+    let MoveLeftImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiUlEQVRYR+3XSwqAMAxF0Xa7WVC2qzjIpBCa5ksljoV7+kDROYqvWdwfDegF/r0AIj7fUwYA7EFDFqAwPeJpgDWcBuDC4YBdOAwgDbsDTsNuAG3YDLCG7wfQCaxLuL2ItBA3gHYRd8ApJAwghYQDdpA0AAdJB6yQMoDknyPki0gSpnsa0AuUL/ACyt5IIUA+wvAAAAAASUVORK5CYII=";
+    let MoveRightImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAhklEQVRYR+3Xyw3AIAwDUFg3A2XdVj3kWuVjk6oKA+AnoyDYq3nt5vw1gGng2w2o6vVMiYjQoK8bG8BGlQEJARiQFAAJKQEQEAigAoECMhAKIAKhAjyQfwM8FxelAU+wHQ8UEAmGAjLBEEAluARABKcAyOAQgBHsApz4M9CeWl78AKaB9gZuy2VIIQlnVq4AAAAASUVORK5CYII=";
+    let MoveDownImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+2Wuw3AIAwFYV0P5HUT0VEk/kt+hRnAvjuBxF7NZzfvXwMwBbALMPNT8UqI6FdULNAOcOyzEJL9ma/egXaATAXN3lQAAiACYbE3F4AA8EBY7V0FIAAsEB57dwEIAAnCax8qAAHwBRGxDxeAALghovapAhAAFb8l9T9QsUSaMQBToL3AC0spSCGCz338AAAAAElFTkSuQmCC";
+    let DecreaseHeightImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAlElEQVRYR+2USw7AIAgF9bociOu2caEhjcXwMbDAtcRxeNBb8OnB77cCKAN5DCDio5kIADB9wlSsAf7WHAGGGesvOVAWgLblFsQvwC4TNyC2AFwgvSFyZ2CEJzSEUgDJLpmtdG1BAWg2Y94xDF1EU2XoKqYQ3tuPZuU4hppgSWoWgGSG6QNWO3kMSLR53i0DZSDcwAti40whmNIJqgAAAABJRU5ErkJggg==";
+    let DecreaseWidthImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAjUlEQVRYR+2VUQrAIAxD9bo9UK+70UGhG2o3DbiP+Fsb42vQWjavuvn8QgMkQAIXAVU9RGSJxqwGDfyXwGimrRo0AyZm4ewFs1WHGXDxNwbiHjcQ+7OPzi54y8CX5ihuQhAD/ia4eDYCOAE/eGsGookRgWcNFsIsOL06DSwRmMWO6Fv6gmmABEiABBAETmT6sCHHOCicAAAAAElFTkSuQmCC";
+    let IncreaseWidthImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAnklEQVRYR+2VYQrAIAiF67oeqOtuNBBaWDYzhPH212nvfWnmFPzl4PMTBIAACDwESikXEW3RsNb4v4BKhh87ifJxAmYBszuVYqP/TQI4adSYUtxNgKaYp6a/VxbQ5muLrhp89cCX5LZ4LeQiYOSudyJRchPQigjpAXYbOgVa80hxtymwHD7bJ9pUHX8JNUNbG1ArvhKHABAAARAIJ3ADzKXQIRXj3OkAAAAASUVORK5CYII=";
+    let IncreaseHeightImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAnklEQVRYR+2VSw7AIAgF9boeyOu26UJDDEUf2GBSui46DB9zcv6y8/0pAMLAOQZqrZdmIkoppiRMwRrgMWYK8JixZimBigC0LF9BvAJwPYFCrCTAAkgNiUCoAWjNLD3wPwBkl7RSbh3DABgXjroJjxhD10XUVK4olPb8SvzWKdC8jlMAzaFITAdAZphegLwNHNg5BhBtO/8NA2HA3cANKa1sIQSaVB0AAAAASUVORK5CYII=";
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let $NudgerState;
+    	component_subscribe($$self, NudgerState, $$value => $$invalidate(2, $NudgerState = $$value));
+    	let { Applet } = $$props;
+    	let { PositionAroundPreferredPosition } = $$props;
+
+    	function dialog_State_binding(value) {
+    		$NudgerState = value;
+    		NudgerState.set($NudgerState);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ("Applet" in $$props) $$invalidate(0, Applet = $$props.Applet);
+    		if ("PositionAroundPreferredPosition" in $$props) $$invalidate(1, PositionAroundPreferredPosition = $$props.PositionAroundPreferredPosition);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*Applet, $NudgerState*/ 5) {
+    			if (Applet != null) {
+    				// needs "$:"
+    				if (isNaN($NudgerState.Width)) {
+    					NudgerState.set({
+    						isVisible: true,
+    						Width: 260,
+    						Height: 148,
+    						Offset: { x: NaN, y: NaN }, // but let "Dialog" compute actual position
+    						
+    					});
+    				}
+    			}
+    		}
+    	};
+
+    	return [Applet, PositionAroundPreferredPosition, $NudgerState, dialog_State_binding];
+    }
+
+    class NudgerView extends SvelteComponent {
+    	constructor(options) {
+    		super();
+
+    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {
+    			Applet: 0,
+    			PositionAroundPreferredPosition: 1
+    		});
+    	}
+    }
+
+    const initialToolboxState = {
+        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN
+      };
+
+      let currentlyChosenApplet = undefined;
+      let currentToolboxState   = Object.assign({}, initialToolboxState);
+
+      const ToolboxStateStore = writable(currentToolboxState);   // subscription mgmt
+      const ToolboxStateSet   = new WeakMap();      // applet-specific Toolbox states
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet !== newChosenApplet) {
+          currentlyChosenApplet = newChosenApplet;
+
+          if (currentlyChosenApplet == null) {
+            currentToolboxState = Object.assign({}, initialToolboxState);
+          } else {
+            if (ToolboxStateSet.has(currentlyChosenApplet)) {
+              currentToolboxState = ToolboxStateSet.get(currentlyChosenApplet);
+            } else {
+              currentToolboxState = Object.assign({}, initialToolboxState);
+              ToolboxStateSet.set(currentlyChosenApplet,currentToolboxState);
+            }
+            ToolboxStateStore.set(currentToolboxState);
+          }
+        }
+      });
+
+    /**** validate changes to "ToolboxState" ****/
+
+      function setToolboxState (newToolboxState) {
+        if (currentlyChosenApplet !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentToolboxState,newToolboxState)) {
+            currentToolboxState = Object.assign({}, newToolboxState);
+            ToolboxStateSet.set(currentlyChosenApplet,newToolboxState);
+            ToolboxStateStore.set(newToolboxState);
+          }
+        }
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const ToolboxState = {
+        subscribe: (Callback) => ToolboxStateStore.subscribe(Callback),
+        set:       setToolboxState
+      };
+
     /* src/ToolboxView.svelte generated by Svelte v3.38.3 */
 
     function create_if_block$1(ctx) {
@@ -2311,7 +2723,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let current;
 
     	function dialog_State_binding(value) {
-    		/*dialog_State_binding*/ ctx[4](value);
+    		/*dialog_State_binding*/ ctx[6](value);
     	}
 
     	let dialog_props = {
@@ -2330,7 +2742,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	dialog = new Dialog({ props: dialog_props });
     	binding_callbacks.push(() => bind(dialog, "State", dialog_State_binding));
-    	dialog.$on("close", /*onClose*/ ctx[3]);
+    	dialog.$on("close", /*onClose*/ ctx[4]);
 
     	return {
     		c() {
@@ -2345,7 +2757,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (dirty & /*Applet*/ 1) dialog_changes.Applet = /*Applet*/ ctx[0];
     			if (dirty & /*PositionAroundPreferredPosition*/ 2) dialog_changes.PositionAroundPreferredPosition = /*PositionAroundPreferredPosition*/ ctx[1];
 
-    			if (dirty & /*$$scope*/ 32) {
+    			if (dirty & /*$$scope, $NudgerState*/ 136) {
     				dialog_changes.$$scope = { dirty, ctx };
     			}
 
@@ -2372,7 +2784,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (61:2) <Dialog class="WAD-Toolbox" {Applet} Title="WAT-Designer" resizable={false}     {PositionAroundPreferredPosition} bind:State={$ToolboxState}     on:close={onClose}   >
+    // (66:2) <Dialog class="WAD-Toolbox" {Applet} Title="WAT-Designer" resizable={false}     {PositionAroundPreferredPosition} bind:State={$ToolboxState}     on:close={onClose}   >
     function create_default_slot(ctx) {
     	let iconbutton0;
     	let t0;
@@ -2439,9 +2851,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	iconbutton2 = new IconButton({
     			props: {
     				style: "left:84px;  top:4px",
-    				ImageURL: NudgerImageURL
+    				ImageURL: NudgerImageURL,
+    				active: /*$NudgerState*/ ctx[3].isVisible
     			}
     		});
+
+    	iconbutton2.$on("click", /*toggleNudgerView*/ ctx[5]);
 
     	iconbutton3 = new IconButton({
     			props: {
@@ -2679,7 +3094,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			mount_component(iconbutton22, target, anchor);
     			current = true;
     		},
-    		p: noop,
+    		p(ctx, dirty) {
+    			const iconbutton2_changes = {};
+    			if (dirty & /*$NudgerState*/ 8) iconbutton2_changes.active = /*$NudgerState*/ ctx[3].isVisible;
+    			iconbutton2.$set(iconbutton2_changes);
+    		},
     		i(local) {
     			if (current) return;
     			transition_in(iconbutton0.$$.fragment, local);
@@ -2873,7 +3292,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     function instance$2($$self, $$props, $$invalidate) {
     	let $ToolboxState;
+    	let $NudgerState;
     	component_subscribe($$self, ToolboxState, $$value => $$invalidate(2, $ToolboxState = $$value));
+    	component_subscribe($$self, NudgerState, $$value => $$invalidate(3, $NudgerState = $$value));
     	let { Applet } = $$props;
     	let { PositionAroundPreferredPosition } = $$props;
 
@@ -2881,6 +3302,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		let currentToolboxState = $ToolboxState;
     		ToolboxState.set(Object.assign(Object.assign({}, currentToolboxState), { isVisible: true })); // because...
     		chosenApplet.set(undefined); // ..."chosenApplet" decides about visibility
+    	}
+
+    	function toggleNudgerView() {
+    		let currentState = $NudgerState;
+    		NudgerState.set(Object.assign(Object.assign({}, currentState), { isVisible: !currentState.isVisible }));
     	}
 
     	function dialog_State_binding(value) {
@@ -2914,7 +3340,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		Applet,
     		PositionAroundPreferredPosition,
     		$ToolboxState,
+    		$NudgerState,
     		onClose,
+    		toggleNudgerView,
     		dialog_State_binding
     	];
     }
@@ -3405,22 +3833,22 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[9] = list[i];
+    	child_ctx[10] = list[i];
     	return child_ctx;
     }
 
-    // (92:4) {#if $chosenApplet !== Applet}
-    function create_if_block_1(ctx) {
+    // (94:4) {#if $chosenApplet !== Applet}
+    function create_if_block_2(ctx) {
     	let designerbutton;
     	let updating_preferredPosition;
     	let current;
 
     	function designerbutton_preferredPosition_binding(value) {
-    		/*designerbutton_preferredPosition_binding*/ ctx[7](value);
+    		/*designerbutton_preferredPosition_binding*/ ctx[8](value);
     	}
 
     	let designerbutton_props = {
-    		Applet: /*Applet*/ ctx[9],
+    		Applet: /*Applet*/ ctx[10],
     		startDesigning: /*startDesigning*/ ctx[0]
     	};
 
@@ -3441,7 +3869,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		p(ctx, dirty) {
     			const designerbutton_changes = {};
-    			if (dirty & /*$AppletList*/ 8) designerbutton_changes.Applet = /*Applet*/ ctx[9];
+    			if (dirty & /*$AppletList*/ 8) designerbutton_changes.Applet = /*Applet*/ ctx[10];
 
     			if (!updating_preferredPosition && dirty & /*preferredPosition*/ 2) {
     				updating_preferredPosition = true;
@@ -3466,12 +3894,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (91:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (93:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let if_block_anchor;
     	let current;
-    	let if_block = /*$chosenApplet*/ ctx[2] !== /*Applet*/ ctx[9] && create_if_block_1(ctx);
+    	let if_block = /*$chosenApplet*/ ctx[2] !== /*Applet*/ ctx[10] && create_if_block_2(ctx);
 
     	return {
     		key: key_1,
@@ -3491,7 +3919,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		p(new_ctx, dirty) {
     			ctx = new_ctx;
 
-    			if (/*$chosenApplet*/ ctx[2] !== /*Applet*/ ctx[9]) {
+    			if (/*$chosenApplet*/ ctx[2] !== /*Applet*/ ctx[10]) {
     				if (if_block) {
     					if_block.p(ctx, dirty);
 
@@ -3499,7 +3927,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block_1(ctx);
+    					if_block = create_if_block_2(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(if_block_anchor.parentNode, if_block_anchor);
@@ -3531,15 +3959,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (99:2) {#if $chosenApplet !== null}
-    function create_if_block(ctx) {
+    // (101:2) {#if ($chosenApplet !== null)}
+    function create_if_block_1(ctx) {
     	let toolboxview;
     	let current;
 
     	toolboxview = new ToolboxView({
     			props: {
     				Applet: /*$chosenApplet*/ ctx[2],
-    				PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[4]
+    				PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[5]
     			}
     		});
 
@@ -3571,14 +3999,55 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
+    // (105:2) {#if ($chosenApplet !== null) && $NudgerState.isVisible }
+    function create_if_block(ctx) {
+    	let nudgerview;
+    	let current;
+
+    	nudgerview = new NudgerView({
+    			props: {
+    				Applet: /*$chosenApplet*/ ctx[2],
+    				PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[5]
+    			}
+    		});
+
+    	return {
+    		c() {
+    			create_component(nudgerview.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(nudgerview, target, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			const nudgerview_changes = {};
+    			if (dirty & /*$chosenApplet*/ 4) nudgerview_changes.Applet = /*$chosenApplet*/ ctx[2];
+    			nudgerview.$set(nudgerview_changes);
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(nudgerview.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(nudgerview.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(nudgerview, detaching);
+    		}
+    	};
+    }
+
     function create_fragment(ctx) {
     	let div;
     	let each_blocks = [];
     	let each_1_lookup = new Map();
-    	let t;
+    	let t0;
+    	let t1;
     	let current;
     	let each_value = /*$AppletList*/ ctx[3];
-    	const get_key = ctx => /*Applet*/ ctx[9]["uniqueId"];
+    	const get_key = ctx => /*Applet*/ ctx[10]["uniqueId"];
 
     	for (let i = 0; i < each_value.length; i += 1) {
     		let child_ctx = get_each_context(ctx, each_value, i);
@@ -3586,7 +4055,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		each_1_lookup.set(key, each_blocks[i] = create_each_block(key, child_ctx));
     	}
 
-    	let if_block = /*$chosenApplet*/ ctx[2] !== null && create_if_block(ctx);
+    	let if_block0 = /*$chosenApplet*/ ctx[2] !== null && create_if_block_1(ctx);
+    	let if_block1 = /*$chosenApplet*/ ctx[2] !== null && /*$NudgerState*/ ctx[4].isVisible && create_if_block(ctx);
 
     	return {
     		c() {
@@ -3596,8 +4066,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				each_blocks[i].c();
     			}
 
-    			t = space();
-    			if (if_block) if_block.c();
+    			t0 = space();
+    			if (if_block0) if_block0.c();
+    			t1 = space();
+    			if (if_block1) if_block1.c();
     			attr(div, "id", "webapp-tinkerer-designer");
     			set_style(div, "display", "block");
     			set_style(div, "position", "absolute");
@@ -3619,36 +4091,61 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				each_blocks[i].m(div, null);
     			}
 
-    			append(div, t);
-    			if (if_block) if_block.m(div, null);
+    			append(div, t0);
+    			if (if_block0) if_block0.m(div, null);
+    			append(div, t1);
+    			if (if_block1) if_block1.m(div, null);
     			current = true;
     		},
     		p(ctx, [dirty]) {
     			if (dirty & /*$AppletList, startDesigning, preferredPosition, $chosenApplet*/ 15) {
     				each_value = /*$AppletList*/ ctx[3];
     				group_outros();
-    				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, t, get_each_context);
+    				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block, t0, get_each_context);
     				check_outros();
     			}
 
     			if (/*$chosenApplet*/ ctx[2] !== null) {
-    				if (if_block) {
-    					if_block.p(ctx, dirty);
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
 
     					if (dirty & /*$chosenApplet*/ 4) {
-    						transition_in(if_block, 1);
+    						transition_in(if_block0, 1);
     					}
     				} else {
-    					if_block = create_if_block(ctx);
-    					if_block.c();
-    					transition_in(if_block, 1);
-    					if_block.m(div, null);
+    					if_block0 = create_if_block_1(ctx);
+    					if_block0.c();
+    					transition_in(if_block0, 1);
+    					if_block0.m(div, t1);
     				}
-    			} else if (if_block) {
+    			} else if (if_block0) {
     				group_outros();
 
-    				transition_out(if_block, 1, 1, () => {
-    					if_block = null;
+    				transition_out(if_block0, 1, 1, () => {
+    					if_block0 = null;
+    				});
+
+    				check_outros();
+    			}
+
+    			if (/*$chosenApplet*/ ctx[2] !== null && /*$NudgerState*/ ctx[4].isVisible) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+
+    					if (dirty & /*$chosenApplet, $NudgerState*/ 20) {
+    						transition_in(if_block1, 1);
+    					}
+    				} else {
+    					if_block1 = create_if_block(ctx);
+    					if_block1.c();
+    					transition_in(if_block1, 1);
+    					if_block1.m(div, null);
+    				}
+    			} else if (if_block1) {
+    				group_outros();
+
+    				transition_out(if_block1, 1, 1, () => {
+    					if_block1 = null;
     				});
 
     				check_outros();
@@ -3661,7 +4158,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				transition_in(each_blocks[i]);
     			}
 
-    			transition_in(if_block);
+    			transition_in(if_block0);
+    			transition_in(if_block1);
     			current = true;
     		},
     		o(local) {
@@ -3669,7 +4167,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				transition_out(each_blocks[i]);
     			}
 
-    			transition_out(if_block);
+    			transition_out(if_block0);
+    			transition_out(if_block1);
     			current = false;
     		},
     		d(detaching) {
@@ -3679,7 +4178,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				each_blocks[i].d();
     			}
 
-    			if (if_block) if_block.d();
+    			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
     		}
     	};
     }
@@ -3700,8 +4200,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function instance($$self, $$props, $$invalidate) {
     	let $chosenApplet;
     	let $AppletList;
+    	let $NudgerState;
     	component_subscribe($$self, chosenApplet, $$value => $$invalidate(2, $chosenApplet = $$value));
     	component_subscribe($$self, AppletList, $$value => $$invalidate(3, $AppletList = $$value));
+    	component_subscribe($$self, NudgerState, $$value => $$invalidate(4, $NudgerState = $$value));
     	const Version = "0.1.0";
 
     	function startDesigning(Applet, Target, Property) {
@@ -3755,6 +4257,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		preferredPosition,
     		$chosenApplet,
     		$AppletList,
+    		$NudgerState,
     		PositionAroundPreferredPosition,
     		Version,
     		inhibitsEventsFrom,
@@ -3767,14 +4270,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		super();
 
     		init(this, options, instance, create_fragment, safe_not_equal, {
-    			Version: 5,
+    			Version: 6,
     			startDesigning: 0,
-    			inhibitsEventsFrom: 6
+    			inhibitsEventsFrom: 7
     		});
     	}
 
     	get Version() {
-    		return this.$$.ctx[5];
+    		return this.$$.ctx[6];
     	}
 
     	get startDesigning() {
