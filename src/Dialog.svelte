@@ -109,6 +109,8 @@
   export let Applet:WAT_Applet
   export let Title:string
   export let resizable:boolean = false
+  export let minWidth:number   = 120
+  export let minHeight:number  = 80
   export let State:WAD_DialogState
   export let PositionAroundPreferredPosition:(Width:WAT_Dimension,Height:WAT_Dimension) => WAT_Position
 
@@ -126,8 +128,11 @@ $:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
   function onDragStart ()                 { return State.Offset }
   function onDragMove (x:number,y:number) { State.Offset = { x,y } }
 
-  function startResizing ()                     { return { x:State.Width,y:State.Height } }
-  function continueResizing (x:number,y:number) { State.Width = x; State.Height = y }
+  function startResizing () { return { x:State.Width,y:State.Height } }
+  function continueResizing (x:number,y:number) {
+    State.Width  = Math.max(minWidth,x)
+    State.Height = Math.max(minHeight,y)
+  }
 
   function closeDialog () {
     State.isVisible = false
@@ -155,8 +160,7 @@ $:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
 
     {#if resizable}
       <div class="WAD-ResizeHandle" use:asDraggable={{
-        onDragStart:startResizing, onDragMove:continueResizing,
-        minX:120,minY:80
+        onDragStart:startResizing, onDragMove:continueResizing
       }}>
         <IconButton ImageURL={ResizeHandle_ImageURL} />
       </div>
