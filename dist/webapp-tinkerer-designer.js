@@ -749,7 +749,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
       });
 
     let currentAppletList     = [];
-      let currentlyChosenApplet$3 = undefined;
+      let currentlyChosenApplet$4 = undefined;
 
       const chosenAppletStore = writable(undefined);   // for subscription management
 
@@ -758,10 +758,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
       AppletList.subscribe((newAppletList) => {      // implements a "derived" store
         currentAppletList = newAppletList;
         if (
-          (currentlyChosenApplet$3 != null) &&
-          (newAppletList.indexOf(currentlyChosenApplet$3) < 0)
+          (currentlyChosenApplet$4 != null) &&
+          (newAppletList.indexOf(currentlyChosenApplet$4) < 0)
         ) {
-          currentlyChosenApplet$3 = undefined;
+          currentlyChosenApplet$4 = undefined;
           chosenAppletStore.set(undefined);
         }
       });
@@ -776,8 +776,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
           Applet = undefined;
         }
 
-        if (currentlyChosenApplet$3 !== Applet) {
-          currentlyChosenApplet$3 = Applet;
+        if (currentlyChosenApplet$4 !== Applet) {
+          currentlyChosenApplet$4 = Applet;
           chosenAppletStore.set(Applet);
         }
       }
@@ -788,6 +788,186 @@ var WAD = (function (exports, webappTinkererRuntime) {
         subscribe: (Subscription) => chosenAppletStore.subscribe(Subscription),
         set:       setChosenApplet
       };
+
+    /*
+      export WAD_MessageType   = 'info' | 'warning' | 'error'
+      export WAD_Message       = WAT_Textline
+      export WAD_MessageSource = WAT_Name | WAT_Visual | undefined
+    */
+      const initialMessageState = {
+        MessageType:'info', Message:'', MessageSource:undefined
+      };
+
+      let currentlyChosenApplet$3 = undefined;
+      let currentMessageState = Object.assign({}, initialMessageState);
+
+      const MessageStateStore = writable(currentMessageState);   // subscription mgmt
+      const MessageStateSet   = new WeakMap();      // applet-specific Message states
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet$3 !== newChosenApplet) {
+          currentlyChosenApplet$3 = newChosenApplet;
+
+          if (currentlyChosenApplet$3 == null) {
+            currentMessageState = Object.assign({}, initialMessageState);
+          } else {
+            if (MessageStateSet.has(currentlyChosenApplet$3)) {
+              currentMessageState = MessageStateSet.get(currentlyChosenApplet$3);
+            } else {
+              currentMessageState = Object.assign({}, initialMessageState);
+              MessageStateSet.set(currentlyChosenApplet$3,currentMessageState);
+            }
+            MessageStateStore.set(currentMessageState);
+          }
+        }
+      });
+
+    /**** validate changes to "MessageState" ****/
+
+      function setMessageState (newMessageState) {
+        if (currentlyChosenApplet$3 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentMessageState,newMessageState)) {
+            currentMessageState = Object.assign({}, newMessageState);
+            MessageStateSet.set(currentlyChosenApplet$3,newMessageState);
+            MessageStateStore.set(newMessageState);
+          }
+        }
+      }
+
+    /**** clearInfo, clearWarning, clearError ****/
+
+      function clearInfo () {
+        if (currentMessageState.MessageType === 'info') {
+          setMessageState(initialMessageState);
+        }
+      }
+
+      function clearWarning () {
+        if (currentMessageState.MessageType !== 'error') {
+          setMessageState(initialMessageState);
+        }
+      }
+
+      function clearError () {
+        setMessageState(initialMessageState);
+      }
+
+    /**** showInfo, showWarning, showError ****/
+
+      function showInfo (Message, MessageSource) {
+        if (currentMessageState.MessageType === 'info') {
+          setMessageState({ MessageType:'info', Message, MessageSource });
+        }
+      }
+
+      function showWarning (Message, MessageSource) {
+        if (currentMessageState.MessageType !== 'error') {
+          setMessageState({ MessageType:'warning', Message, MessageSource });
+        }
+      }
+
+      function showError (Message, MessageSource) {
+        setMessageState({ MessageType:'error', Message, MessageSource });
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const MessageState = {
+        subscribe: (Callback) => MessageStateStore.subscribe(Callback),
+        clearInfo, clearWarning, clearError, showInfo, showWarning, showError
+      };
+
+    function styleInject(css, ref) {
+      if ( ref === void 0 ) ref = {};
+      var insertAt = ref.insertAt;
+
+      if (!css || typeof document === 'undefined') { return; }
+
+      var head = document.head || document.getElementsByTagName('head')[0];
+      var style = document.createElement('style');
+      style.type = 'text/css';
+
+      if (insertAt === 'top') {
+        if (head.firstChild) {
+          head.insertBefore(style, head.firstChild);
+        } else {
+          head.appendChild(style);
+        }
+      } else {
+        head.appendChild(style);
+      }
+
+      if (style.styleSheet) {
+        style.styleSheet.cssText = css;
+      } else {
+        style.appendChild(document.createTextNode(css));
+      }
+    }
+
+    var css_248z$4 = ".WAD-MessageView.svelte-l80szn{display:block;position:relative;overflow:hidden;height:34px;line-height:34px;text-align:left;border:none;border-top:solid 1px var(--normal-color);padding:0px 34px 0px 4px;white-space:nowrap;text-overflow:ellipsis\n  }.info.svelte-l80szn{color:var(--info-color) }.warning.svelte-l80szn{color:var(--warning-color) }.error.svelte-l80szn{color:#FF4500 }";
+    styleInject(css_248z$4,{"insertAt":"top"});
+
+    /* src/MessageView.svelte generated by Svelte v3.38.3 */
+
+    function create_fragment$7(ctx) {
+    	let div;
+    	let t_value = /*$MessageState*/ ctx[0].Message + "";
+    	let t;
+
+    	return {
+    		c() {
+    			div = element("div");
+    			t = text(t_value);
+    			attr(div, "class", "WAD-MessageView svelte-l80szn");
+    			attr(div, "style", `--normal-color:${normalColor};` + `--info-color:${normalColor}; --warning-color:${hoveredColor$1}`);
+    			toggle_class(div, "info", /*$MessageState*/ ctx[0].MessageType === "info");
+    			toggle_class(div, "warning", /*$MessageState*/ ctx[0].MessageType === "warning");
+    			toggle_class(div, "error", /*$MessageState*/ ctx[0].MessageType === "error");
+    		},
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+    			append(div, t);
+    		},
+    		p(ctx, [dirty]) {
+    			if (dirty & /*$MessageState*/ 1 && t_value !== (t_value = /*$MessageState*/ ctx[0].Message + "")) set_data(t, t_value);
+
+    			if (dirty & /*$MessageState*/ 1) {
+    				toggle_class(div, "info", /*$MessageState*/ ctx[0].MessageType === "info");
+    			}
+
+    			if (dirty & /*$MessageState*/ 1) {
+    				toggle_class(div, "warning", /*$MessageState*/ ctx[0].MessageType === "warning");
+    			}
+
+    			if (dirty & /*$MessageState*/ 1) {
+    				toggle_class(div, "error", /*$MessageState*/ ctx[0].MessageType === "error");
+    			}
+    		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(div);
+    		}
+    	};
+    }
+
+    const normalColor = "#969696";
+    const hoveredColor$1 = "#FFEC2E";
+
+    function instance$7($$self, $$props, $$invalidate) {
+    	let $MessageState;
+    	component_subscribe($$self, MessageState, $$value => $$invalidate(0, $MessageState = $$value));
+    	return [$MessageState];
+    }
+
+    class MessageView extends SvelteComponent {
+    	constructor(options) {
+    		super();
+    		init(this, options, instance$7, create_fragment$7, safe_not_equal, {});
+    	}
+    }
 
     const initialInspectorState = {
         isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN
@@ -1154,33 +1334,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
         Context.fillStyle = TintColor;
         Context.fillRect(0, 0, Bitmap.width, Bitmap.height);
         return Canvas.toDataURL('image/png');
-    }
-
-    function styleInject(css, ref) {
-      if ( ref === void 0 ) ref = {};
-      var insertAt = ref.insertAt;
-
-      if (!css || typeof document === 'undefined') { return; }
-
-      var head = document.head || document.getElementsByTagName('head')[0];
-      var style = document.createElement('style');
-      style.type = 'text/css';
-
-      if (insertAt === 'top') {
-        if (head.firstChild) {
-          head.insertBefore(style, head.firstChild);
-        } else {
-          head.appendChild(style);
-        }
-      } else {
-        head.appendChild(style);
-      }
-
-      if (style.styleSheet) {
-        style.styleSheet.cssText = css;
-      } else {
-        style.appendChild(document.createTextNode(css));
-      }
     }
 
     var css_248z$3 = ".WAD-IconButton.svelte-16u1t1m{display:block;position:absolute;width:32px;height:32px;background:var(--normal-image-url)}.WAD-IconButton.svelte-16u1t1m:hover{background:var(--hovered-image-url)}.WAD-IconButton.active.svelte-16u1t1m:not(:hover){background:var(--active-image-url)}";
@@ -1943,7 +2096,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
     }
 
-    var css_248z$2 = ".WAD-Dialog.svelte-lpux1e{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-lpux1e{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-lpux1e{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-lpux1e{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-lpux1e:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-lpux1e{display:inline-block;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ResizeHandle.svelte-lpux1e{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-lpux1e:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
+    var css_248z$2 = ".WAD-Dialog.svelte-18t6msy{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-18t6msy{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-18t6msy{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-18t6msy{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-18t6msy:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-18t6msy{display:inline-flex;flex-flow:column nowrap;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ResizeHandle.svelte-18t6msy{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-18t6msy:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
     styleInject(css_248z$2,{"insertAt":"top"});
 
     /* src/Dialog.svelte generated by Svelte v3.38.3 */
@@ -2004,12 +2157,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (default_slot) default_slot.c();
     			t3 = space();
     			if (if_block) if_block.c();
-    			attr(div0, "class", "WAD-Title svelte-lpux1e");
-    			attr(div1, "class", "WAD-CloseButton svelte-lpux1e");
-    			attr(div2, "class", "WAD-Titlebar svelte-lpux1e");
-    			attr(div3, "class", "WAD-ContentArea svelte-lpux1e");
+    			attr(div0, "class", "WAD-Title svelte-18t6msy");
+    			attr(div1, "class", "WAD-CloseButton svelte-18t6msy");
+    			attr(div2, "class", "WAD-Titlebar svelte-18t6msy");
+    			attr(div3, "class", "WAD-ContentArea svelte-18t6msy");
     			set_attributes(div4, div4_data);
-    			toggle_class(div4, "svelte-lpux1e", true);
+    			toggle_class(div4, "svelte-18t6msy", true);
     		},
     		m(target, anchor) {
     			insert(target, div4, anchor);
@@ -2081,7 +2234,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				(!current || dirty & /*Applet, State*/ 3 && div4_style_value !== (div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px\n  ")) && { style: div4_style_value }
     			]));
 
-    			toggle_class(div4, "svelte-lpux1e", true);
+    			toggle_class(div4, "svelte-18t6msy", true);
     		},
     		i(local) {
     			if (current) return;
@@ -2123,7 +2276,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		c() {
     			div = element("div");
     			create_component(iconbutton.$$.fragment);
-    			attr(div, "class", "WAD-ResizeHandle svelte-lpux1e");
+    			attr(div, "class", "WAD-ResizeHandle svelte-18t6msy");
     		},
     		m(target, anchor) {
     			insert(target, div, anchor);
@@ -2395,9 +2548,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (44:2) <Dialog class="WAD-Inspector" {Applet} Title="WAT-Designer: Inspector" resizable={true}     {PositionAroundPreferredPosition} bind:State={$InspectorState}     minWidth={300} minHeight={420}   >
+    // (46:2) <Dialog class="WAD-Inspector" {Applet} Title="WAT-Designer: Inspector" resizable={true}     {PositionAroundPreferredPosition} bind:State={$InspectorState}     minWidth={300} minHeight={420}   >
     function create_default_slot$2(ctx) {
-    	let div;
+    	let div0;
     	let iconbutton0;
     	let t0;
     	let iconbutton1;
@@ -2425,6 +2578,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let iconbutton12;
     	let t12;
     	let iconbutton13;
+    	let t13;
+    	let div1;
+    	let t14;
+    	let messageview;
     	let current;
 
     	iconbutton0 = new IconButton({
@@ -2525,9 +2682,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
     		});
 
+    	messageview = new MessageView({});
+
     	return {
     		c() {
-    			div = element("div");
+    			div0 = element("div");
     			create_component(iconbutton0.$$.fragment);
     			t0 = space();
     			create_component(iconbutton1.$$.fragment);
@@ -2555,43 +2714,58 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			create_component(iconbutton12.$$.fragment);
     			t12 = space();
     			create_component(iconbutton13.$$.fragment);
-    			attr(div, "name", "TabStrip");
-    			set_style(div, "display", "block");
-    			set_style(div, "position", "relative");
-    			set_style(div, "top", "2px");
-    			set_style(div, "height", "74px");
-    			set_style(div, "overflow", "visible");
-    			set_style(div, "border-bottom", "solid 1px #454545");
+    			t13 = space();
+    			div1 = element("div");
+    			t14 = space();
+    			create_component(messageview.$$.fragment);
+    			attr(div0, "name", "TabStrip");
+    			set_style(div0, "display", "block");
+    			set_style(div0, "position", "relative");
+    			set_style(div0, "top", "2px");
+    			set_style(div0, "height", "74px");
+    			set_style(div0, "overflow", "visible");
+    			set_style(div0, "border-bottom", "solid 1px #454545");
+    			attr(div1, "name", "PaneArea");
+    			set_style(div1, "display", "block");
+    			set_style(div1, "position", "relative");
+    			set_style(div1, "flex", "1 1 auto");
+    			set_style(div1, "border", "none");
+    			set_style(div1, "border-top", "solid 1px #969696");
+    			set_style(div1, "border-bottom", "solid 1px #454545");
     		},
     		m(target, anchor) {
-    			insert(target, div, anchor);
-    			mount_component(iconbutton0, div, null);
-    			append(div, t0);
-    			mount_component(iconbutton1, div, null);
-    			append(div, t1);
-    			mount_component(iconbutton2, div, null);
-    			append(div, t2);
-    			mount_component(iconbutton3, div, null);
-    			append(div, t3);
-    			mount_component(iconbutton4, div, null);
-    			append(div, t4);
-    			mount_component(iconbutton5, div, null);
-    			append(div, t5);
-    			mount_component(iconbutton6, div, null);
-    			append(div, t6);
-    			mount_component(iconbutton7, div, null);
-    			append(div, t7);
-    			mount_component(iconbutton8, div, null);
-    			append(div, t8);
-    			mount_component(iconbutton9, div, null);
-    			append(div, t9);
-    			mount_component(iconbutton10, div, null);
-    			append(div, t10);
-    			mount_component(iconbutton11, div, null);
-    			append(div, t11);
-    			mount_component(iconbutton12, div, null);
-    			append(div, t12);
-    			mount_component(iconbutton13, div, null);
+    			insert(target, div0, anchor);
+    			mount_component(iconbutton0, div0, null);
+    			append(div0, t0);
+    			mount_component(iconbutton1, div0, null);
+    			append(div0, t1);
+    			mount_component(iconbutton2, div0, null);
+    			append(div0, t2);
+    			mount_component(iconbutton3, div0, null);
+    			append(div0, t3);
+    			mount_component(iconbutton4, div0, null);
+    			append(div0, t4);
+    			mount_component(iconbutton5, div0, null);
+    			append(div0, t5);
+    			mount_component(iconbutton6, div0, null);
+    			append(div0, t6);
+    			mount_component(iconbutton7, div0, null);
+    			append(div0, t7);
+    			mount_component(iconbutton8, div0, null);
+    			append(div0, t8);
+    			mount_component(iconbutton9, div0, null);
+    			append(div0, t9);
+    			mount_component(iconbutton10, div0, null);
+    			append(div0, t10);
+    			mount_component(iconbutton11, div0, null);
+    			append(div0, t11);
+    			mount_component(iconbutton12, div0, null);
+    			append(div0, t12);
+    			mount_component(iconbutton13, div0, null);
+    			insert(target, t13, anchor);
+    			insert(target, div1, anchor);
+    			insert(target, t14, anchor);
+    			mount_component(messageview, target, anchor);
     			current = true;
     		},
     		p: noop,
@@ -2611,6 +2785,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_in(iconbutton11.$$.fragment, local);
     			transition_in(iconbutton12.$$.fragment, local);
     			transition_in(iconbutton13.$$.fragment, local);
+    			transition_in(messageview.$$.fragment, local);
     			current = true;
     		},
     		o(local) {
@@ -2628,10 +2803,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_out(iconbutton11.$$.fragment, local);
     			transition_out(iconbutton12.$$.fragment, local);
     			transition_out(iconbutton13.$$.fragment, local);
+    			transition_out(messageview.$$.fragment, local);
     			current = false;
     		},
     		d(detaching) {
-    			if (detaching) detach(div);
+    			if (detaching) detach(div0);
     			destroy_component(iconbutton0);
     			destroy_component(iconbutton1);
     			destroy_component(iconbutton2);
@@ -2646,6 +2822,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			destroy_component(iconbutton11);
     			destroy_component(iconbutton12);
     			destroy_component(iconbutton13);
+    			if (detaching) detach(t13);
+    			if (detaching) detach(div1);
+    			if (detaching) detach(t14);
+    			destroy_component(messageview, detaching);
     		}
     	};
     }
