@@ -1,10 +1,3 @@
-<style>
-  .WAD-Nudger {
-    display:block; position:absolute;
-    width:260px; height:148px;
-  }
-</style>
-
 <script context="module" lang="ts">
   import type {
     WAT_Applet, WAT_Dimension, WAT_Position
