@@ -27,7 +27,7 @@
   let ImportExportImageURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA0klEQVRYR+2VYQ6AIAiF67oeyOvWbKPRExCdaW32p5qO94Hw3LfJzz5Zf1sA/61AjPEIIVwJpO/0pv+avmqqAAoOBSAxnvEwAC4+HADFhwJI4p8EwO73TEXXKeAAHvG0XwWQup0EtDGkdfQHyyNEAG4ykqlYAFrmWswMAB1OClhjRKV4D4BS5tYReM8cNW4Ayc28QJb3YwzUMQFqLhXv3iqAKRXAUfJmVtqn3SPZEZQC9Vqnps2moJeAFYdPjGpEb4BIo9p0F/SEWwCrAqsC0ytwArCqxCFYK1feAAAAAElFTkSuQmCC'
   let SearchImageURL       = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA00lEQVRYR+2WQRKAIAgA87s+yO/WcHCGEBAV8WKnmqxdkKD0HD7SYf7jLlBKeWlQOWeR4ybAgS0iLgIYzkWr3V8W6MFrFqR1bgLaPlMJvHZJoEZlgUsSV+BmYCkDUFi0EOFaKkquaN0EQKaCuW/etQ9obXd7J8Rp5M616crJDW0Bt9849bgmsIjLNJSKTSs6y7+GKQO74CDYFdgJ7wrshqsCEXBRIArOCkTCG4Fo+E/gBLwRwMMEzlebzFAjotMqAi7WAO3vlkhm13Q74eyLrc9dgQ9itQQwkRB2awAAAABJRU5ErkJggg=='
 
-  let ContentsImageURL               = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAUklEQVRYR+3UwREAIAgDQWiXgtKuFqA+MTzOAiSzBjPMJ83zgwAIXAUkrY5yVtUxjwAzBTre/3UnazizA/wDdgHW0C5g7wAB7AL2EhIAAQR+CmweoTAhD/IaqwAAAABJRU5ErkJggg=='
+  let SelectionImageURL              = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAUklEQVRYR+3UwREAIAgDQWiXgtKuFqA+MTzOAiSzBjPMJ83zgwAIXAUkrY5yVtUxjwAzBTre/3UnazizA/wDdgHW0C5g7wAB7AL2EhIAAQR+CmweoTAhD/IaqwAAAABJRU5ErkJggg=='
   let SelectionGlobalsImageURL       = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA+UlEQVRYR+2XUQ7EIAhE2+t6IK+7Gz5oKAEZ1IZusv3ZJlV5DgO651H8nMXxjwug9/5hmNZaCLZrvAtAAQhk9CuBs+N57nsUqPLCLdcs41Mw1vqh2SwYacCMca21UgpwYK4SuSP9zQPXFQYroOXTrueA2TRCCnjBvaAexJQHouBZCJ2aUIGdAGkFrAkZeRE/DDshunskDd7ZAQEgfX50bhDgEgBaYiPFQgC0cTzmAZZJdyrUB8i4dBVYUKgCSAXQ+mEfQCCQ3XsK/8ZZIKuA3ktOQ1klZfeB1ZvSVBWsBo3mv+dWrFsl0v///wui/CLf4UaELDYzphzgC1oI5DDpfBDzAAAAAElFTkSuQmCC'
   let SelectionResourcesImageURL     = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7ElEQVRYR+2XUQ6EMAhE9bo9UK+7m35gugSYEWl0N+uPMVIYnhTqvt187TfH3w4BvfeXiGmtQWFV9q6AEWAIie6z4LP2sjZFYM5+OLpCDKJeXSMfAgTjqqCW/98hIHUR1cNSAowA69NSNYCc6/eefZpAlYAUgbPBJYi1LkWgUkBIwOrt2eAWBW92hK340QKQuEFhtoEEvPYbbaloEDECx3rYB7xqRlOwbBdolNazpsdmTxHwviXq+RahVB+4kh0z1mENME5YmxICbDDW7k8gdSqedwbqB3ouaPvv/C9YQoCt2mq7Zx3Lq7Nj/L0BoDBwMIhTLVUAAAAASUVORK5CYII='
   let SelectionPropertiesImageURL    = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABM0lEQVRYR+1XQQ7DMAhrv9sH5bubcqDykMEQReoO3WWHJsUY20nP4+Hf+XD94wYwxvgYmOu6JLBd60MAs8AEkv0j4O562/s/DHS1YB2zfTaeyih/Zp29FAtFBVAXuN6AsPdLsfkOI/FFxZWw2wxUAGDHTKjYVJkBT7unkwGrWLXEgKfX7Dk7Yd0yYaKlWwyw2bJ8mC9VImTASgxEQmRMIBBvwy0uMDBR8nXzZDkJfacqfCJBlgBkaq4y0QaAHfnNzJLmiEpKojbCHFDJhha0cUSizHSRuoB1k826ogPvDMqASjD1HBlRrqAMqAJKlL5o+zRcBRCJ1esljOLogMG5dTXg3VTSQJbr7KKB6eiP3+X7QCcH2G1p641IaYIpnR086WnYLbJr/ftdUL4TqkRbff4C+AI8xegwDnQdAwAAAABJRU5ErkJggg=='
@@ -62,29 +62,90 @@ $:if (Applet != null) {                                            // needs "$:"
     <div name="TabStrip" style="
       display:block; position:relative;
       top:2px; height:74px; overflow:visible;
-      border-bottom: solid 1px #454545;
+      border:none; border-bottom: solid 1px #454545;
     ">
-      <IconButton style="left:10px;  top:0px" ImageURL={AppletImageURL}/>
-      <IconButton style="left:50px;  top:0px" ImageURL={MasterImageURL}/>
-      <IconButton style="left:90px;  top:0px" ImageURL={CardImageURL}/>
-      <IconButton style="left:130px; top:0px" ImageURL={OverlayImageURL}/>
-      <IconButton style="left:170px; top:0px" ImageURL={ComponentImageURL}/>
-      <IconButton style="left:210px; top:0px" ImageURL={ImportExportImageURL}/>
-      <IconButton style="left:250px; top:0px" ImageURL={SearchImageURL}/>
+      <IconButton style="left:10px;  top:0px" ImageURL={AppletImageURL}
+        active={$InspectorState.Mode === 'applet'}
+        on:click={() => InspectorState.setMode('applet')}/>
+      <IconButton style="left:50px;  top:0px" ImageURL={MasterImageURL}
+        active={$InspectorState.Mode === 'master'}
+        on:click={() => InspectorState.setMode('master')}/>
+      <IconButton style="left:90px;  top:0px" ImageURL={CardImageURL}
+        active={$InspectorState.Mode === 'card'}
+        on:click={() => InspectorState.setMode('card')}/>
+      <IconButton style="left:130px; top:0px" ImageURL={OverlayImageURL}
+        active={$InspectorState.Mode === 'overlay'}
+        on:click={() => InspectorState.setMode('overlay')}/>
+      <IconButton style="left:170px; top:0px" ImageURL={ComponentImageURL}
+        active={$InspectorState.Mode === 'component'}
+        on:click={() => InspectorState.setMode('component')}/>
+      <IconButton style="left:210px; top:0px" ImageURL={ImportExportImageURL}
+        active={$InspectorState.Mode === 'import-export'}
+        on:click={() => InspectorState.setMode('import-export')}/>
+      <IconButton style="left:250px; top:0px" ImageURL={SearchImageURL}
+        active={$InspectorState.Mode === 'search'}
+        on:click={() => InspectorState.setMode('search')}/>
 
-      <IconButton style="left:10px;  top:40px" ImageURL={ContentsImageURL}/>
-      <IconButton style="left:50px;  top:40px" ImageURL={SelectionGlobalsImageURL}/>
-      <IconButton style="left:90px;  top:40px" ImageURL={SelectionResourcesImageURL}/>
-      <IconButton style="left:130px; top:40px" ImageURL={SelectionPropertiesImageURL}/>
-      <IconButton style="left:170px; top:40px" ImageURL={SelectionConfigurationImageURL}/>
-      <IconButton style="left:210px; top:40px" ImageURL={SelectionScriptImageURL}/>
-      <IconButton style="left:250px; top:40px" ImageURL={SelectionContentsImageURL}/>
+      <IconButton style="left:10px;  top:40px" ImageURL={SelectionImageURL}
+        active={$InspectorState.Pane === 'overview'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('overview')}/>
+      <IconButton style="left:50px;  top:40px" ImageURL={SelectionGlobalsImageURL}
+        active={$InspectorState.Pane === 'selection-globals'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('selection-globals')}/>
+      <IconButton style="left:90px;  top:40px" ImageURL={SelectionResourcesImageURL}
+        active={$InspectorState.Pane === 'selection-resources'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('selection-resources')}/>
+      <IconButton style="left:130px; top:40px" ImageURL={SelectionPropertiesImageURL}
+        active={$InspectorState.Pane === 'selection-properties'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('selection-properties')}/>
+      <IconButton style="left:170px; top:40px" ImageURL={SelectionConfigurationImageURL}
+        active={$InspectorState.Pane === 'selection-configuration'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('selection-configuration')}/>
+      <IconButton style="left:210px; top:40px" ImageURL={SelectionScriptImageURL}
+        active={$InspectorState.Pane === 'selection-script'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('selection-script')}/>
+      <IconButton style="left:250px; top:40px" ImageURL={SelectionContentsImageURL}
+        active={$InspectorState.Pane === 'selection-contents'}
+        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        on:click={() => InspectorState.setPane('selection-contents')}/>
     </div>
 
     <div name="PaneArea" style="
       display:block; position:relative; flex:1 1 auto;
       border:none; border-top:solid 1px #969696; border-bottom:solid 1px #454545;
     ">
+      {#if $InspectorState.Pane === 'overview'}
+      {/if}
+
+      {#if $InspectorState.Pane === 'selection-globals'}
+      {/if}
+
+      {#if $InspectorState.Pane === 'selection-resources'}
+      {/if}
+
+      {#if $InspectorState.Pane === 'selection-properties'}
+      {/if}
+
+      {#if $InspectorState.Pane === 'selection-configuration'}
+      {/if}
+
+      {#if $InspectorState.Pane === 'selection-script'}
+      {/if}
+
+      {#if $InspectorState.Pane === 'selection-contents'}
+      {/if}
+
+      {#if $InspectorState.Mode === 'import-export'}
+      {/if}
+
+      {#if $InspectorState.Mode === 'search'}
+      {/if}
     </div>
 
     <MessageView/>
