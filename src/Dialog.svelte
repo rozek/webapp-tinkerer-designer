@@ -60,7 +60,7 @@
 /**** ContentArea ****/
 
   .WAD-ContentArea {
-    display:inline-block; flex:1 1 auto;
+    display:inline-flex; flex-flow:column nowrap; flex:1 1 auto;
     position:relative; overflow:hidden;
     min-height:24px;
   }
