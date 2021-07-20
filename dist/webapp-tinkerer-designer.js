@@ -969,8 +969,18 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
     }
 
-    const initialInspectorState = {
-        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN
+    /*
+      export type WAD_Mode = (
+        'applet'|'master'|'card'|'overlay'|'component'|'import-export'|'search'
+      )
+      export type WAD_Pane = (
+        'overview'|'selection-globals'|'selection-resources'|'selection-properties'|
+        'selection-configuration'|'selection-script'|'selection-contents'
+      )
+    */
+      const initialInspectorState = {
+        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN,
+        Mode:'applet', Pane:'overview'
       };
 
       let currentlyChosenApplet$2 = undefined;
@@ -1004,10 +1014,35 @@ var WAD = (function (exports, webappTinkererRuntime) {
       function setInspectorState (newInspectorState) {
         if (currentlyChosenApplet$2 !== null) {
           if (webappTinkererRuntime.ValuesDiffer(currentInspectorState,newInspectorState)) {
-            currentInspectorState = Object.assign({}, newInspectorState);
-            InspectorStateSet.set(currentlyChosenApplet$2,newInspectorState);
-            InspectorStateStore.set(newInspectorState);
+            currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState);
+            InspectorStateSet.set(currentlyChosenApplet$2,currentInspectorState);
+            InspectorStateStore.set(currentInspectorState);
           }
+        }
+      }
+
+    /**** setMode ****/
+
+      function setMode (newMode) {
+        if (newMode != currentInspectorState.Mode) {
+          let newPane;
+            if ((newMode === 'import-export') || (newMode === 'search')) {
+              newPane = undefined;
+            } else {
+              newPane = currentInspectorState.Pane || 'overview';
+            }
+          setInspectorState({ ...currentInspectorState, Mode:newMode, Pane:newPane });
+        }
+      }
+
+    /**** setPane ****/
+
+      function setPane (newPane) {
+        if (newPane != currentInspectorState.Pane) {
+          if ('import-export search'.indexOf(currentInspectorState.Mode) >= 0) {
+            newPane = undefined;
+          }
+          setInspectorState({ ...currentInspectorState, Pane:newPane });
         }
       }
 
@@ -1015,7 +1050,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
       const InspectorState = {
         subscribe: (Callback) => InspectorStateStore.subscribe(Callback),
-        set:       setInspectorState
+        set:       setInspectorState,
+        setMode, setPane
       };
 
     //----------------------------------------------------------------------------//
@@ -2127,7 +2163,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	const default_slot_template = /*#slots*/ ctx[14].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[13], null);
-    	let if_block = /*resizable*/ ctx[3] && create_if_block_1$1(ctx);
+    	let if_block = /*resizable*/ ctx[3] && create_if_block_1$2(ctx);
 
     	let div4_levels = [
     		/*$$restProps*/ ctx[9],
@@ -2213,7 +2249,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block_1$1(ctx);
+    					if_block = create_if_block_1$2(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(div4, null);
@@ -2261,7 +2297,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
 
     // (143:4) {#if resizable}
-    function create_if_block_1$1(ctx) {
+    function create_if_block_1$2(ctx) {
     	let div;
     	let iconbutton;
     	let current;
@@ -2486,7 +2522,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let current;
 
     	function dialog_State_binding(value) {
-    		/*dialog_State_binding*/ ctx[3](value);
+    		/*dialog_State_binding*/ ctx[17](value);
     	}
 
     	let dialog_props = {
@@ -2521,7 +2557,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (dirty & /*Applet*/ 1) dialog_changes.Applet = /*Applet*/ ctx[0];
     			if (dirty & /*PositionAroundPreferredPosition*/ 2) dialog_changes.PositionAroundPreferredPosition = /*PositionAroundPreferredPosition*/ ctx[1];
 
-    			if (dirty & /*$$scope*/ 16) {
+    			if (dirty & /*$$scope, $InspectorState*/ 262148) {
     				dialog_changes.$$scope = { dirty, ctx };
     			}
 
@@ -2546,6 +2582,51 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			destroy_component(dialog, detaching);
     		}
     	};
+    }
+
+    // (111:6) {#if $InspectorState.Pane === 'overview'}
+    function create_if_block_9(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (114:6) {#if $InspectorState.Pane === 'selection-globals'}
+    function create_if_block_8(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (117:6) {#if $InspectorState.Pane === 'selection-resources'}
+    function create_if_block_7(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (120:6) {#if $InspectorState.Pane === 'selection-properties'}
+    function create_if_block_6(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (123:6) {#if $InspectorState.Pane === 'selection-configuration'}
+    function create_if_block_5(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (126:6) {#if $InspectorState.Pane === 'selection-script'}
+    function create_if_block_4(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (129:6) {#if $InspectorState.Pane === 'selection-contents'}
+    function create_if_block_3$1(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (132:6) {#if $InspectorState.Mode === 'import-export'}
+    function create_if_block_2$1(ctx) {
+    	return { c: noop, m: noop, d: noop };
+    }
+
+    // (135:6) {#if $InspectorState.Mode === 'search'}
+    function create_if_block_1$1(ctx) {
+    	return { c: noop, m: noop, d: noop };
     }
 
     // (46:2) <Dialog class="WAD-Inspector" {Applet} Title="WAT-Designer: Inspector" resizable={true}     {PositionAroundPreferredPosition} bind:State={$InspectorState}     minWidth={300} minHeight={420}   >
@@ -2581,107 +2662,172 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let t13;
     	let div1;
     	let t14;
+    	let t15;
+    	let t16;
+    	let t17;
+    	let t18;
+    	let t19;
+    	let t20;
+    	let t21;
+    	let t22;
     	let messageview;
     	let current;
 
     	iconbutton0 = new IconButton({
     			props: {
     				style: "left:10px;  top:0px",
-    				ImageURL: AppletImageURL
+    				ImageURL: AppletImageURL,
+    				active: /*$InspectorState*/ ctx[2].Mode === "applet"
     			}
     		});
+
+    	iconbutton0.$on("click", /*click_handler*/ ctx[3]);
 
     	iconbutton1 = new IconButton({
     			props: {
     				style: "left:50px;  top:0px",
-    				ImageURL: MasterImageURL
+    				ImageURL: MasterImageURL,
+    				active: /*$InspectorState*/ ctx[2].Mode === "master"
     			}
     		});
+
+    	iconbutton1.$on("click", /*click_handler_1*/ ctx[4]);
 
     	iconbutton2 = new IconButton({
     			props: {
     				style: "left:90px;  top:0px",
-    				ImageURL: CardImageURL
+    				ImageURL: CardImageURL,
+    				active: /*$InspectorState*/ ctx[2].Mode === "card"
     			}
     		});
+
+    	iconbutton2.$on("click", /*click_handler_2*/ ctx[5]);
 
     	iconbutton3 = new IconButton({
     			props: {
     				style: "left:130px; top:0px",
-    				ImageURL: OverlayImageURL
+    				ImageURL: OverlayImageURL,
+    				active: /*$InspectorState*/ ctx[2].Mode === "overlay"
     			}
     		});
+
+    	iconbutton3.$on("click", /*click_handler_3*/ ctx[6]);
 
     	iconbutton4 = new IconButton({
     			props: {
     				style: "left:170px; top:0px",
-    				ImageURL: ComponentImageURL
+    				ImageURL: ComponentImageURL,
+    				active: /*$InspectorState*/ ctx[2].Mode === "component"
     			}
     		});
+
+    	iconbutton4.$on("click", /*click_handler_4*/ ctx[7]);
 
     	iconbutton5 = new IconButton({
     			props: {
     				style: "left:210px; top:0px",
-    				ImageURL: ImportExportImageURL$1
+    				ImageURL: ImportExportImageURL$1,
+    				active: /*$InspectorState*/ ctx[2].Mode === "import-export"
     			}
     		});
+
+    	iconbutton5.$on("click", /*click_handler_5*/ ctx[8]);
 
     	iconbutton6 = new IconButton({
     			props: {
     				style: "left:250px; top:0px",
-    				ImageURL: SearchImageURL$1
+    				ImageURL: SearchImageURL$1,
+    				active: /*$InspectorState*/ ctx[2].Mode === "search"
     			}
     		});
+
+    	iconbutton6.$on("click", /*click_handler_6*/ ctx[9]);
 
     	iconbutton7 = new IconButton({
     			props: {
     				style: "left:10px;  top:40px",
-    				ImageURL: ContentsImageURL
+    				ImageURL: SelectionImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "overview",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
+
+    	iconbutton7.$on("click", /*click_handler_7*/ ctx[10]);
 
     	iconbutton8 = new IconButton({
     			props: {
     				style: "left:50px;  top:40px",
-    				ImageURL: SelectionGlobalsImageURL
+    				ImageURL: SelectionGlobalsImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "selection-globals",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
+
+    	iconbutton8.$on("click", /*click_handler_8*/ ctx[11]);
 
     	iconbutton9 = new IconButton({
     			props: {
     				style: "left:90px;  top:40px",
-    				ImageURL: SelectionResourcesImageURL
+    				ImageURL: SelectionResourcesImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "selection-resources",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
+
+    	iconbutton9.$on("click", /*click_handler_9*/ ctx[12]);
 
     	iconbutton10 = new IconButton({
     			props: {
     				style: "left:130px; top:40px",
-    				ImageURL: SelectionPropertiesImageURL
+    				ImageURL: SelectionPropertiesImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "selection-properties",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
+
+    	iconbutton10.$on("click", /*click_handler_10*/ ctx[13]);
 
     	iconbutton11 = new IconButton({
     			props: {
     				style: "left:170px; top:40px",
-    				ImageURL: SelectionConfigurationImageURL
+    				ImageURL: SelectionConfigurationImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "selection-configuration",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
+
+    	iconbutton11.$on("click", /*click_handler_11*/ ctx[14]);
 
     	iconbutton12 = new IconButton({
     			props: {
     				style: "left:210px; top:40px",
-    				ImageURL: SelectionScriptImageURL
+    				ImageURL: SelectionScriptImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "selection-script",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
+
+    	iconbutton12.$on("click", /*click_handler_12*/ ctx[15]);
 
     	iconbutton13 = new IconButton({
     			props: {
     				style: "left:250px; top:40px",
-    				ImageURL: SelectionContentsImageURL
+    				ImageURL: SelectionContentsImageURL,
+    				active: /*$InspectorState*/ ctx[2].Pane === "selection-contents",
+    				disabled: ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0
     			}
     		});
 
+    	iconbutton13.$on("click", /*click_handler_13*/ ctx[16]);
+    	let if_block0 = /*$InspectorState*/ ctx[2].Pane === "overview" && create_if_block_9();
+    	let if_block1 = /*$InspectorState*/ ctx[2].Pane === "selection-globals" && create_if_block_8();
+    	let if_block2 = /*$InspectorState*/ ctx[2].Pane === "selection-resources" && create_if_block_7();
+    	let if_block3 = /*$InspectorState*/ ctx[2].Pane === "selection-properties" && create_if_block_6();
+    	let if_block4 = /*$InspectorState*/ ctx[2].Pane === "selection-configuration" && create_if_block_5();
+    	let if_block5 = /*$InspectorState*/ ctx[2].Pane === "selection-script" && create_if_block_4();
+    	let if_block6 = /*$InspectorState*/ ctx[2].Pane === "selection-contents" && create_if_block_3$1();
+    	let if_block7 = /*$InspectorState*/ ctx[2].Mode === "import-export" && create_if_block_2$1();
+    	let if_block8 = /*$InspectorState*/ ctx[2].Mode === "search" && create_if_block_1$1();
     	messageview = new MessageView({});
 
     	return {
@@ -2716,7 +2862,24 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			create_component(iconbutton13.$$.fragment);
     			t13 = space();
     			div1 = element("div");
+    			if (if_block0) if_block0.c();
     			t14 = space();
+    			if (if_block1) if_block1.c();
+    			t15 = space();
+    			if (if_block2) if_block2.c();
+    			t16 = space();
+    			if (if_block3) if_block3.c();
+    			t17 = space();
+    			if (if_block4) if_block4.c();
+    			t18 = space();
+    			if (if_block5) if_block5.c();
+    			t19 = space();
+    			if (if_block6) if_block6.c();
+    			t20 = space();
+    			if (if_block7) if_block7.c();
+    			t21 = space();
+    			if (if_block8) if_block8.c();
+    			t22 = space();
     			create_component(messageview.$$.fragment);
     			attr(div0, "name", "TabStrip");
     			set_style(div0, "display", "block");
@@ -2724,6 +2887,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			set_style(div0, "top", "2px");
     			set_style(div0, "height", "74px");
     			set_style(div0, "overflow", "visible");
+    			set_style(div0, "border", "none");
     			set_style(div0, "border-bottom", "solid 1px #454545");
     			attr(div1, "name", "PaneArea");
     			set_style(div1, "display", "block");
@@ -2764,11 +2928,177 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			mount_component(iconbutton13, div0, null);
     			insert(target, t13, anchor);
     			insert(target, div1, anchor);
-    			insert(target, t14, anchor);
+    			if (if_block0) if_block0.m(div1, null);
+    			append(div1, t14);
+    			if (if_block1) if_block1.m(div1, null);
+    			append(div1, t15);
+    			if (if_block2) if_block2.m(div1, null);
+    			append(div1, t16);
+    			if (if_block3) if_block3.m(div1, null);
+    			append(div1, t17);
+    			if (if_block4) if_block4.m(div1, null);
+    			append(div1, t18);
+    			if (if_block5) if_block5.m(div1, null);
+    			append(div1, t19);
+    			if (if_block6) if_block6.m(div1, null);
+    			append(div1, t20);
+    			if (if_block7) if_block7.m(div1, null);
+    			append(div1, t21);
+    			if (if_block8) if_block8.m(div1, null);
+    			insert(target, t22, anchor);
     			mount_component(messageview, target, anchor);
     			current = true;
     		},
-    		p: noop,
+    		p(ctx, dirty) {
+    			const iconbutton0_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton0_changes.active = /*$InspectorState*/ ctx[2].Mode === "applet";
+    			iconbutton0.$set(iconbutton0_changes);
+    			const iconbutton1_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton1_changes.active = /*$InspectorState*/ ctx[2].Mode === "master";
+    			iconbutton1.$set(iconbutton1_changes);
+    			const iconbutton2_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton2_changes.active = /*$InspectorState*/ ctx[2].Mode === "card";
+    			iconbutton2.$set(iconbutton2_changes);
+    			const iconbutton3_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton3_changes.active = /*$InspectorState*/ ctx[2].Mode === "overlay";
+    			iconbutton3.$set(iconbutton3_changes);
+    			const iconbutton4_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton4_changes.active = /*$InspectorState*/ ctx[2].Mode === "component";
+    			iconbutton4.$set(iconbutton4_changes);
+    			const iconbutton5_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton5_changes.active = /*$InspectorState*/ ctx[2].Mode === "import-export";
+    			iconbutton5.$set(iconbutton5_changes);
+    			const iconbutton6_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton6_changes.active = /*$InspectorState*/ ctx[2].Mode === "search";
+    			iconbutton6.$set(iconbutton6_changes);
+    			const iconbutton7_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton7_changes.active = /*$InspectorState*/ ctx[2].Pane === "overview";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton7_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton7.$set(iconbutton7_changes);
+    			const iconbutton8_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton8_changes.active = /*$InspectorState*/ ctx[2].Pane === "selection-globals";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton8_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton8.$set(iconbutton8_changes);
+    			const iconbutton9_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton9_changes.active = /*$InspectorState*/ ctx[2].Pane === "selection-resources";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton9_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton9.$set(iconbutton9_changes);
+    			const iconbutton10_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton10_changes.active = /*$InspectorState*/ ctx[2].Pane === "selection-properties";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton10_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton10.$set(iconbutton10_changes);
+    			const iconbutton11_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton11_changes.active = /*$InspectorState*/ ctx[2].Pane === "selection-configuration";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton11_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton11.$set(iconbutton11_changes);
+    			const iconbutton12_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton12_changes.active = /*$InspectorState*/ ctx[2].Pane === "selection-script";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton12_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton12.$set(iconbutton12_changes);
+    			const iconbutton13_changes = {};
+    			if (dirty & /*$InspectorState*/ 4) iconbutton13_changes.active = /*$InspectorState*/ ctx[2].Pane === "selection-contents";
+    			if (dirty & /*$InspectorState*/ 4) iconbutton13_changes.disabled = ("import-export search").indexOf(/*$InspectorState*/ ctx[2].Mode) >= 0;
+    			iconbutton13.$set(iconbutton13_changes);
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "overview") {
+    				if (if_block0) ; else {
+    					if_block0 = create_if_block_9();
+    					if_block0.c();
+    					if_block0.m(div1, t14);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "selection-globals") {
+    				if (if_block1) ; else {
+    					if_block1 = create_if_block_8();
+    					if_block1.c();
+    					if_block1.m(div1, t15);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "selection-resources") {
+    				if (if_block2) ; else {
+    					if_block2 = create_if_block_7();
+    					if_block2.c();
+    					if_block2.m(div1, t16);
+    				}
+    			} else if (if_block2) {
+    				if_block2.d(1);
+    				if_block2 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "selection-properties") {
+    				if (if_block3) ; else {
+    					if_block3 = create_if_block_6();
+    					if_block3.c();
+    					if_block3.m(div1, t17);
+    				}
+    			} else if (if_block3) {
+    				if_block3.d(1);
+    				if_block3 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "selection-configuration") {
+    				if (if_block4) ; else {
+    					if_block4 = create_if_block_5();
+    					if_block4.c();
+    					if_block4.m(div1, t18);
+    				}
+    			} else if (if_block4) {
+    				if_block4.d(1);
+    				if_block4 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "selection-script") {
+    				if (if_block5) ; else {
+    					if_block5 = create_if_block_4();
+    					if_block5.c();
+    					if_block5.m(div1, t19);
+    				}
+    			} else if (if_block5) {
+    				if_block5.d(1);
+    				if_block5 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "selection-contents") {
+    				if (if_block6) ; else {
+    					if_block6 = create_if_block_3$1();
+    					if_block6.c();
+    					if_block6.m(div1, t20);
+    				}
+    			} else if (if_block6) {
+    				if_block6.d(1);
+    				if_block6 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Mode === "import-export") {
+    				if (if_block7) ; else {
+    					if_block7 = create_if_block_2$1();
+    					if_block7.c();
+    					if_block7.m(div1, t21);
+    				}
+    			} else if (if_block7) {
+    				if_block7.d(1);
+    				if_block7 = null;
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Mode === "search") {
+    				if (if_block8) ; else {
+    					if_block8 = create_if_block_1$1();
+    					if_block8.c();
+    					if_block8.m(div1, null);
+    				}
+    			} else if (if_block8) {
+    				if_block8.d(1);
+    				if_block8 = null;
+    			}
+    		},
     		i(local) {
     			if (current) return;
     			transition_in(iconbutton0.$$.fragment, local);
@@ -2824,7 +3154,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			destroy_component(iconbutton13);
     			if (detaching) detach(t13);
     			if (detaching) detach(div1);
-    			if (detaching) detach(t14);
+    			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
+    			if (if_block2) if_block2.d();
+    			if (if_block3) if_block3.d();
+    			if (if_block4) if_block4.d();
+    			if (if_block5) if_block5.d();
+    			if (if_block6) if_block6.d();
+    			if (if_block7) if_block7.d();
+    			if (if_block8) if_block8.d();
+    			if (detaching) detach(t22);
     			destroy_component(messageview, detaching);
     		}
     	};
@@ -2897,7 +3236,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     let ComponentImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABAklEQVRYR+1WQRLEIAhrv+uD/O7ueGCGYQOh1FoP21OnFhMiBM/j5ed8Gf/Ym0Dv/WMVaq1B0ujfTKyrQLShJZEBFzI2lmajAzQQ+u6pM8AllhLwQCQDtK43z7zro/lRADEd36KMEagGGbGXFRBAljGSNxMjBPdVYDBERcWyu10DWlJLYkkXoGpnhjLdByISy5xw1ZB6bBh5fW8Te4SArYnIouksqB5FZGTUiiPGjJCV3voCHUbWBxigt15WoAqo427XwEwS7DhpF2TbqUo6JHBFyqkEoolXBfKmK7wPoBvMjKOwN6tBihoRaqeqCqgg96wB1NOsnaqq0DasbpyN+xP4ArhxGDBtdoDkAAAAAElFTkSuQmCC";
     let ImportExportImageURL$1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA0klEQVRYR+2VYQ6AIAiF67oeyOvWbKPRExCdaW32p5qO94Hw3LfJzz5Zf1sA/61AjPEIIVwJpO/0pv+avmqqAAoOBSAxnvEwAC4+HADFhwJI4p8EwO73TEXXKeAAHvG0XwWQup0EtDGkdfQHyyNEAG4ykqlYAFrmWswMAB1OClhjRKV4D4BS5tYReM8cNW4Ayc28QJb3YwzUMQFqLhXv3iqAKRXAUfJmVtqn3SPZEZQC9Vqnps2moJeAFYdPjGpEb4BIo9p0F/SEWwCrAqsC0ytwArCqxCFYK1feAAAAAElFTkSuQmCC";
     let SearchImageURL$1 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA00lEQVRYR+2WQRKAIAgA87s+yO/WcHCGEBAV8WKnmqxdkKD0HD7SYf7jLlBKeWlQOWeR4ybAgS0iLgIYzkWr3V8W6MFrFqR1bgLaPlMJvHZJoEZlgUsSV+BmYCkDUFi0EOFaKkquaN0EQKaCuW/etQ9obXd7J8Rp5M616crJDW0Bt9849bgmsIjLNJSKTSs6y7+GKQO74CDYFdgJ7wrshqsCEXBRIArOCkTCG4Fo+E/gBLwRwMMEzlebzFAjotMqAi7WAO3vlkhm13Q74eyLrc9dgQ9itQQwkRB2awAAAABJRU5ErkJggg==";
-    let ContentsImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAUklEQVRYR+3UwREAIAgDQWiXgtKuFqA+MTzOAiSzBjPMJ83zgwAIXAUkrY5yVtUxjwAzBTre/3UnazizA/wDdgHW0C5g7wAB7AL2EhIAAQR+CmweoTAhD/IaqwAAAABJRU5ErkJggg==";
+    let SelectionImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAUklEQVRYR+3UwREAIAgDQWiXgtKuFqA+MTzOAiSzBjPMJ83zgwAIXAUkrY5yVtUxjwAzBTre/3UnazizA/wDdgHW0C5g7wAB7AL2EhIAAQR+CmweoTAhD/IaqwAAAABJRU5ErkJggg==";
     let SelectionGlobalsImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA+UlEQVRYR+2XUQ7EIAhE2+t6IK+7Gz5oKAEZ1IZusv3ZJlV5DgO651H8nMXxjwug9/5hmNZaCLZrvAtAAQhk9CuBs+N57nsUqPLCLdcs41Mw1vqh2SwYacCMca21UgpwYK4SuSP9zQPXFQYroOXTrueA2TRCCnjBvaAexJQHouBZCJ2aUIGdAGkFrAkZeRE/DDshunskDd7ZAQEgfX50bhDgEgBaYiPFQgC0cTzmAZZJdyrUB8i4dBVYUKgCSAXQ+mEfQCCQ3XsK/8ZZIKuA3ktOQ1klZfeB1ZvSVBWsBo3mv+dWrFsl0v///wui/CLf4UaELDYzphzgC1oI5DDpfBDzAAAAAElFTkSuQmCC";
     let SelectionResourcesImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA7ElEQVRYR+2XUQ6EMAhE9bo9UK+7m35gugSYEWl0N+uPMVIYnhTqvt187TfH3w4BvfeXiGmtQWFV9q6AEWAIie6z4LP2sjZFYM5+OLpCDKJeXSMfAgTjqqCW/98hIHUR1cNSAowA69NSNYCc6/eefZpAlYAUgbPBJYi1LkWgUkBIwOrt2eAWBW92hK340QKQuEFhtoEEvPYbbaloEDECx3rYB7xqRlOwbBdolNazpsdmTxHwviXq+RahVB+4kh0z1mENME5YmxICbDDW7k8gdSqedwbqB3ouaPvv/C9YQoCt2mq7Zx3Lq7Nj/L0BoDBwMIhTLVUAAAAASUVORK5CYII=";
     let SelectionPropertiesImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABM0lEQVRYR+1XQQ7DMAhrv9sH5bubcqDykMEQReoO3WWHJsUY20nP4+Hf+XD94wYwxvgYmOu6JLBd60MAs8AEkv0j4O562/s/DHS1YB2zfTaeyih/Zp29FAtFBVAXuN6AsPdLsfkOI/FFxZWw2wxUAGDHTKjYVJkBT7unkwGrWLXEgKfX7Dk7Yd0yYaKlWwyw2bJ8mC9VImTASgxEQmRMIBBvwy0uMDBR8nXzZDkJfacqfCJBlgBkaq4y0QaAHfnNzJLmiEpKojbCHFDJhha0cUSizHSRuoB1k826ogPvDMqASjD1HBlRrqAMqAJKlL5o+zRcBRCJ1esljOLogMG5dTXg3VTSQJbr7KKB6eiP3+X7QCcH2G1p641IaYIpnR086WnYLbJr/ftdUL4TqkRbff4C+AI8xegwDnQdAwAAAABJRU5ErkJggg==";
@@ -2910,6 +3249,20 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	component_subscribe($$self, InspectorState, $$value => $$invalidate(2, $InspectorState = $$value));
     	let { Applet } = $$props;
     	let { PositionAroundPreferredPosition } = $$props;
+    	const click_handler = () => InspectorState.setMode("applet");
+    	const click_handler_1 = () => InspectorState.setMode("master");
+    	const click_handler_2 = () => InspectorState.setMode("card");
+    	const click_handler_3 = () => InspectorState.setMode("overlay");
+    	const click_handler_4 = () => InspectorState.setMode("component");
+    	const click_handler_5 = () => InspectorState.setMode("import-export");
+    	const click_handler_6 = () => InspectorState.setMode("search");
+    	const click_handler_7 = () => InspectorState.setPane("overview");
+    	const click_handler_8 = () => InspectorState.setPane("selection-globals");
+    	const click_handler_9 = () => InspectorState.setPane("selection-resources");
+    	const click_handler_10 = () => InspectorState.setPane("selection-properties");
+    	const click_handler_11 = () => InspectorState.setPane("selection-configuration");
+    	const click_handler_12 = () => InspectorState.setPane("selection-script");
+    	const click_handler_13 = () => InspectorState.setPane("selection-contents");
 
     	function dialog_State_binding(value) {
     		$InspectorState = value;
@@ -2938,7 +3291,26 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		}
     	};
 
-    	return [Applet, PositionAroundPreferredPosition, $InspectorState, dialog_State_binding];
+    	return [
+    		Applet,
+    		PositionAroundPreferredPosition,
+    		$InspectorState,
+    		click_handler,
+    		click_handler_1,
+    		click_handler_2,
+    		click_handler_3,
+    		click_handler_4,
+    		click_handler_5,
+    		click_handler_6,
+    		click_handler_7,
+    		click_handler_8,
+    		click_handler_9,
+    		click_handler_10,
+    		click_handler_11,
+    		click_handler_12,
+    		click_handler_13,
+    		dialog_State_binding
+    	];
     }
 
     class InspectorView extends SvelteComponent {
