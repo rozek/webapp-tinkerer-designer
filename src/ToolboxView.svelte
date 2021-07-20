@@ -80,7 +80,7 @@ $:if (Applet != null) {                                            // needs "$:"
     on:close={onClose}
   >
     <IconButton style="left:4px;   top:4px" ImageURL={LayouterImageURL}/>
-    <IconButton style="left:44px;  top:4px" ImageURL={UnlockedImageURL}/>
+    <IconButton style="left:44px;  top:4px" active ImageURL={UnlockedImageURL} activeURL={LockedImageURL}/>
     <IconButton style="left:84px;  top:4px" ImageURL={NudgerImageURL}/>
     <IconButton style="left:124px; top:4px" ImageURL={InspectorImageURL}/>
 
