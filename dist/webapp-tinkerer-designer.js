@@ -2335,7 +2335,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (60:2) <Dialog class="WAD-Toolbox" {Applet} Title="WAT-Designer" resizable={false}     {PositionAroundPreferredPosition} bind:State={$ToolboxState}     on:close={onClose}   >
+    // (61:2) <Dialog class="WAD-Toolbox" {Applet} Title="WAT-Designer" resizable={false}     {PositionAroundPreferredPosition} bind:State={$ToolboxState}     on:close={onClose}   >
     function create_default_slot(ctx) {
     	let iconbutton0;
     	let t0;
@@ -2394,7 +2394,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	iconbutton1 = new IconButton({
     			props: {
     				style: "left:44px;  top:4px",
-    				ImageURL: EventLockImageURL
+    				ImageURL: UnlockedImageURL
     			}
     		});
 
@@ -2805,8 +2805,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     /**** normal IconButton images as Data URLs ****/
     let LayouterImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABA0lEQVRYR82WSw6EMAxD4bo9UK/LiAWjTCYfO6lUWEKwX01ocx6br3Oz/0EDzDmvCHqMQWlCxZmpB4TApADaPBNl610AVkingL5vAsiXsxVnTZxphQBd8wfugbD0/gCi4my10lCbebo/AFlcCICn4d03AarRW7+r1LJSWAYgxb24Q4DOt0fMvYb8JlAFYMxvCO3TAmDNlwJUzJcBVM2XAHTM2wBd8xbACvMQwHqo/125FVd2y/JOiJ7t2VkBA9xC1h6u72eG8jl0GEWfgTGzaqHjGBkgKiDUQCJT6ERuNTA0EXmdz3Y92rjvHcu9DmZ6AEktTUAbWmNXZ4OiAZgEkNrtAB9tuDAwYD8R4wAAAABJRU5ErkJggg==";
-
-    let EventLockImageURL = "";
+    let UnlockedImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAnklEQVRYR+2WSwrAIAxE9boeKNdtcSGIaDMTKUGJ2+bzMlOiOTmf7Nw/mQBE5BnBSymmWlTSrPEuCAzQN59Nq31fWQ0BoMXRuB6GAkB8bhBIbAVRAdiCtSiTcycAs1t+USAA7lAAWbvopF87YfkTBoCmQC8rEzvaZrJAuw2ZK/pMgDqhqwUBEAqgK7jFnbmK2Smt8eqLyFoYzQsAdwVeyNKYIaHO7AQAAAAASUVORK5CYII=";
     let NudgerImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAo0lEQVRYR+2WUQ7AIAhD9boeiOtu8YPEmG1CIUEX9g32WYuuluCvBuuXBEgHTA4Q0dVD3FqD14Ebu3AoAIvzGKMuwA6EAsziFhcgB8IBPK9vsQPSxEvreBNLAG3YtPWvAOg5a/v2BeAz0lqqrV9mYAZZ3XjuIfQcuae1xA6MzdqgfW3iTIDxKba8A70XcmALgPAfki0APEYUzoCHuCmECfAbB26pGWAhx+HZtAAAAABJRU5ErkJggg==";
     let InspectorImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA6UlEQVRYR+2WSw6AIAxE9bociOtqWDTBSjvTotEF7gyh8zr9hH37+Ns/1t8WwHIg5UCt9Rg1byklHC90wRLWMBEQGmAkLkLeGRpzCgBZjs49CAjQB9cZo/8mjMrhAujMkKBVEg9iAZgOMF2PStI3n1WGKQBr/iNjGQJAM+2d0w6w2y4Lo0EuDrwtLtA9xK0Eb0O4DmRtnbnnNiFao6xwc5VuQgnqXWKFmVhwFc+6gBL5N0CzEGXglYO5C98DWQhGvMWmAASCeWDIHmF7hwboO3oEEhWWeGEADTJar5ExTQNERKYepU8JWXFOXsLIIZeR3YwAAAAASUVORK5CYII=";
     let UndoImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAz0lEQVRYR+2WUQrAIAxD53U9kNfd8KNQRG0a3crA/Y1p85ZUbLqCnxSsfx2ALQ6UUu6cM1WL2qT7porX9xAAEQ8B0OKfA7TiEgkTA9UDIwAGhAKoQr0ImFhogBZC2+9pziUADdHmjx7PZQCB6DUgArEFYHShhQPMIhLoVx34NwCSHzLMWHWGEVgbEfGlCMIBEHrLBeQnpqcAKTCDQPabxxAp0oNA98EAnqFj+2WEXrPoOu2Y6UBvALWazzMZuQBEOHwksxzwfKcc8AhYaw/AA7TnkCErkZMFAAAAAElFTkSuQmCC";
