@@ -87,5 +87,5 @@
   `--hovered-image-url:url(${active ? activeHoveredImageURL : hoveredImageURL});` +
   `--active-image-url:url(${activeImageURL});`   +
   style
-}></div>
+} on:click></div>
 
