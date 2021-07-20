@@ -1972,8 +1972,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
     		});
 
-    	const default_slot_template = /*#slots*/ ctx[12].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[11], null);
+    	const default_slot_template = /*#slots*/ ctx[14].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[13], null);
     	let if_block = /*resizable*/ ctx[3] && create_if_block_1$1(ctx);
 
     	let div4_levels = [
@@ -2047,8 +2047,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!current || dirty & /*Title*/ 4) set_data(t0, /*Title*/ ctx[2]);
 
     			if (default_slot) {
-    				if (default_slot.p && (!current || dirty & /*$$scope*/ 2048)) {
-    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[11], !current ? -1 : dirty, null, null);
+    				if (default_slot.p && (!current || dirty & /*$$scope*/ 8192)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[13], !current ? -1 : dirty, null, null);
     				}
     			}
 
@@ -2107,7 +2107,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (138:4) {#if resizable}
+    // (143:4) {#if resizable}
     function create_if_block_1$1(ctx) {
     	let div;
     	let iconbutton;
@@ -2133,9 +2133,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!mounted) {
     				dispose = action_destroyer(asDraggable.call(null, div, {
     					onDragStart: /*startResizing*/ ctx[6],
-    					onDragMove: /*continueResizing*/ ctx[7],
-    					minX: 120,
-    					minY: 80
+    					onDragMove: /*continueResizing*/ ctx[7]
     				}));
 
     				mounted = true;
@@ -2223,13 +2221,18 @@ var WAD = (function (exports, webappTinkererRuntime) {
     let ResizeHandle_ImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC";
 
     function instance$5($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["Applet","Title","resizable","State","PositionAroundPreferredPosition"];
+    	const omit_props_names = [
+    		"Applet","Title","resizable","minWidth","minHeight","State","PositionAroundPreferredPosition"
+    	];
+
     	let $$restProps = compute_rest_props($$props, omit_props_names);
     	let { $$slots: slots = {}, $$scope } = $$props;
     	const dispatch = createEventDispatcher();
     	let { Applet } = $$props;
     	let { Title } = $$props;
     	let { resizable = false } = $$props;
+    	let { minWidth = 120 } = $$props;
+    	let { minHeight = 80 } = $$props;
     	let { State } = $$props;
     	let { PositionAroundPreferredPosition } = $$props;
 
@@ -2247,8 +2250,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	function continueResizing(x, y) {
-    		$$invalidate(0, State.Width = x, State);
-    		$$invalidate(0, State.Height = y, State);
+    		$$invalidate(0, State.Width = Math.max(minWidth, x), State);
+    		$$invalidate(0, State.Height = Math.max(minHeight, y), State);
     	}
 
     	function closeDialog() {
@@ -2262,13 +2265,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		if ("Applet" in $$new_props) $$invalidate(1, Applet = $$new_props.Applet);
     		if ("Title" in $$new_props) $$invalidate(2, Title = $$new_props.Title);
     		if ("resizable" in $$new_props) $$invalidate(3, resizable = $$new_props.resizable);
+    		if ("minWidth" in $$new_props) $$invalidate(10, minWidth = $$new_props.minWidth);
+    		if ("minHeight" in $$new_props) $$invalidate(11, minHeight = $$new_props.minHeight);
     		if ("State" in $$new_props) $$invalidate(0, State = $$new_props.State);
-    		if ("PositionAroundPreferredPosition" in $$new_props) $$invalidate(10, PositionAroundPreferredPosition = $$new_props.PositionAroundPreferredPosition);
-    		if ("$$scope" in $$new_props) $$invalidate(11, $$scope = $$new_props.$$scope);
+    		if ("PositionAroundPreferredPosition" in $$new_props) $$invalidate(12, PositionAroundPreferredPosition = $$new_props.PositionAroundPreferredPosition);
+    		if ("$$scope" in $$new_props) $$invalidate(13, $$scope = $$new_props.$$scope);
     	};
 
     	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*Applet, State, PositionAroundPreferredPosition*/ 1027) {
+    		if ($$self.$$.dirty & /*Applet, State, PositionAroundPreferredPosition*/ 4099) {
     			if (Applet != null && isNaN(State.Offset.x)) {
     				// requires "$:"
     				let GeometryOnDisplay = Applet.GeometryOnDisplay;
@@ -2296,6 +2301,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		continueResizing,
     		closeDialog,
     		$$restProps,
+    		minWidth,
+    		minHeight,
     		PositionAroundPreferredPosition,
     		$$scope,
     		slots
@@ -2310,8 +2317,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			Applet: 1,
     			Title: 2,
     			resizable: 3,
+    			minWidth: 10,
+    			minHeight: 11,
     			State: 0,
-    			PositionAroundPreferredPosition: 10
+    			PositionAroundPreferredPosition: 12
     		});
     	}
     }
@@ -2332,7 +2341,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		Applet: /*Applet*/ ctx[0],
     		Title: "WAT-Designer: Inspector",
     		resizable: true,
-    		PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[1]
+    		PositionAroundPreferredPosition: /*PositionAroundPreferredPosition*/ ctx[1],
+    		minWidth: 300,
+    		minHeight: 420,
+    		$$slots: { default: [create_default_slot$2] },
+    		$$scope: { ctx }
     	};
 
     	if (/*$InspectorState*/ ctx[2] !== void 0) {
@@ -2355,6 +2368,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (dirty & /*Applet*/ 1) dialog_changes.Applet = /*Applet*/ ctx[0];
     			if (dirty & /*PositionAroundPreferredPosition*/ 2) dialog_changes.PositionAroundPreferredPosition = /*PositionAroundPreferredPosition*/ ctx[1];
 
+    			if (dirty & /*$$scope*/ 16) {
+    				dialog_changes.$$scope = { dirty, ctx };
+    			}
+
     			if (!updating_State && dirty & /*$InspectorState*/ 4) {
     				updating_State = true;
     				dialog_changes.State = /*$InspectorState*/ ctx[2];
@@ -2374,6 +2391,29 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		d(detaching) {
     			destroy_component(dialog, detaching);
+    		}
+    	};
+    }
+
+    // (31:2) <Dialog class="WAD-Inspector" {Applet} Title="WAT-Designer: Inspector" resizable={true}     {PositionAroundPreferredPosition} bind:State={$InspectorState}     minWidth={300} minHeight={420}   >
+    function create_default_slot$2(ctx) {
+    	let div;
+
+    	return {
+    		c() {
+    			div = element("div");
+    			attr(div, "name", "TabStrip");
+    			set_style(div, "display", "block");
+    			set_style(div, "position", "relative");
+    			set_style(div, "height", "74px");
+    			set_style(div, "overflow", "visible");
+    			set_style(div, "border-bottom", "solid 1px #454545");
+    		},
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+    		},
+    		d(detaching) {
+    			if (detaching) detach(div);
     		}
     	};
     }
