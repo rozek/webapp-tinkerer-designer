@@ -7,7 +7,7 @@
   import       Dialog       from './Dialog.svelte'
   import     IconButton     from './IconButton.svelte'
   import {  chosenApplet  } from './chosenApplet.js'
-  import {  ToolboxState  } from './ToolboxState.js'
+//import {  ToolboxState  } from './ToolboxState.js'   // causes Svelte warnings
   import {  NudgerState   } from './NudgerState.js'
   import { InspectorState } from './InspectorState.js'
 
@@ -50,6 +50,8 @@
 </script>
 
 <script lang="ts">
+  import {  ToolboxState  } from './ToolboxState.js'
+
   export let Applet:WAT_Applet
   export let PositionAroundPreferredPosition:(Width:WAT_Dimension,Height:WAT_Dimension) => WAT_Position
 
