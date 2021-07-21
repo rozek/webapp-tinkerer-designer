@@ -14,6 +14,14 @@
   import { selectedAppletList } from './selectedAppletList.js'
   import        ListView        from 'svelte-sortable-flat-list-view'
   import         Button         from './Button.svelte'
+
+/**** Colors ****/
+
+  const normalColor  = '#AAAAAA'
+  const hoveredColor = '#FFEC2E'
+  const activeColor  = '#7FFF00' /* chartreuse */
+
+
 </script>
 
 <script lang="ts">
@@ -45,13 +53,24 @@
     height:30px
   ">
     <span style="flex:1 1 auto; line-height:24px">designable Applets:</span>
-    <Button disabled={$selectedAppletList.length === 0} on:click={editSelection}
+    <Button disabled={
+      ($selectedAppletList.length === 0) || ($chosenApplet === $selectedAppletList[0])
+    } on:click={editSelection}
     >design</Button>
   </div>
 
   <ListView style="flex:1 1 auto; border:solid 1px #969696; padding:2px"
-    List={$AppletList} Key={(Applet,Index) => (Applet.Id || ('Applet #' + Index))}
+    List={$AppletList} Key={(Applet,Index) => Applet.Id}
     SelectionLimit={1}
     on:selected-item={selectApplet} on:deselected-item={deselectApplet}
-  />
+    let:Item={Applet} let:Index={Index}
+  >
+    <div style="color:{
+      $selectedAppletList.indexOf(Applet) < 0
+      ? (Applet === $chosenApplet ? activeColor : normalColor)
+      : '#454545'
+    }">
+      {Applet.Id || ('Applet #' + Index)}
+    </div>
+  </ListView>
 </div>
