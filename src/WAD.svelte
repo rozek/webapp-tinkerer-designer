@@ -91,7 +91,7 @@
 
 /**** Colors ****/
 
-  const normalColor  = '#969696'
+  const normalColor  = '#AAAAAA'
   const hoveredColor = '#FFEC2E'
   const activeColor  = '#7FFF00' /* chartreuse */
 
