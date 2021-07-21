@@ -2,6 +2,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     'use strict';
 
     function noop() { }
+    const identity = x => x;
     function assign(tar, src) {
         // @ts-ignore
         for (const k in src)
@@ -89,6 +90,41 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
     function action_destroyer(action_result) {
         return action_result && is_function(action_result.destroy) ? action_result.destroy : noop;
+    }
+
+    const is_client = typeof window !== 'undefined';
+    let now = is_client
+        ? () => window.performance.now()
+        : () => Date.now();
+    let raf = is_client ? cb => requestAnimationFrame(cb) : noop;
+
+    const tasks = new Set();
+    function run_tasks(now) {
+        tasks.forEach(task => {
+            if (!task.c(now)) {
+                tasks.delete(task);
+                task.f();
+            }
+        });
+        if (tasks.size !== 0)
+            raf(run_tasks);
+    }
+    /**
+     * Creates a new task that runs on each raf frame
+     * until it returns a falsy value or is aborted
+     */
+    function loop(callback) {
+        let task;
+        if (tasks.size === 0)
+            raf(run_tasks);
+        return {
+            promise: new Promise(fulfill => {
+                tasks.add(task = { c: callback, f: fulfill });
+            }),
+            abort() {
+                tasks.delete(task);
+            }
+        };
     }
 
     // Track which nodes are claimed during hydration. Unclaimed nodes can then be removed from the DOM
@@ -271,6 +307,136 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return e;
     }
 
+    const active_docs = new Set();
+    let active = 0;
+    // https://github.com/darkskyapp/string-hash/blob/master/index.js
+    function hash(str) {
+        let hash = 5381;
+        let i = str.length;
+        while (i--)
+            hash = ((hash << 5) - hash) ^ str.charCodeAt(i);
+        return hash >>> 0;
+    }
+    function create_rule(node, a, b, duration, delay, ease, fn, uid = 0) {
+        const step = 16.666 / duration;
+        let keyframes = '{\n';
+        for (let p = 0; p <= 1; p += step) {
+            const t = a + (b - a) * ease(p);
+            keyframes += p * 100 + `%{${fn(t, 1 - t)}}\n`;
+        }
+        const rule = keyframes + `100% {${fn(b, 1 - b)}}\n}`;
+        const name = `__svelte_${hash(rule)}_${uid}`;
+        const doc = node.ownerDocument;
+        active_docs.add(doc);
+        const stylesheet = doc.__svelte_stylesheet || (doc.__svelte_stylesheet = doc.head.appendChild(element('style')).sheet);
+        const current_rules = doc.__svelte_rules || (doc.__svelte_rules = {});
+        if (!current_rules[name]) {
+            current_rules[name] = true;
+            stylesheet.insertRule(`@keyframes ${name} ${rule}`, stylesheet.cssRules.length);
+        }
+        const animation = node.style.animation || '';
+        node.style.animation = `${animation ? `${animation}, ` : ''}${name} ${duration}ms linear ${delay}ms 1 both`;
+        active += 1;
+        return name;
+    }
+    function delete_rule(node, name) {
+        const previous = (node.style.animation || '').split(', ');
+        const next = previous.filter(name
+            ? anim => anim.indexOf(name) < 0 // remove specific animation
+            : anim => anim.indexOf('__svelte') === -1 // remove all Svelte animations
+        );
+        const deleted = previous.length - next.length;
+        if (deleted) {
+            node.style.animation = next.join(', ');
+            active -= deleted;
+            if (!active)
+                clear_rules();
+        }
+    }
+    function clear_rules() {
+        raf(() => {
+            if (active)
+                return;
+            active_docs.forEach(doc => {
+                const stylesheet = doc.__svelte_stylesheet;
+                let i = stylesheet.cssRules.length;
+                while (i--)
+                    stylesheet.deleteRule(i);
+                doc.__svelte_rules = {};
+            });
+            active_docs.clear();
+        });
+    }
+
+    function create_animation(node, from, fn, params) {
+        if (!from)
+            return noop;
+        const to = node.getBoundingClientRect();
+        if (from.left === to.left && from.right === to.right && from.top === to.top && from.bottom === to.bottom)
+            return noop;
+        const { delay = 0, duration = 300, easing = identity, 
+        // @ts-ignore todo: should this be separated from destructuring? Or start/end added to public api and documentation?
+        start: start_time = now() + delay, 
+        // @ts-ignore todo:
+        end = start_time + duration, tick = noop, css } = fn(node, { from, to }, params);
+        let running = true;
+        let started = false;
+        let name;
+        function start() {
+            if (css) {
+                name = create_rule(node, 0, 1, duration, delay, easing, css);
+            }
+            if (!delay) {
+                started = true;
+            }
+        }
+        function stop() {
+            if (css)
+                delete_rule(node, name);
+            running = false;
+        }
+        loop(now => {
+            if (!started && now >= start_time) {
+                started = true;
+            }
+            if (started && now >= end) {
+                tick(1, 0);
+                stop();
+            }
+            if (!running) {
+                return false;
+            }
+            if (started) {
+                const p = now - start_time;
+                const t = 0 + 1 * easing(p / duration);
+                tick(t, 1 - t);
+            }
+            return true;
+        });
+        start();
+        tick(0, 1);
+        return stop;
+    }
+    function fix_position(node) {
+        const style = getComputedStyle(node);
+        if (style.position !== 'absolute' && style.position !== 'fixed') {
+            const { width, height } = style;
+            const a = node.getBoundingClientRect();
+            node.style.position = 'absolute';
+            node.style.width = width;
+            node.style.height = height;
+            add_transform(node, a);
+        }
+    }
+    function add_transform(node, a) {
+        const b = node.getBoundingClientRect();
+        if (a.left !== b.left || a.top !== b.top) {
+            const style = getComputedStyle(node);
+            const transform = style.transform === 'none' ? '' : style.transform;
+            node.style.transform = `${transform} translate(${a.left - b.left}px, ${a.top - b.top}px)`;
+        }
+    }
+
     let current_component;
     function set_current_component(component) {
         current_component = component;
@@ -374,6 +540,20 @@ var WAD = (function (exports, webappTinkererRuntime) {
             $$.after_update.forEach(add_render_callback);
         }
     }
+
+    let promise;
+    function wait() {
+        if (!promise) {
+            promise = Promise.resolve();
+            promise.then(() => {
+                promise = null;
+            });
+        }
+        return promise;
+    }
+    function dispatch(node, direction, kind) {
+        node.dispatchEvent(custom_event(`${direction ? 'intro' : 'outro'}${kind}`));
+    }
     const outroing = new Set();
     let outros;
     function group_outros() {
@@ -411,10 +591,120 @@ var WAD = (function (exports, webappTinkererRuntime) {
             block.o(local);
         }
     }
+    const null_transition = { duration: 0 };
+    function create_bidirectional_transition(node, fn, params, intro) {
+        let config = fn(node, params);
+        let t = intro ? 0 : 1;
+        let running_program = null;
+        let pending_program = null;
+        let animation_name = null;
+        function clear_animation() {
+            if (animation_name)
+                delete_rule(node, animation_name);
+        }
+        function init(program, duration) {
+            const d = program.b - t;
+            duration *= Math.abs(d);
+            return {
+                a: t,
+                b: program.b,
+                d,
+                duration,
+                start: program.start,
+                end: program.start + duration,
+                group: program.group
+            };
+        }
+        function go(b) {
+            const { delay = 0, duration = 300, easing = identity, tick = noop, css } = config || null_transition;
+            const program = {
+                start: now() + delay,
+                b
+            };
+            if (!b) {
+                // @ts-ignore todo: improve typings
+                program.group = outros;
+                outros.r += 1;
+            }
+            if (running_program || pending_program) {
+                pending_program = program;
+            }
+            else {
+                // if this is an intro, and there's a delay, we need to do
+                // an initial tick and/or apply CSS animation immediately
+                if (css) {
+                    clear_animation();
+                    animation_name = create_rule(node, t, b, duration, delay, easing, css);
+                }
+                if (b)
+                    tick(0, 1);
+                running_program = init(program, duration);
+                add_render_callback(() => dispatch(node, b, 'start'));
+                loop(now => {
+                    if (pending_program && now > pending_program.start) {
+                        running_program = init(pending_program, duration);
+                        pending_program = null;
+                        dispatch(node, running_program.b, 'start');
+                        if (css) {
+                            clear_animation();
+                            animation_name = create_rule(node, t, running_program.b, running_program.duration, 0, easing, config.css);
+                        }
+                    }
+                    if (running_program) {
+                        if (now >= running_program.end) {
+                            tick(t = running_program.b, 1 - t);
+                            dispatch(node, running_program.b, 'end');
+                            if (!pending_program) {
+                                // we're done
+                                if (running_program.b) {
+                                    // intro — we can tidy up immediately
+                                    clear_animation();
+                                }
+                                else {
+                                    // outro — needs to be coordinated
+                                    if (!--running_program.group.r)
+                                        run_all(running_program.group.c);
+                                }
+                            }
+                            running_program = null;
+                        }
+                        else if (now >= running_program.start) {
+                            const p = now - running_program.start;
+                            t = running_program.a + running_program.d * easing(p / running_program.duration);
+                            tick(t, 1 - t);
+                        }
+                    }
+                    return !!(running_program || pending_program);
+                });
+            }
+        }
+        return {
+            run(b) {
+                if (is_function(config)) {
+                    wait().then(() => {
+                        // @ts-ignore
+                        config = config();
+                        go(b);
+                    });
+                }
+                else {
+                    go(b);
+                }
+            },
+            end() {
+                clear_animation();
+                running_program = pending_program = null;
+            }
+        };
+    }
     function outro_and_destroy_block(block, lookup) {
         transition_out(block, 1, 1, () => {
             lookup.delete(block.key);
         });
+    }
+    function fix_and_outro_and_destroy_block(block, lookup) {
+        block.f();
+        outro_and_destroy_block(block, lookup);
     }
     function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, lookup, node, destroy, create_each_block, next, get_context) {
         let o = old_blocks.length;
@@ -909,12 +1199,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
       }
     }
 
-    var css_248z$4 = ".WAD-MessageView.svelte-l80szn{display:block;position:relative;overflow:hidden;height:34px;line-height:34px;text-align:left;border:none;border-top:solid 1px var(--normal-color);padding:0px 34px 0px 4px;white-space:nowrap;text-overflow:ellipsis\n  }.info.svelte-l80szn{color:var(--info-color) }.warning.svelte-l80szn{color:var(--warning-color) }.error.svelte-l80szn{color:#FF4500 }";
-    styleInject(css_248z$4,{"insertAt":"top"});
+    var css_248z$6 = ".WAD-MessageView.svelte-1dfvlfz{display:block;position:relative;overflow:hidden;height:34px;line-height:34px;text-align:left;border:none;border-top:solid 1px var(--normal-color);padding:0px 34px 0px 4px;white-space:nowrap;text-overflow:ellipsis\n  }.info.svelte-1dfvlfz{color:var(--info-color) }.warning.svelte-1dfvlfz{color:var(--warning-color) }.error.svelte-1dfvlfz{color:#FF4500 }";
+    styleInject(css_248z$6,{"insertAt":"top"});
 
     /* src/MessageView.svelte generated by Svelte v3.38.3 */
 
-    function create_fragment$7(ctx) {
+    function create_fragment$9(ctx) {
     	let div;
     	let t_value = /*$MessageState*/ ctx[0].Message + "";
     	let t;
@@ -923,7 +1213,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		c() {
     			div = element("div");
     			t = text(t_value);
-    			attr(div, "class", "WAD-MessageView svelte-l80szn");
+    			attr(div, "class", "WAD-MessageView svelte-1dfvlfz");
     			attr(div, "style", `--normal-color:${normalColor};` + `--info-color:${normalColor}; --warning-color:${hoveredColor$1}`);
     			toggle_class(div, "info", /*$MessageState*/ ctx[0].MessageType === "info");
     			toggle_class(div, "warning", /*$MessageState*/ ctx[0].MessageType === "warning");
@@ -959,7 +1249,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     const normalColor = "#969696";
     const hoveredColor$1 = "#FFEC2E";
 
-    function instance$7($$self, $$props, $$invalidate) {
+    function instance$9($$self, $$props, $$invalidate) {
     	let $MessageState;
     	component_subscribe($$self, MessageState, $$value => $$invalidate(0, $MessageState = $$value));
     	return [$MessageState];
@@ -968,100 +1258,49 @@ var WAD = (function (exports, webappTinkererRuntime) {
     class MessageView extends SvelteComponent {
     	constructor(options) {
     		super();
-    		init(this, options, instance$7, create_fragment$7, safe_not_equal, {});
+    		init(this, options, instance$9, create_fragment$9, safe_not_equal, {});
     	}
     }
 
-    /*
-      export type WAD_Mode = (
-        'applet'|'master'|'card'|'overlay'|'component'|'import-export'|'search'
-      )
-      export type WAD_Pane = (
-        'overview'|'selection-globals'|'selection-resources'|'selection-properties'|
-        'selection-configuration'|'selection-script'|'selection-contents'
-      )
-    */
-      const initialInspectorState = {
-        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN,
-        Mode:'applet', Pane:'overview'
-      };
+    function cubicOut(t) {
+        const f = t - 1.0;
+        return f * f * f + 1.0;
+    }
 
-      let currentlyChosenApplet$3 = undefined;
-      let currentInspectorState = Object.assign({}, initialInspectorState);
-
-      const InspectorStateStore = writable(currentInspectorState); // subscript. mgmt
-      const InspectorStateSet   = new WeakMap();  // applet-specific Inspector states
-
-    /**** keep track of changes in "chosenApplet" ****/
-
-      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$3 !== newChosenApplet) {
-          currentlyChosenApplet$3 = newChosenApplet;
-
-          if (currentlyChosenApplet$3 == null) {
-            currentInspectorState = Object.assign({}, initialInspectorState);
-          } else {
-            if (InspectorStateSet.has(currentlyChosenApplet$3)) {
-              currentInspectorState = InspectorStateSet.get(currentlyChosenApplet$3);
-            } else {
-              currentInspectorState = Object.assign({}, initialInspectorState);
-              InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
-            }
-            InspectorStateStore.set(currentInspectorState);
-          }
-        }
-      });
-
-    /**** validate changes to "InspectorState" ****/
-
-      function setInspectorState (newInspectorState) {
-        if (currentlyChosenApplet$3 !== null) {
-          if (webappTinkererRuntime.ValuesDiffer(currentInspectorState,newInspectorState)) {
-            currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState);
-            InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
-            InspectorStateStore.set(currentInspectorState);
-          }
-        }
-      }
-
-    /**** setMode ****/
-
-      function setMode (newMode) {
-        if (newMode != currentInspectorState.Mode) {
-          let newPane;
-            if ((newMode === 'import-export') || (newMode === 'search')) {
-              newPane = undefined;
-            } else {
-              newPane = currentInspectorState.Pane || 'overview';
-            }
-          setInspectorState({ ...currentInspectorState, Mode:newMode, Pane:newPane });
-        }
-      }
-
-    /**** setPane ****/
-
-      function setPane (newPane) {
-        if (newPane != currentInspectorState.Pane) {
-          if ('import-export search'.indexOf(currentInspectorState.Mode) >= 0) {
-            newPane = undefined;
-          }
-          setInspectorState({ ...currentInspectorState, Pane:newPane });
-        }
-      }
-
-    /**** export an explicitly implemented store ****/
-
-      const InspectorState = {
-        subscribe: (Callback) => InspectorStateStore.subscribe(Callback),
-        set:       setInspectorState,
-        setMode, setPane
-      };
+    function flip(node, animation, params = {}) {
+        const style = getComputedStyle(node);
+        const transform = style.transform === 'none' ? '' : style.transform;
+        const scaleX = animation.from.width / node.clientWidth;
+        const scaleY = animation.from.height / node.clientHeight;
+        const dx = (animation.from.left - animation.to.left) / scaleX;
+        const dy = (animation.from.top - animation.to.top) / scaleY;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const { delay = 0, duration = (d) => Math.sqrt(d) * 120, easing = cubicOut } = params;
+        return {
+            delay,
+            duration: is_function(duration) ? duration(d) : duration,
+            easing,
+            css: (_t, u) => `transform: ${transform} translate(${u * dx}px, ${u * dy}px);`
+        };
+    }
 
     //----------------------------------------------------------------------------//
     //                        JavaScript Interface Library                        //
     //----------------------------------------------------------------------------//
     /**** get a reference to the "global" object ****/
-    var global$1 = /*#__PURE__*/ Function('return this')();
+    var global$2 = /*#__PURE__*/ Function('return this')();
+    // see https://stackoverflow.com/questions/3277182/how-to-get-the-global-object-in-javascript
+    //------------------------------------------------------------------------------
+    //--                             Object Functions                             --
+    //------------------------------------------------------------------------------
+    // allow methods from Object.prototype to be applied to "vanilla" objects
+    /**** Object_hasOwnProperty ****/
+    function Object_hasOwnProperty(Value, PropertyName) {
+        return ((Value == null) || // let this method crash like its original
+            ('hasOwnProperty' in Value) && (typeof Value.hasOwnProperty === 'function')
+            ? Value.hasOwnProperty(PropertyName)
+            : Object.prototype.hasOwnProperty.call(Value, PropertyName));
+    }
     /**** throwError - simplifies construction of named errors ****/
     function throwError(Message) {
         var Match = /^([$a-zA-Z][$a-zA-Z0-9]*):\s*(\S.+)\s*$/.exec(Message);
@@ -1074,9 +1313,25 @@ var WAD = (function (exports, webappTinkererRuntime) {
             throw namedError;
         }
     }
+    /**** ValueIsBoolean ****/
+    function ValueIsBoolean(Value) {
+        return (typeof Value === 'boolean') || (Value instanceof Boolean);
+    }
+    /**** ValueIsNumber ****/
+    function ValueIsNumber(Value) {
+        return (typeof Value === 'number') || (Value instanceof Number);
+    }
     /**** ValueIsFiniteNumber (pure "isFinite" breaks on objects) ****/
     function ValueIsFiniteNumber(Value) {
         return ((typeof Value === 'number') || (Value instanceof Number)) && isFinite(Value.valueOf());
+    }
+    /**** ValueIsInteger ****/
+    function ValueIsInteger(Value) {
+        if ((typeof Value !== 'number') && !(Value instanceof Number)) {
+            return false;
+        }
+        Value = Value.valueOf();
+        return isFinite(Value) && (Math.round(Value) === Value);
     }
     /**** ValueIsOrdinal ****/
     function ValueIsOrdinal(Value) {
@@ -1099,11 +1354,68 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function ValueIsFunction(Value) {
         return (typeof Value === 'function');
     }
+    /**** ValueIsObject ****/
+    function ValueIsObject(Value) {
+        return (Value != null) && (typeof Value === 'object');
+    }
     /**** ValueIsPlainObject ****/
     function ValueIsPlainObject(Value) {
         return ((Value != null) && (typeof Value === 'object') &&
             (Object.getPrototypeOf(Value) === Object.prototype));
     }
+    /**** ValueIsArray ****/
+    var ValueIsArray = Array.isArray;
+    /**** ValueIsList ("dense" array) ****/
+    function ValueIsList(Value, minLength, maxLength) {
+        if (ValueIsArray(Value)) {
+            for (var i = 0, l = Value.length; i < l; i++) {
+                if (Value[i] === undefined) {
+                    return false;
+                }
+            }
+            if (minLength != null) {
+                if (Value.length < minLength) {
+                    return false;
+                }
+            }
+            if (maxLength != null) {
+                if (Value.length > maxLength) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    /**** ValueIsListSatisfying ****/
+    function ValueIsListSatisfying(Value, Validator, minLength, maxLength) {
+        if (ValueIsArray(Value)) {
+            try {
+                for (var i = 0, l = Value.length; i < l; i++) {
+                    if (Validator(Value[i]) == false) {
+                        return false;
+                    }
+                }
+                if (minLength != null) {
+                    if (Value.length < minLength) {
+                        return false;
+                    }
+                }
+                if (maxLength != null) {
+                    if (Value.length > maxLength) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            catch (Signal) { /* nop */ }
+        }
+        return false;
+    }
+    /**** ValueIsOneOf ****/
+    function ValueIsOneOf(Value, ValueList) {
+        return (ValueList.indexOf(Value) >= 0);
+    } // no automatic unboxing of boxed values and vice-versa!
     /**** ValueIsColor ****/
     function ValueIsColor(Value) {
         return ValueIsString(Value) && (ColorSet.hasOwnProperty(Value) ||
@@ -1188,16 +1500,82 @@ var WAD = (function (exports, webappTinkererRuntime) {
             '}');
         return renamed(originalFunction);
     } // also works with older JavaScript engines
+    /**** allow/expect[ed]Boolean ****/
+    var allowBoolean = /*#__PURE__*/ ValidatorForClassifier(ValueIsBoolean, acceptNil, 'boolean value'), allowedBoolean = allowBoolean;
     /**** allow/expect[ed]FiniteNumber ****/
     var allowFiniteNumber = /*#__PURE__*/ ValidatorForClassifier(ValueIsFiniteNumber, acceptNil, 'finite numeric value'), allowedFiniteNumber = allowFiniteNumber;
+    var expectInteger = /*#__PURE__*/ ValidatorForClassifier(ValueIsInteger, rejectNil, 'integral numeric value');
+    /**** allow[ed]IntegerInRange ****/
+    function allowIntegerInRange(Description, Argument, minValue, maxValue) {
+        return (Argument == null
+            ? Argument
+            : expectedIntegerInRange(Description, Argument, minValue, maxValue));
+    }
+    var allowedIntegerInRange = allowIntegerInRange;
+    /**** expect[ed]IntegerInRange ****/
+    function expectIntegerInRange(Description, Argument, minValue, maxValue) {
+        expectInteger(Description, Argument);
+        if (isNaN(Argument)) {
+            throwError("InvalidArgument: the given " + escaped(Description) + " is not-a-number");
+        }
+        if ((minValue != null) && isFinite(minValue)) {
+            if ((maxValue != null) && isFinite(maxValue)) {
+                if ((Argument < minValue) || (Argument > maxValue)) {
+                    throw new RangeError("the given " + escaped(Description) + " (" + Argument + ") is outside " +
+                        ("the allowed range (" + minValue + "..." + maxValue + ")"));
+                }
+            }
+            else {
+                if (Argument < minValue) {
+                    throw new RangeError("the given " + escaped(Description) + " is below the allowed " +
+                        ("minimum (" + Argument + " < " + minValue + ")"));
+                }
+            }
+        }
+        else {
+            if ((maxValue != null) && isFinite(maxValue)) {
+                if (Argument > maxValue) {
+                    throw new RangeError("the given " + escaped(Description) + " exceeds the allowed " +
+                        ("maximum (" + Argument + " > " + maxValue + ")"));
+                }
+            }
+        }
+        return Argument.valueOf();
+    }
+    var expectedIntegerInRange = expectIntegerInRange;
     /**** allow/expect[ed]Ordinal ****/
     var allowOrdinal = /*#__PURE__*/ ValidatorForClassifier(ValueIsOrdinal, acceptNil, 'ordinal number'), allowedOrdinal = allowOrdinal;
+    /**** allow/expect[ed]String ****/
+    var allowString = /*#__PURE__*/ ValidatorForClassifier(ValueIsString, acceptNil, 'literal string'), allowedString = allowString;
     /**** allow/expect[ed]NonEmptyString ****/
     var allowNonEmptyString = /*#__PURE__*/ ValidatorForClassifier(ValueIsNonEmptyString, acceptNil, 'non-empty literal string'), allowedNonEmptyString = allowNonEmptyString;
     /**** allow/expect[ed]Function ****/
     var allowFunction = /*#__PURE__*/ ValidatorForClassifier(ValueIsFunction, acceptNil, 'JavaScript function'), allowedFunction = allowFunction;
+    var expectObject = /*#__PURE__*/ ValidatorForClassifier(ValueIsObject, rejectNil, 'JavaScript object');
     /**** allow/expect[ed]PlainObject ****/
     var allowPlainObject = /*#__PURE__*/ ValidatorForClassifier(ValueIsPlainObject, acceptNil, '"plain" JavaScript object'), allowedPlainObject = allowPlainObject;
+    /**** allow[ed]ListSatisfying ****/
+    function allowListSatisfying(Description, Argument, Validator, Expectation, minLength, maxLength) {
+        return (Argument == null
+            ? Argument
+            : expectedListSatisfying(Description, Argument, Validator, Expectation, minLength, maxLength));
+    }
+    var allowedListSatisfying = allowListSatisfying;
+    /**** expect[ed]ListSatisfying ****/
+    function expectListSatisfying(Description, Argument, Validator, Expectation, minLength, maxLength) {
+        if (Argument == null) {
+            throwError("MissingArgument: no " + escaped(Description) + " given");
+        }
+        if (ValueIsListSatisfying(Argument, Validator, minLength, maxLength)) {
+            return Argument;
+        }
+        else {
+            throwError("InvalidArgument: the given " + escaped(Description) + " is " + (Expectation == null
+                ? 'either not a list or contains invalid elements'
+                : 'no ' + escaped(Expectation)));
+        }
+    }
+    var expectedListSatisfying = expectListSatisfying;
     /**** expect[ed]InstanceOf ****/
     function expectInstanceOf(Description, Argument, constructor, Expectation) {
         if (Argument == null) {
@@ -1268,6 +1646,93 @@ var WAD = (function (exports, webappTinkererRuntime) {
     function quoted(Text, Quote) {
         if (Quote === void 0) { Quote = '"'; }
         return Quote + quotable(Text, Quote) + Quote;
+    }
+    /**** ValuesDiffer ****/
+    function ValuesDiffer(thisValue, otherValue, Mode) {
+        if (thisValue === otherValue) {
+            return false;
+        }
+        var thisType = typeof thisValue;
+        if (thisType !== typeof otherValue) {
+            return true;
+        }
+        /**** ArraysDiffer ****/
+        function ArraysDiffer(thisArray, otherArray, Mode) {
+            if (!Array.isArray(otherArray)) {
+                return true;
+            }
+            if (thisArray.length !== otherArray.length) {
+                return true;
+            }
+            for (var i = 0, l = thisArray.length; i < l; i++) {
+                if (ValuesDiffer(thisArray[i], otherArray[i], Mode)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        /**** ObjectsDiffer ****/
+        function ObjectsDiffer(thisObject, otherObject, Mode) {
+            if (Object.getPrototypeOf(thisObject) !== Object.getPrototypeOf(otherObject)) {
+                return true;
+            }
+            for (var key in thisObject) {
+                if (!(key in otherObject)) {
+                    return true;
+                }
+            }
+            for (var key in otherObject) {
+                if (!(key in thisObject)) {
+                    return true;
+                }
+                if (ValuesDiffer(thisObject[key], otherObject[key], Mode)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        switch (thisType) {
+            case 'undefined':
+            case 'boolean':
+            case 'string':
+            case 'function': return true; // most primitives are compared using "==="
+            case 'number': return ((isNaN(thisValue) !== isNaN(otherValue)) ||
+                (Math.abs(thisValue - otherValue) > Number.EPSILON));
+            case 'object':
+                if (thisValue == null) {
+                    return true;
+                } // since "other_value" != null!
+                if (otherValue == null) {
+                    return true;
+                } // since "this_value" != null!
+                if ((Mode === 'by-value') && ((thisValue instanceof Boolean) ||
+                    (thisValue instanceof Number) ||
+                    (thisValue instanceof String))) {
+                    return (thisValue.valueOf() !== otherValue.valueOf());
+                }
+                if (Array.isArray(thisValue)) {
+                    return ArraysDiffer(thisValue, otherValue, Mode);
+                }
+                return (Mode === 'by-reference'
+                    ? true // because (thisValue !== otherValue)
+                    : ObjectsDiffer(thisValue, otherValue, Mode));
+            default: return true; // unsupported property type
+        }
+        return true;
+    }
+    /**** ObjectIsEmpty ****/
+    function ObjectIsEmpty(Candidate) {
+        expectObject('candidate', Candidate);
+        for (var Key in Candidate) {
+            if (Object_hasOwnProperty(Candidate, Key)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /**** ObjectIsNotEmpty ****/
+    function ObjectIsNotEmpty(Candidate) {
+        return !ObjectIsEmpty(Candidate);
     }
     /**** constrained ****/
     function constrained(Value, Minimum, Maximum) {
@@ -1356,291 +1821,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
         lightgreen: 'rgba(144,238,144,1.0)', yellowgreen: 'rgba(154,205,50,1.0)',
         lightgrey: 'rgba(211,211,211,1.0)',
     };
-
-    //----------------------------------------------------------------------------//
-    /**** tintedBitmapAsURL ****/
-    function tintedBitmapAsURL(Bitmap, TintColor) {
-        expectInstanceOf('bitmap', Bitmap, HTMLImageElement, 'HTML image element');
-        expectColor('tint color', TintColor);
-        if (!Bitmap.complete)
-            throwError('InvalidArgument: the given bitmap has not yet been completely loaded');
-        var Canvas = document.createElement('canvas');
-        Canvas.width = Bitmap.width;
-        Canvas.height = Bitmap.height;
-        var Context = Canvas.getContext('2d');
-        Context.drawImage(Bitmap, 0, 0);
-        Context.globalCompositeOperation = 'source-in';
-        Context.fillStyle = TintColor;
-        Context.fillRect(0, 0, Bitmap.width, Bitmap.height);
-        return Canvas.toDataURL('image/png');
-    }
-
-    var css_248z$3 = ".WAD-IconButton.svelte-13l10lr{display:block;position:absolute;width:32px;height:32px;background:var(--normal-image-url)}.WAD-IconButton.svelte-13l10lr:not([disabled]):hover,.WAD-IconButton[disabled=\"false\"].svelte-13l10lr:hover{background:var(--hovered-image-url)}.WAD-IconButton.active.svelte-13l10lr:not([disabled]):not(:hover),.WAD-IconButton.active[disabled=\"false\"].svelte-13l10lr:not(:hover){background:var(--active-image-url)}.WAD-IconButton[disabled=\"true\"].svelte-13l10lr{opacity:0.3 }";
-    styleInject(css_248z$3,{"insertAt":"top"});
-
-    /* src/IconButton.svelte generated by Svelte v3.38.3 */
-
-    function create_fragment$6(ctx) {
-    	let div;
-    	let div_style_value;
-    	let mounted;
-    	let dispose;
-
-    	let div_levels = [
-    		/*$$restProps*/ ctx[6],
-    		{ class: "WAD-IconButton" },
-    		{
-    			style: div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
-			? /*activeHoveredImageURL*/ ctx[5]
-			: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]
-    		}
-    	];
-
-    	let div_data = {};
-
-    	for (let i = 0; i < div_levels.length; i += 1) {
-    		div_data = assign(div_data, div_levels[i]);
-    	}
-
-    	return {
-    		c() {
-    			div = element("div");
-    			set_attributes(div, div_data);
-    			toggle_class(div, "active", /*active*/ ctx[0]);
-    			toggle_class(div, "svelte-13l10lr", true);
-    		},
-    		m(target, anchor) {
-    			insert(target, div, anchor);
-
-    			if (!mounted) {
-    				dispose = listen(div, "click", /*click_handler*/ ctx[10]);
-    				mounted = true;
-    			}
-    		},
-    		p(ctx, [dirty]) {
-    			set_attributes(div, div_data = get_spread_update(div_levels, [
-    				dirty & /*$$restProps*/ 64 && /*$$restProps*/ ctx[6],
-    				{ class: "WAD-IconButton" },
-    				dirty & /*normalImageURL, active, activeHoveredImageURL, hoveredImageURL, activeImageURL, style*/ 63 && div_style_value !== (div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
-				? /*activeHoveredImageURL*/ ctx[5]
-				: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]) && { style: div_style_value }
-    			]));
-
-    			toggle_class(div, "active", /*active*/ ctx[0]);
-    			toggle_class(div, "svelte-13l10lr", true);
-    		},
-    		i: noop,
-    		o: noop,
-    		d(detaching) {
-    			if (detaching) detach(div);
-    			mounted = false;
-    			dispose();
-    		}
-    	};
-    }
-    const hoveredColor = "#FFEC2E";
-    const activeColor = "#7FFF00"; /* chartreuse */
-
-    function instance$6($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["ImageURL","active","activeURL","style"];
-    	let $$restProps = compute_rest_props($$props, omit_props_names);
-    	let { ImageURL } = $$props; // bitmap as Data URL
-    	let { active = false } = $$props;
-    	let { activeURL = undefined } = $$props; // opt. image URL for active state
-    	let { style = "" } = $$props; // since {...$$restProps} does not help here
-    	let normalImageURL = ""; // just for the beginning
-    	let hoveredImageURL = ""; // dto.
-    	let activeImageURL = ""; // dto.
-    	let activeHoveredImageURL = ""; // dto.
-    	let auxImage;
-
-    	function tintOriginalImage() {
-    		$$invalidate(3, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
-
-    		if (activeURL == null) {
-    			$$invalidate(4, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
-    			$$invalidate(5, activeHoveredImageURL = hoveredImageURL);
-    			$$invalidate(9, auxImage = undefined);
-    		} else {
-    			$$invalidate(9, auxImage = document.createElement("img")); // new image element necessary
-    			$$invalidate(9, auxImage.src = activeURL, auxImage);
-
-    			if (auxImage.complete) {
-    				// just in case
-    				tintActiveImage();
-    			} else {
-    				auxImage.addEventListener("load", tintActiveImage);
-    			}
-    		}
-    	}
-
-    	function tintActiveImage() {
-    		$$invalidate(4, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
-    		$$invalidate(5, activeHoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
-    		$$invalidate(9, auxImage = undefined);
-    	}
-
-    	function click_handler(event) {
-    		bubble.call(this, $$self, event);
-    	}
-
-    	$$self.$$set = $$new_props => {
-    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(6, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("ImageURL" in $$new_props) $$invalidate(7, ImageURL = $$new_props.ImageURL);
-    		if ("active" in $$new_props) $$invalidate(0, active = $$new_props.active);
-    		if ("activeURL" in $$new_props) $$invalidate(8, activeURL = $$new_props.activeURL);
-    		if ("style" in $$new_props) $$invalidate(1, style = $$new_props.style);
-    	};
-
-    	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*ImageURL, normalImageURL, auxImage*/ 644) {
-    			{
-    				switch (true) {
-    					case ImageURL == null:
-    						$$invalidate(2, normalImageURL = $$invalidate(3, hoveredImageURL = $$invalidate(4, activeImageURL = "")));
-    					case ImageURL === normalImageURL:
-    						// prevents multiple conversions
-    						break;
-    					default:
-    						$$invalidate(2, normalImageURL = ImageURL);
-    						$$invalidate(9, auxImage = document.createElement("img"));
-    						$$invalidate(9, auxImage.src = ImageURL, auxImage);
-    						if (auxImage.complete) {
-    							// just in case
-    							tintOriginalImage();
-    						} else {
-    							auxImage.addEventListener("load", tintOriginalImage);
-    						}
-    				}
-    			}
-    		}
-    	};
-
-    	return [
-    		active,
-    		style,
-    		normalImageURL,
-    		hoveredImageURL,
-    		activeImageURL,
-    		activeHoveredImageURL,
-    		$$restProps,
-    		ImageURL,
-    		activeURL,
-    		auxImage,
-    		click_handler
-    	];
-    }
-
-    class IconButton extends SvelteComponent {
-    	constructor(options) {
-    		super();
-
-    		init(this, options, instance$6, create_fragment$6, safe_not_equal, {
-    			ImageURL: 7,
-    			active: 0,
-    			activeURL: 8,
-    			style: 1
-    		});
-    	}
-    }
-
-    const initialDialogOrder = { Dialogs:[], zIndexOf };
-
-      let currentlyChosenApplet$2 = undefined;
-      let currentDialogOrder = { Dialogs:[], zIndexOf };
-
-      const DialogOrderStore = writable(currentDialogOrder);     // subscription mgmt
-      const DialogOrderSet   = new WeakMap();        // applet-specific dialog orders
-
-    /**** keep track of changes in "chosenApplet" ****/
-
-      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$2 !== newChosenApplet) {
-          currentlyChosenApplet$2 = newChosenApplet;
-
-          if (currentlyChosenApplet$2 == null) {
-            currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
-          } else {
-            if (DialogOrderSet.has(currentlyChosenApplet$2)) {
-              currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet$2);
-            } else {
-              currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
-              DialogOrderSet.set(currentlyChosenApplet$2,currentDialogOrder);
-            }
-            DialogOrderStore.set(currentDialogOrder);
-          }
-        }
-      });
-
-    /**** validate changes to "DialogOrder" ****/
-
-      function setDialogOrder (newDialogOrder) {
-        if (currentlyChosenApplet$2 !== null) {
-          if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder)) {
-            currentDialogOrder = newDialogOrder;
-            DialogOrderSet.set(currentlyChosenApplet$2,newDialogOrder);
-            DialogOrderStore.set(newDialogOrder);
-          }
-        }
-      }
-
-    /**** open ****/
-
-      function open (DialogElement) {
-        if (
-          (DialogElement != null) &&
-          (currentDialogOrder.Dialogs.indexOf(DialogElement) < 0)
-        ) {
-          let Dialogs = currentDialogOrder.Dialogs.slice();
-            Dialogs.push(DialogElement);
-          setDialogOrder({ Dialogs, zIndexOf });
-        }
-      }
-
-    /**** close ****/
-
-      function close (DialogElement) {
-        if (DialogElement != null) {
-          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
-          if (DialogIndex >= 0) {
-            let Dialogs = currentDialogOrder.Dialogs.slice();
-              Dialogs.splice(DialogIndex,1);
-            setDialogOrder({ Dialogs, zIndexOf });
-          }
-        }
-      }
-
-    /**** raise ****/
-
-      function raise (DialogElement) {
-        if (DialogElement != null) {
-          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
-          if (DialogIndex >= 0) {
-            let Dialogs = currentDialogOrder.Dialogs.slice();
-              Dialogs.splice(DialogIndex,1);
-              Dialogs.push(DialogElement);
-            setDialogOrder({ Dialogs, zIndexOf });
-          }
-        }
-      }
-
-    /**** zIndexOf ****/
-
-      function zIndexOf (DialogElement) {
-        if (DialogElement != null) {
-          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
-          if (DialogIndex >= 0) { return 1000000 + DialogIndex }
-        }
-        return 'auto'
-      }
-
-    /**** export an explicitly implemented store ****/
-
-      const DialogOrder = {
-        subscribe: (Callback) => DialogOrderStore.subscribe(Callback),
-        open, close, raise, zIndexOf
-      };
 
     //----------------------------------------------------------------------------//
     //                        Svelte Coordinate Conversion                        //
@@ -1777,9 +1957,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     //----------------------------------------------------------------------------//
     var Context = ( // make this package a REAL singleton
-    '__DragAndDropActions' in global$1
-        ? global$1.__DragAndDropActions
-        : global$1.__DragAndDropActions = {});
+    '__DragAndDropActions' in global$2
+        ? global$2.__DragAndDropActions
+        : global$2.__DragAndDropActions = {});
     /**** parsedDraggableOptions ****/
     function parsedDraggableOptions(Options) {
         Options = allowedPlainObject('drag options', Options) || {};
@@ -2094,10 +2274,594 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
         return Candidate; // this is the innermost element at (x,y)
     }
+    //-------------------------------------------------------------------------------
+    //--               use:asDroppable={options} - "drag" and "drop"               --
+    //-------------------------------------------------------------------------------
+    var DropOperations = ['copy', 'move', 'link'];
+    /**** parsedDroppableOptions ****/
+    function parsedDroppableOptions(Options) {
+        Options = allowedPlainObject('drop options', Options) || {};
+        var Operations, DataToOffer;
+        var onDropZoneEnter, onDropZoneHover, onDropZoneLeave;
+        var onDropped;
+        Operations = parsedOperations('list of allowed operations', Options.Operations, 'copy');
+        DataToOffer = Object.assign({}, allowedPlainObject('data to be offered', Options.DataToOffer));
+        if ('none' in DataToOffer)
+            throwError('InvalidArgument: "none" is not a valid data type');
+        onDropZoneEnter = allowedFunction('"onDropZoneEnter" handler', Options.onDropZoneEnter);
+        onDropZoneHover = allowedFunction('"onDropZoneHover" handler', Options.onDropZoneHover);
+        onDropZoneLeave = allowedFunction('"onDropZoneLeave" handler', Options.onDropZoneLeave);
+        onDropped = allowedFunction('"onDropped" handler', Options.onDropped);
+        return {
+            Operations: Operations,
+            DataToOffer: DataToOffer,
+            // @ts-ignore we cannot validate given functions any further
+            onDropZoneEnter: onDropZoneEnter,
+            onDropZoneHover: onDropZoneHover,
+            onDropZoneLeave: onDropZoneLeave,
+            onDropped: onDropped
+        };
+    }
+    /**** use:asDroppable={options} ****/
+    function asDroppable(Element, Options) {
+        var isDragged;
+        var currentDraggableOptions;
+        var currentDroppableOptions;
+        var PositionReference; // element with user coordinate system
+        var ReferenceDeltaX, ReferenceDeltaY; // mouse -> user coord.s
+        var PositioningWasDelayed; // workaround for prob. with "drag" events
+        var DragImage;
+        var initialPosition; // given in user coordinates
+        var lastPosition; // dto.
+        var lastDropZoneElement;
+        var lastDropZoneExtras;
+        isDragged = false;
+        currentDraggableOptions = parsedDraggableOptions(Options);
+        currentDroppableOptions = parsedDroppableOptions(Options);
+        /**** startDragging ****/
+        function startDragging(originalEvent) {
+            var Options = Object.assign({}, currentDraggableOptions, currentDroppableOptions);
+            if (fromForbiddenElement(Element, Options, originalEvent)) {
+                originalEvent.stopPropagation();
+                originalEvent.preventDefault();
+                return false;
+            }
+            PositionReference = PositionReferenceFor(Element, Options);
+            var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+            ReferenceDeltaX = ReferenceDeltaY = 0;
+            initialPosition = { x: 0, y: 0 };
+            if (Options.onDragStart == null) {
+                initialPosition = { x: 0, y: 0 }; // given in user coordinates
+            }
+            else {
+                try {
+                    var StartPosition = Options.onDragStart(Options.Extras);
+                    if (ValueIsPlainObject(StartPosition)) {
+                        var x = allowedFiniteNumber('x start position', StartPosition.x);
+                        var y = allowedFiniteNumber('y start position', StartPosition.y);
+                        ReferenceDeltaX = x - relativePosition.left;
+                        ReferenceDeltaY = y - relativePosition.top;
+                        x = constrained(x, Options.minX, Options.maxX);
+                        y = constrained(y, Options.minY, Options.maxY);
+                        initialPosition = { x: x, y: y }; // given in user coordinates
+                    }
+                }
+                catch (Signal) {
+                    console.error('"onDragStart" handler failed', Signal);
+                }
+            }
+            lastPosition = initialPosition;
+            lastDropZoneElement = undefined;
+            lastDropZoneExtras = undefined;
+            PositioningWasDelayed = false; // initializes workaround
+            if (Options.Dummy == null) {
+                Options.Dummy = 'standard'; // this is the default for "use.asDroppable"
+            }
+            DragImage = DragImageFor(Element, Options);
+            if ((DragImage != null) && (originalEvent.dataTransfer != null)) {
+                var OffsetX = Options.DummyOffsetX;
+                var OffsetY = Options.DummyOffsetY;
+                if ((OffsetX == null) || (OffsetY == null)) {
+                    var PositionInDraggable = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element);
+                    if (OffsetX == null) {
+                        OffsetX = PositionInDraggable.left;
+                    }
+                    if (OffsetY == null) {
+                        OffsetY = PositionInDraggable.top;
+                    }
+                }
+                switch (true) {
+                    case (Options.Dummy === 'none'):
+                        originalEvent.dataTransfer.setDragImage(DragImage, 0, 0);
+                        setTimeout(function () {
+                            document.body.removeChild(DragImage);
+                        }, 0);
+                        break;
+                    case ValueIsString(Options.Dummy):
+                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
+                        setTimeout(function () {
+                            document.body.removeChild(DragImage.parentElement);
+                        }, 0);
+                        break;
+                    default:
+                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
+                }
+            }
+            if (originalEvent.dataTransfer != null) {
+                var allowedEffects = allowedEffectsFrom(Options.Operations);
+                originalEvent.dataTransfer.effectAllowed = allowedEffects;
+                if (ObjectIsNotEmpty(Options.DataToOffer)) {
+                    for (var Type in Options.DataToOffer) {
+                        if (Options.DataToOffer.hasOwnProperty(Type)) {
+                            originalEvent.dataTransfer.setData(Type, Options.DataToOffer[Type]);
+                        }
+                    }
+                }
+            }
+            Context.currentDroppableExtras = Options.Extras;
+            Context.currentDropZoneExtras = undefined;
+            Context.currentDropZonePosition = undefined;
+            Context.currentDropZoneElement = undefined;
+            Context.DroppableWasDropped = false;
+            Context.currentDropOperation = undefined;
+            Context.currentTypeTransferred = undefined;
+            Context.currentDataTransferred = undefined;
+            isDragged = true;
+            setTimeout(function () { return Element.classList.add('dragged'); }, 0);
+            originalEvent.stopPropagation();
+        }
+        /**** continueDragging ****/
+        function continueDragging(originalEvent) {
+            if (!isDragged) {
+                return false;
+            }
+            var Options = Object.assign({}, currentDraggableOptions, currentDroppableOptions);
+            if ((originalEvent.screenX === 0) && (originalEvent.screenY === 0) &&
+                !PositioningWasDelayed) {
+                PositioningWasDelayed = true; // last "drag" event contains wrong coord.s
+            }
+            else {
+                PositioningWasDelayed = false;
+                performPanningFor('draggable', Element, Options, originalEvent.pageX, originalEvent.pageY);
+                var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+                var x = relativePosition.left + ReferenceDeltaX; // in user coordinates
+                var y = relativePosition.top + ReferenceDeltaY;
+                x = constrained(x, Options.minX, Options.maxX);
+                y = constrained(y, Options.minY, Options.maxY);
+                var dx = x - lastPosition.x; // calculated AFTER constraining x,y
+                var dy = y - lastPosition.y; // dto.
+                lastPosition = { x: x, y: y };
+                invokeHandler('onDragMove', Options, x, y, dx, dy, Options.Extras);
+            }
+            if (Context.currentDropZoneElement === lastDropZoneElement) {
+                if (Context.currentDropZoneElement != null) {
+                    invokeHandler('onDropZoneHover', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, Context.currentDropZoneExtras, Options.Extras);
+                }
+            }
+            else {
+                if (Context.currentDropZoneElement == null) {
+                    Element.classList.remove('droppable');
+                    invokeHandler('onDropZoneLeave', Options, lastDropZoneExtras, Options.Extras);
+                }
+                else {
+                    Element.classList.add('droppable');
+                    invokeHandler('onDropZoneEnter', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, lastDropZoneExtras, Options.Extras);
+                }
+                lastDropZoneElement = Context.currentDropZoneElement;
+                lastDropZoneExtras = Context.currentDropZoneExtras;
+            }
+            originalEvent.stopPropagation();
+        }
+        /**** finishDragging ****/
+        function finishDragging(originalEvent) {
+            if (!isDragged) {
+                return false;
+            }
+            //    continueDragging(originalEvent)           // NO! positions might be wrong!
+            var Options = Object.assign({}, currentDraggableOptions, currentDroppableOptions);
+            if (Context.DroppableWasDropped) {
+                invokeHandler('onDropped', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, Context.currentDropOperation, Context.currentTypeTransferred, Context.currentDataTransferred, Context.currentDropZoneExtras, Options.Extras);
+                Context.currentDropZoneExtras = undefined;
+                Context.currentDropZonePosition = undefined;
+                Context.currentDropZoneElement = undefined;
+                Context.DroppableWasDropped = false;
+                Context.currentDropOperation = undefined;
+                Context.currentTypeTransferred = undefined;
+                Context.currentDataTransferred = undefined;
+            }
+            if (Options.onDragEnd != null) {
+                var x = constrained(lastPosition.x, Options.minX, Options.maxX);
+                var y = constrained(lastPosition.y, Options.minY, Options.maxY);
+                var dx = x - lastPosition.x;
+                var dy = y - lastPosition.y;
+                invokeHandler('onDragEnd', Options, x, y, dx, dy, Options.Extras);
+            }
+            Context.currentDroppableExtras = undefined;
+            isDragged = false;
+            Element.classList.remove('dragged', 'droppable');
+            originalEvent.stopPropagation();
+        }
+        /**** updateDraggableOptions ****/
+        function updateDraggableOptions(Options) {
+            Options = parsedDraggableOptions(Options);
+            if ((currentDraggableOptions.Extras == null) && (Options.Extras != null)) {
+                currentDraggableOptions.Extras = Options.Extras;
+            } // Extras may be set with delay, but remain constant afterwards
+            currentDraggableOptions.Dummy = (Options.Dummy || currentDraggableOptions.Dummy);
+            currentDraggableOptions.minX = Options.minX;
+            currentDraggableOptions.minY = Options.minY;
+            currentDraggableOptions.maxX = Options.maxX;
+            currentDraggableOptions.maxY = Options.maxY;
+            currentDraggableOptions.Pannable = Options.Pannable;
+            currentDraggableOptions.PanSensorWidth = Options.PanSensorWidth;
+            currentDraggableOptions.PanSensorHeight = Options.PanSensorHeight;
+            currentDraggableOptions.PanSpeed = Options.PanSpeed;
+            currentDraggableOptions.onDragStart = (Options.onDragStart || currentDraggableOptions.onDragStart); // may be used to update initial position for subsequent drags
+        }
+        /**** updateDroppableOptions ****/
+        function updateDroppableOptions(Options) {
+            Options = parsedDroppableOptions(Options);
+            currentDroppableOptions.Operations = Options.Operations;
+            currentDroppableOptions.DataToOffer = Options.DataToOffer;
+        }
+        Element.setAttribute('draggable', 'true');
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragstart', startDragging);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('drag', continueDragging);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragend', finishDragging);
+        return {
+            update: function (Options) {
+                updateDraggableOptions(Options);
+                updateDroppableOptions(Options);
+            }
+        };
+    }
+    /**** parsedDropZoneOptions ****/
+    function parsedDropZoneOptions(Options) {
+        Options = allowedPlainObject('drop zone options', Options) || {};
+        var Extras, TypesToAccept, HoldDelay;
+        var Pannable;
+        var PanSensorWidth, PanSensorHeight, PanSpeed;
+        var onDroppableEnter, onDroppableMove, onDroppableLeave;
+        var onDroppableHold, onDroppableRelease, onDrop;
+        Extras = Options.Extras;
+        allowPlainObject('data types to be accepted', Options.TypesToAccept);
+        TypesToAccept = Object.create(null);
+        if ((Options.TypesToAccept != null) && ('none' in Options.TypesToAccept))
+            throwError('InvalidArgument: "none" is not a valid data type');
+        for (var Type in Options.TypesToAccept) {
+            if (Options.TypesToAccept.hasOwnProperty(Type)) {
+                TypesToAccept[Type] = parsedOperations('list of accepted operations for type ' + quoted(Type), Options.TypesToAccept[Type]);
+            }
+        }
+        HoldDelay = allowedIntegerInRange('min. time to hold', Options.HoldDelay, 0);
+        switch (true) {
+            case (Options.Pannable == null):
+                Pannable = undefined;
+                break;
+            case (Options.Pannable === 'this'):
+            case ValueIsNonEmptyString(Options.Pannable):
+            case (Options.Pannable instanceof HTMLElement):
+            case (Options.Pannable instanceof SVGElement):
+                //    case (Options.Pannable instanceof MathMLElement):
+                Pannable = Options.Pannable;
+                break;
+            default: throwError('InvalidArgument: invalid "Pannable" specification given');
+        }
+        PanSensorWidth = allowedOrdinal('panning sensor width', Options.PanSensorWidth);
+        if (PanSensorWidth == null) {
+            PanSensorWidth = 20;
+        }
+        PanSensorHeight = allowedOrdinal('panning sensor height', Options.PanSensorHeight);
+        if (PanSensorHeight == null) {
+            PanSensorHeight = 20;
+        }
+        PanSpeed = allowedOrdinal('panning speed', Options.PanSpeed);
+        if (PanSpeed == null) {
+            PanSpeed = 10;
+        }
+        onDroppableEnter = allowedFunction('"onDroppableEnter" handler', Options.onDroppableEnter);
+        onDroppableMove = allowedFunction('"onDroppableMove" handler', Options.onDroppableMove);
+        onDroppableLeave = allowedFunction('"onDroppableLeave" handler', Options.onDroppableLeave);
+        onDroppableHold = allowedFunction('"onDroppableHold" handler', Options.onDroppableHold);
+        onDroppableRelease = allowedFunction('"onDroppableRelease" handler', Options.onDroppableRelease);
+        onDrop = allowedFunction('"onDrop" handler', Options.onDrop);
+        return {
+            Extras: Extras,
+            TypesToAccept: TypesToAccept,
+            HoldDelay: HoldDelay,
+            Pannable: Pannable,
+            PanSensorWidth: PanSensorWidth,
+            PanSensorHeight: PanSensorHeight,
+            PanSpeed: PanSpeed,
+            // @ts-ignore we cannot validate given functions any further
+            onDroppableEnter: onDroppableEnter,
+            onDroppableMove: onDroppableMove,
+            onDroppableLeave: onDroppableLeave,
+            // @ts-ignore we cannot validate given functions any further
+            onDroppableHold: onDroppableHold,
+            onDroppableRelease: onDroppableRelease,
+            onDrop: onDrop,
+        };
+    }
+    /**** use:asDropZone={options} ****/
+    function asDropZone(Element, Options) {
+        var currentDropZoneOptions;
+        currentDropZoneOptions = parsedDropZoneOptions(Options);
+        /**** enteredByDroppable ****/
+        function enteredByDroppable(originalEvent) {
+            var Options = currentDropZoneOptions;
+            performPanningFor('dropzone', Element, Options, originalEvent.pageX, originalEvent.pageY);
+            var DropZonePosition = asPosition(svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
+            if (ValueIsNumber(Options.HoldDelay) && (Options.HoldDelay > 0) &&
+                (Context.HoldWasTriggeredForElement !== Element)) {
+                startHoldTimer(DropZonePosition);
+            }
+            if ((originalEvent.dataTransfer == null) ||
+                (originalEvent.dataTransfer.effectAllowed === 'none')) {
+                return;
+            }
+            var wantedOperation = originalEvent.dataTransfer.dropEffect;
+            if (wantedOperation === 'none') { // workaround for browser bug
+                switch (originalEvent.dataTransfer.effectAllowed) {
+                    case 'copy':
+                    case 'move':
+                    case 'link':
+                        wantedOperation = originalEvent.dataTransfer.effectAllowed;
+                        break;
+                    default:
+                        wantedOperation = undefined;
+                }
+            }
+            var TypesToAccept = Options.TypesToAccept;
+            var offeredTypeList = originalEvent.dataTransfer.types.filter(function (Type) {
+                return (Type in TypesToAccept) &&
+                    (TypesToAccept[Type] !== '');
+            } // "getData" is not available here
+            ); // cannot use "originalEvent.dataTransfer.dropEffect" due to browser bug
+            if (offeredTypeList.length === 0) {
+                return;
+            }
+            var accepted = ResultOfHandler('onDroppableEnter', Options, DropZonePosition.x, DropZonePosition.y, wantedOperation, offeredTypeList, Context.currentDroppableExtras, Options.Extras);
+            if (accepted === false) { // i.e. explicit "false" result required
+                return;
+            }
+            else {
+                Context.currentDropZoneExtras = Options.Extras;
+                Context.currentDropZoneElement = Element;
+                Context.currentDropZonePosition = DropZonePosition;
+                Element.classList.add('hovered');
+                originalEvent.preventDefault();
+                originalEvent.stopPropagation();
+            }
+        }
+        /**** hoveredByDroppable ****/
+        // warning: I've already seen leftByDroppable followed by hoveredByDropable!
+        function hoveredByDroppable(originalEvent) {
+            var Options = currentDropZoneOptions;
+            performPanningFor('dropzone', Element, Options, originalEvent.pageX, originalEvent.pageY);
+            var DropZonePosition = asPosition(svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
+            if (ValueIsNumber(Options.HoldDelay) && (Options.HoldDelay > 0) &&
+                (Context.HoldWasTriggeredForElement !== Element)) {
+                if (Context.HoldPosition == null) { // see above for reasoning
+                    startHoldTimer(DropZonePosition);
+                }
+                else {
+                    continueHoldTimer(DropZonePosition);
+                }
+            }
+            if ((originalEvent.dataTransfer == null) ||
+                (originalEvent.dataTransfer.effectAllowed === 'none') ||
+                (Context.currentDropZoneElement != null) && (Context.currentDropZoneElement !== Element)) {
+                Element.classList.remove('hovered');
+                return;
+            }
+            // in some browsers, it may be that (currentDropZone !== Element)!
+            var wantedOperation = originalEvent.dataTransfer.dropEffect;
+            if (wantedOperation === 'none') { // workaround for browser bug
+                switch (originalEvent.dataTransfer.effectAllowed) {
+                    case 'copy':
+                    case 'move':
+                    case 'link':
+                        wantedOperation = originalEvent.dataTransfer.effectAllowed;
+                        break;
+                    default:
+                        wantedOperation = undefined;
+                }
+            }
+            var TypesToAccept = Options.TypesToAccept;
+            var offeredTypeList = originalEvent.dataTransfer.types.filter(function (Type) {
+                return (Type in TypesToAccept) &&
+                    (TypesToAccept[Type] !== '');
+            } // "getData" is not available here
+            ); // cannot use "originalEvent.dataTransfer.dropEffect" due to browser bug
+            if (offeredTypeList.length === 0) {
+                if (Context.currentDropZoneElement === Element) {
+                    Context.currentDropZoneExtras = undefined;
+                    Context.currentDropZoneElement = undefined;
+                    Context.currentDropZonePosition = undefined;
+                }
+                Element.classList.remove('hovered');
+                return;
+            }
+            Context.currentDropZonePosition = DropZonePosition;
+            var accepted = ResultOfHandler('onDroppableMove', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, wantedOperation, offeredTypeList, Context.currentDroppableExtras, Options.Extras);
+            if (accepted === false) { // i.e. explicit "false" result required
+                Context.currentDropZoneExtras = undefined;
+                Context.currentDropZoneElement = undefined;
+                Context.currentDropZonePosition = undefined;
+                Element.classList.remove('hovered');
+            }
+            else { // warning: sometimes (currentDropZone !== Element)!
+                Context.currentDropZoneExtras = Options.Extras;
+                Context.currentDropZoneElement = Element;
+                //      Context.currentDropZonePosition has already been set before
+                Element.classList.add('hovered');
+                originalEvent.preventDefault(); // never allow default action!
+                //      originalEvent.stopPropagation()
+                return false; // special return value when drop seems acceptable
+            }
+        }
+        /**** leftByDroppable ****/
+        function leftByDroppable(originalEvent) {
+            Element.classList.remove('hovered');
+            Context.DropZonePanning = false;
+            stopHoldTimer();
+            var Options = currentDropZoneOptions;
+            if (Context.currentDropZoneElement === Element) {
+                if (Context.currentTypeTransferred == null) { // see explanation below
+                    Context.currentDropZoneExtras = undefined;
+                    Context.currentDropZoneElement = undefined;
+                    Context.DroppableWasDropped = false;
+                    Context.currentDropZonePosition = undefined;
+                    Context.currentTypeTransferred = undefined;
+                    Context.currentDataTransferred = undefined;
+                    invokeHandler('onDroppableLeave', Options, Context.currentDroppableExtras, Options.Extras);
+                } // swallow "dragleave" right after successful "drop"
+                originalEvent.preventDefault();
+                originalEvent.stopPropagation();
+            }
+        }
+        /**** droppedByDroppable ****/
+        function droppedByDroppable(originalEvent) {
+            Element.classList.remove('hovered');
+            Context.DropZonePanning = false;
+            stopHoldTimer();
+            if ((originalEvent.dataTransfer == null) ||
+                (originalEvent.dataTransfer.effectAllowed === 'none') ||
+                (Context.currentDropZoneElement !== Element)) {
+                return;
+            }
+            //    originalEvent.preventDefault()
+            originalEvent.stopPropagation();
+            var Options = currentDropZoneOptions;
+            var wantedOperation = originalEvent.dataTransfer.dropEffect;
+            if (wantedOperation === 'none') { // workaround for browser bug
+                switch (originalEvent.dataTransfer.effectAllowed) {
+                    case 'copy':
+                    case 'move':
+                    case 'link':
+                        wantedOperation = originalEvent.dataTransfer.effectAllowed;
+                        break;
+                    default:
+                        wantedOperation = undefined;
+                }
+            }
+            var TypesToAccept = Options.TypesToAccept;
+            var offeredTypeList = originalEvent.dataTransfer.types.filter(function (Type) {
+                return (Type in TypesToAccept) && ((wantedOperation == null) ||
+                    (TypesToAccept[Type].indexOf(wantedOperation) >= 0));
+            }); // cannot use "originalEvent.dataTransfer.dropEffect" due to browser bug
+            if (offeredTypeList.length === 0) {
+                Context.currentDropZoneExtras = undefined;
+                Context.currentDropZonePosition = undefined;
+                Context.DroppableWasDropped = false;
+                Context.currentDropOperation = undefined;
+                Context.currentTypeTransferred = undefined;
+                Context.currentDataTransferred = undefined;
+                invokeHandler('onDroppableLeave', Options, Context.currentDroppableExtras, Options.Extras);
+                return;
+            }
+            Context.currentDropZonePosition = asPosition(svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
+            var offeredData = {};
+            offeredTypeList.forEach(
+            // @ts-ignore originalEvent.dataTransfer definitely exists
+            function (Type) { return offeredData[Type] = originalEvent.dataTransfer.getData(Type); });
+            var acceptedType = ResultOfHandler('onDrop', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, wantedOperation, offeredData, Context.currentDroppableExtras, Options.Extras);
+            switch (true) {
+                case (acceptedType == null):
+                    Context.DroppableWasDropped = true;
+                    Context.currentDropOperation = wantedOperation;
+                    Context.currentTypeTransferred = undefined;
+                    Context.currentDataTransferred = undefined;
+                    break;
+                case ValueIsOneOf(acceptedType, offeredTypeList):
+                    Context.DroppableWasDropped = true;
+                    Context.currentDropOperation = wantedOperation;
+                    Context.currentTypeTransferred = acceptedType;
+                    Context.currentDataTransferred = offeredData[acceptedType];
+                    break;
+                default: // handler should return false in case of failure
+                    Context.DroppableWasDropped = false;
+                    Context.currentDropZoneExtras = undefined;
+                    Context.currentDropZonePosition = undefined;
+                    Context.currentDropOperation = undefined;
+                    Context.currentTypeTransferred = undefined;
+                    Context.currentDataTransferred = undefined;
+                //        invokeHandler('onDroppableLeave', Options, currentDroppableExtras, Options.Extras)
+            }
+            Context.currentDropZoneElement = undefined;
+        }
+        /**** startHoldTimer ****/
+        function startHoldTimer(DropZonePosition) {
+            Context.HoldPosition = DropZonePosition;
+            if (Context.HoldTimer != null) {
+                clearTimeout(Context.HoldTimer);
+            }
+            Context.HoldTimer = setTimeout(triggerHold, Options.HoldDelay);
+        }
+        /**** continueHoldTimer ****/
+        function continueHoldTimer(DropZonePosition) {
+            var Offset = (Math.pow((Context.HoldPosition.x - DropZonePosition.x), 2) +
+                Math.pow((Context.HoldPosition.y - DropZonePosition.y), 2));
+            if (Offset > 25) {
+                Context.HoldPosition = DropZonePosition;
+                clearTimeout(Context.HoldTimer);
+                Context.HoldTimer = setTimeout(triggerHold, Options.HoldDelay);
+            }
+        }
+        /**** stopHoldTimer ****/
+        function stopHoldTimer() {
+            delete Context.HoldPosition;
+            if (Context.HoldTimer != null) {
+                clearTimeout(Context.HoldTimer);
+                delete Context.HoldTimer;
+            }
+            delete Context.HoldWasTriggeredForElement;
+        }
+        /**** triggerHold ****/
+        function triggerHold() {
+            var DropZonePosition = ( // sometimes, there is no "enteredByDroppable"
+            Context.currentDropZonePosition || Context.HoldPosition);
+            delete Context.HoldPosition;
+            delete Context.HoldTimer;
+            Context.HoldWasTriggeredForElement = Element;
+            invokeHandler('onDroppableHold', Options, DropZonePosition.x, DropZonePosition.y, Context.currentDroppableExtras, Options.Extras);
+        }
+        /**** updateDropZoneOptions ****/
+        function updateDropZoneOptions(Options) {
+            Options = parsedDropZoneOptions(Options);
+            if ((currentDropZoneOptions.Extras == null) && (Options.Extras != null)) {
+                currentDropZoneOptions.Extras = Options.Extras;
+            } // Extras may be set with delay, but remain constant afterwards
+            currentDropZoneOptions.TypesToAccept = Options.TypesToAccept;
+            currentDropZoneOptions.HoldDelay = Options.HoldDelay;
+            currentDropZoneOptions.Pannable = Options.Pannable;
+            currentDropZoneOptions.PanSensorWidth = Options.PanSensorWidth;
+            currentDropZoneOptions.PanSensorHeight = Options.PanSensorHeight;
+            currentDropZoneOptions.PanSpeed = Options.PanSpeed;
+        }
+        Element.setAttribute('draggable', 'true');
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragenter', enteredByDroppable);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragover', hoveredByDroppable);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragleave', leftByDroppable);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('drop', droppedByDroppable);
+        return { update: updateDropZoneOptions };
+    }
     /**** ValueIsPosition ****/
     function ValueIsPosition(Candidate) {
         return (ValueIsPlainObject(Candidate) &&
             ValueIsFiniteNumber(Candidate.x) && ValueIsFiniteNumber(Candidate.y));
+    }
+    /**** asPosition ****/
+    function asPosition(Value) {
+        return { x: Value.left, y: Value.top };
     }
     /**** PositionReferenceFor ****/
     function PositionReferenceFor(Element, Options) {
@@ -2216,6 +2980,27 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
         Context.DropZonePanning = (Type === 'dropzone');
     }
+    /**** parsedOperations ****/
+    function parsedOperations(Description, Argument, Default) {
+        if (Default === void 0) { Default = 'copy move link'; }
+        var Operations = allowedString(Description, Argument) || Default;
+        switch (Operations.trim()) {
+            case 'all': return 'copy move link';
+            case 'none': return '';
+        }
+        var OperationList = Operations.trim().replace(/\s+/g, ' ').split(' ');
+        allowListSatisfying(Description, OperationList, function (Operation) { return ValueIsOneOf(Operation, DropOperations); });
+        return OperationList.reduce(function (Result, Operation) { return (Result.indexOf(Operation) < 0 ? Result + Operation + ' ' : Result); }, ' ');
+    }
+    function allowedEffectsFrom(Operations) {
+        var EffectIndex = ( // Horner's method
+        (Operations.indexOf('move') < 0 ? 0 : 1) * 2 +
+            (Operations.indexOf('link') < 0 ? 0 : 1)) * 2 +
+            (Operations.indexOf('copy') < 0 ? 0 : 1);
+        return [
+            'none', 'copy', 'link', 'copyLink', 'move', 'copyMove', 'linkMove', 'all'
+        ][EffectIndex];
+    }
     /**** invokeHandler ****/
     function invokeHandler(Name, Options) {
         var Arguments = [];
@@ -2231,8 +3016,2649 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
         }
     }
+    var ResultOfHandler = invokeHandler;
 
-    var css_248z$2 = ".WAD-Dialog.svelte-18t6msy{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-18t6msy{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-18t6msy{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-18t6msy{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-18t6msy:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-18t6msy{display:inline-flex;flex-flow:column nowrap;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ResizeHandle.svelte-18t6msy{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-18t6msy:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
+    //----------------------------------------------------------------------------//
+    //                             Svelte Device Info                             //
+    //----------------------------------------------------------------------------//
+    var memoized = {};
+    /**** DeviceIsMobile ****/
+    // see https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
+    function DeviceIsMobile() {
+        var Result = false;
+        (function (a) { if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4)))
+            Result = true; })(navigator.userAgent || navigator.vendor || window['opera']);
+        return Result;
+    }
+    /**** DeviceIsPhone ****/
+    // see https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
+    function DeviceIsPhone() {
+        if (DeviceIsMobile()) {
+            var ViewportWidth = window.innerWidth;
+            var ViewportHeight = window.innerHeight;
+            var smallerEdgeSize = Math.min(ViewportWidth, ViewportHeight);
+            var largerEdgeSize = Math.max(ViewportWidth, ViewportHeight);
+            return (smallerEdgeSize <= 480) && (largerEdgeSize <= 896);
+        }
+        else {
+            return false;
+        }
+    }
+    /**** DevicePointingAccuracy ****/
+    // Internet Explorer and MS/Edge are NOT supported
+    function MediaQuery(Query) {
+        var MediaMatcher = (window.matchMedia ||
+            // @ts-ignore
+            window['webkitMatchmedia'] || window['mozMatchmedia'] || window['oMatchmedia']);
+        return (MediaMatcher != null) && MediaMatcher(Query).matches;
+    }
+    function DocumentIsReady() {
+        return ((document.readyState === 'interactive') ||
+            (document.readyState === 'complete'));
+    }
+    /**** touch device without support for "pointer:coarse"? ****/
+    function AppRunsOnLegacyTouchDevice() {
+        if (memoized.AppRunsOnLegacyTouchDevice == null) {
+            memoized.AppRunsOnLegacyTouchDevice = (!MediaQuery('(pointer:fine)') &&
+                !MediaQuery('(pointer:coarse)') && !MediaQuery('-moz-touch-enabled') &&
+                (('ontouchstart' in Window) || ((navigator.maxTouchPoints || 0) > 0) ||
+                    (/touch|android|iphone|ipod|ipad/i).test(navigator.userAgent)));
+        }
+        return memoized.AppRunsOnLegacyTouchDevice;
+    }
+    /**** rewrite media query rules for legacy browsers on touch devices ****/
+    function ListElement(List, Index) {
+        return (typeof List.item === 'function' ? List.item(Index) : List[Index]);
+    }
+    function ListHasElementMatching(List, Pattern) {
+        for (var i = 0, l = List.length; i < l; i++) {
+            if (Pattern.test(ListElement(List, i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+    function rewriteMediaQueriesOnLegacyTouchDevices() {
+        if (memoized.MediaQueriesHaveBeenRewritten) {
+            return;
+        }
+        if (AppRunsOnLegacyTouchDevice()) {
+            if (DocumentIsReady()) {
+                var Stylesheets = document.styleSheets; // reference, not copy
+                for (var i = 0, l = Stylesheets.length; i < l; i++) {
+                    var Rules = Stylesheets[i]['cssRules'] || Stylesheets[i]['rules'];
+                    for (var j = 0, k = Rules.length; j < k; j++) {
+                        var Rule = Rules[j];
+                        if (Rule.type === CSSRule.MEDIA_RULE) {
+                            if (ListHasElementMatching(Rule.media, /handheld/i)) {
+                                var Media = Rule.media; // reference, not copy
+                                Media.mediaText = Media.mediaText.replace('handheld', 'screen');
+                            }
+                        }
+                    }
+                }
+                /**** rewrite media-dependent links for legacy browsers ****/
+                var Links = document.getElementsByTagName('link');
+                for (var i = 0, l = Links.length; i < l; i++) {
+                    var Link = Links[i];
+                    if ((/handheld/i).test(Link.media)) {
+                        Link.media = Link.media.replace('handheld', 'screen');
+                    }
+                }
+                memoized.MediaQueriesHaveBeenRewritten = true;
+            }
+            else {
+                window.addEventListener('DOMContentLoaded', rewriteMediaQueriesOnLegacyTouchDevices);
+            }
+        }
+    }
+    function DevicePointingAccuracy() {
+        if (memoized.DevicePointingAccuracy == null) {
+            updateDevicePointingAccuracy();
+            if (!DocumentIsReady() && !memoized.waitingForLoaded) {
+                memoized.waitingForLoaded = true;
+                window.addEventListener('DOMContentLoaded', updateDevicePointingAccuracy);
+                // after document is loaded, classes will be applied as foreseen
+            }
+        }
+        return memoized.DevicePointingAccuracy; // may change while running!
+    }
+    function updateDevicePointingAccuracy() {
+        var updatedPointingAccuracy = 'fine';
+        switch (true) {
+            case MediaQuery('(pointer:none)'):
+                updatedPointingAccuracy = 'none';
+                break;
+            case MediaQuery('(pointer:coarse)'):
+            case MediaQuery('-moz-touch-enabled'):
+            case AppRunsOnLegacyTouchDevice():
+                updatedPointingAccuracy = 'coarse';
+                break;
+        }
+        memoized.DevicePointingAccuracy = updatedPointingAccuracy;
+        if (DocumentIsReady()) {
+            var ClassList = document.body.classList; // reference, not copy
+            if (((updatedPointingAccuracy === 'none') !== ClassList.contains('noPointer')) ||
+                ((updatedPointingAccuracy === 'fine') !== ClassList.contains('finePointer')) ||
+                ((updatedPointingAccuracy === 'coarse') !== ClassList.contains('coarsePointer'))) {
+                document.body.classList.remove('noPointer', 'finePointer', 'coarsePointer');
+                switch (updatedPointingAccuracy) {
+                    case 'none':
+                        document.body.classList.add('noPointer');
+                        break;
+                    case 'fine':
+                        document.body.classList.add('finePointer');
+                        break;
+                    case 'coarse':
+                        document.body.classList.add('coarsePointer');
+                        break;
+                }
+            }
+        }
+    }
+    /**** registerHandler ****/
+    function registerHandler(Handler, onceOnly) {
+        if (typeof Handler !== 'function') {
+            throw new Error('handler function expected');
+        }
+        if (memoized.EventHandlerRegistry == null) {
+            memoized.EventHandlerRegistry = [];
+        }
+        var EventHandlerRegistry = memoized.EventHandlerRegistry; // ref., not copy!
+        for (var i = 0, l = EventHandlerRegistry.length; i < l; i++) {
+            if (EventHandlerRegistry[i].Handler === Handler) {
+                EventHandlerRegistry[i].onceOnly = onceOnly;
+                return;
+            }
+        }
+        EventHandlerRegistry.push({ Handler: Handler, onceOnly: onceOnly });
+        if (EventHandlerRegistry.length === 1) {
+            observePointingAccuracy();
+        }
+    }
+    /**** unregisterHandler ****/
+    function unregisterHandler(Handler) {
+        if (memoized.EventHandlerRegistry == null) {
+            memoized.EventHandlerRegistry = [];
+        }
+        var EventHandlerRegistry = memoized.EventHandlerRegistry; // ref., not copy!
+        for (var i = 0, l = EventHandlerRegistry.length; i < l; i++) {
+            if (EventHandlerRegistry[i].Handler === Handler) {
+                EventHandlerRegistry.splice(i, 1);
+                break;
+            }
+        }
+        if (EventHandlerRegistry.length === 0) {
+            unobservePointingAccuracy();
+        }
+    }
+    /**** onPointingAccuracyChanged ****/
+    function onPointingAccuracyChanged(Handler) {
+        registerHandler(Handler, false);
+    }
+    /**** oncePointingAccuracyChanged ****/
+    function oncePointingAccuracyChanged(Handler) {
+        registerHandler(Handler, true);
+    }
+    /**** offPointingAccuracyChanged ****/
+    function offPointingAccuracyChanged(Handler) {
+        unregisterHandler(Handler);
+    }
+    /**** observePointingAccuracy (e.g., on "convertibles") ****/
+    function observePointingAccuracy() {
+        memoized.AccuracyPoller = setInterval(function () {
+            var oldPointingAccuracy = DevicePointingAccuracy();
+            updateDevicePointingAccuracy();
+            if (DevicePointingAccuracy() !== oldPointingAccuracy) {
+                invokeRegisteredHandlers();
+            }
+        }, 500);
+    }
+    /**** unobservePointingAccuracy ****/
+    function unobservePointingAccuracy() {
+        clearInterval(memoized.AccuracyPoller);
+        memoized.AccuracyPoller = undefined;
+    }
+    /**** invokeRegisteredHandlers ****/
+    function invokeRegisteredHandlers() {
+        if (memoized.EventHandlerRegistry == null) {
+            memoized.EventHandlerRegistry = [];
+        }
+        var EventHandlerRegistry = memoized.EventHandlerRegistry; // ref., not copy!
+        for (var i = 0, l = EventHandlerRegistry.length; i < l; i++) {
+            var _a = EventHandlerRegistry[i], Handler = _a.Handler, onceOnly = _a.onceOnly;
+            try {
+                Handler(DevicePointingAccuracy());
+            }
+            catch (Signal) {
+                console.warn('PointingAccuracy observation function failed with', Signal);
+            }
+            if (onceOnly) {
+                unregisterHandler(Handler);
+            } // a bit inefficient, but DRY
+        }
+    }
+    var svelteDeviceInfo = {
+        get isMobile() { return DeviceIsMobile(); },
+        get isPhone() { return DeviceIsPhone(); },
+        get isTablet() { return DeviceIsMobile() && !DeviceIsPhone(); },
+        get isLegacyTouchDevice() { return AppRunsOnLegacyTouchDevice(); },
+        rewriteMediaQueriesOnLegacyTouchDevices: rewriteMediaQueriesOnLegacyTouchDevices,
+        get PointingAccuracy() { return DevicePointingAccuracy(); },
+        onPointingAccuracyChanged: onPointingAccuracyChanged,
+        oncePointingAccuracyChanged: oncePointingAccuracyChanged,
+        offPointingAccuracyChanged: offPointingAccuracyChanged,
+        get observesPointingAccuracy() { return (memoized.AccuracyPoller != null); }
+    };
+
+    //----------------------------------------------------------------------------//
+    //                        locally unique Id Generator                         //
+    //----------------------------------------------------------------------------//
+    var IdCounter = 0; // hidden in the closure of "nextId"
+    function nextId() {
+        return ++IdCounter;
+    }
+    /**** make global.nextId a real singleton ****/
+    var global$1 = /*#__PURE__*/ Function('return this')();
+    // see https://stackoverflow.com/questions/3277182/how-to-get-the-global-object-in-javascript
+    if (typeof global$1.__nextId !== 'function') {
+        global$1.__nextId = nextId;
+    }
+    /**** newUniqueId - the actually exported function ****/
+    function newUniqueId() {
+        return 'uid-' + global$1.__nextId();
+    }
+
+    var css_248z$5 = ".defaultListView.svelte-1tfuj23{display:inline-flex;flex-flow:column nowrap;position:relative;justify-content:flex-start;align-items:stretch;margin:0px;padding:0px;list-style:none}.withoutTextSelection.svelte-1tfuj23{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.defaultListView.svelte-1tfuj23>.ListItemView{display:block;position:relative;flex:0 0 auto;height:30px;line-height:30px;border:solid 1px transparent;margin:0px 2px 0px 2px;padding:0px 4px 0px 4px;list-style:none}.defaultListView.svelte-1tfuj23>.ListItemView > *{pointer-events:none}.defaultListView.svelte-1tfuj23:not(.transitioning)>.ListItemView:hover:not(.dragged){border:solid 1px }.defaultListView.svelte-1tfuj23:not(.transitioning)>.ListItemView.selected:not(.dragged){background:dodgerblue }.defaultListView.svelte-1tfuj23>.ListItemView.dragged{opacity:0.3 }.defaultListView.svelte-1tfuj23>.ListItemView.hovered:not(.dragged){border-top:solid 10px transparent }.defaultListView.svelte-1tfuj23>.AttachmentRegion{display:block;position:relative;flex:1 1 auto;min-height:20px;background:transparent;border:solid 1px transparent;margin:0px 2px 2px 2px;padding:0px;list-style:none}.defaultListView.svelte-1tfuj23>.AttachmentRegion.hovered{border:solid 1px }.defaultListView.svelte-1tfuj23>.Placeholder{display:flex;position:absolute;left:0px;top:0px;right:0px;height:100%;flex-flow:column nowrap;justify-content:center;align-items:center}";
+    styleInject(css_248z$5,{"insertAt":"top"});
+
+    /* node_modules/svelte-sortable-flat-list-view/dist/svelte-sortable-flat-list-view.svelte generated by Svelte v3.38.3 */
+
+    function get_each_context_1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[72] = list[i];
+    	child_ctx[74] = i;
+    	return child_ctx;
+    }
+
+    const get_default_slot_changes_1 = dirty => ({
+    	Item: dirty[0] & /*List*/ 1,
+    	Index: dirty[0] & /*List*/ 1
+    });
+
+    const get_default_slot_context_1 = ctx => ({
+    	Item: /*Item*/ ctx[72],
+    	Index: /*Index*/ ctx[74]
+    });
+
+    function get_each_context$1(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[72] = list[i];
+    	child_ctx[74] = i;
+    	return child_ctx;
+    }
+
+    const get_default_slot_changes = dirty => ({
+    	Item: dirty[0] & /*List*/ 1,
+    	Index: dirty[0] & /*List*/ 1
+    });
+
+    const get_default_slot_context = ctx => ({
+    	Item: /*Item*/ ctx[72],
+    	Index: /*Index*/ ctx[74]
+    });
+
+    // (71:4) {:else}
+    function create_else_block_1(ctx) {
+    	let li;
+    	let raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "";
+
+    	return {
+    		c() {
+    			li = element("li");
+    			toggle_class(li, "Placeholder", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, li, anchor);
+    			li.innerHTML = raw_value;
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*Placeholder*/ 32 && raw_value !== (raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "")) li.innerHTML = raw_value;		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(li);
+    		}
+    	};
+    }
+
+    // (63:4) {#if extendable}
+    function create_if_block_3$2(ctx) {
+    	let li;
+    	let raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "";
+    	let asDropZone_action;
+    	let mounted;
+    	let dispose;
+
+    	return {
+    		c() {
+    			li = element("li");
+    			toggle_class(li, "Placeholder", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, li, anchor);
+    			li.innerHTML = raw_value;
+
+    			if (!mounted) {
+    				dispose = action_destroyer(asDropZone_action = asDropZone.call(null, li, {
+    					Extras: { List: /*List*/ ctx[0], Item: undefined },
+    					TypesToAccept: /*TypesAccepted*/ ctx[15],
+    					onDroppableEnter: /*onDroppableEnter*/ ctx[26],
+    					onDroppableMove: /*onDroppableMove*/ ctx[27],
+    					onDrop: /*onDrop*/ ctx[29]
+    				}));
+
+    				mounted = true;
+    			}
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*Placeholder*/ 32 && raw_value !== (raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "")) li.innerHTML = raw_value;
+    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted*/ 32769) asDropZone_action.update.call(null, {
+    				Extras: { List: /*List*/ ctx[0], Item: undefined },
+    				TypesToAccept: /*TypesAccepted*/ ctx[15],
+    				onDroppableEnter: /*onDroppableEnter*/ ctx[26],
+    				onDroppableMove: /*onDroppableMove*/ ctx[27],
+    				onDrop: /*onDrop*/ ctx[29]
+    			});
+    		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(li);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+    }
+
+    // (14:2) {#if (List.length > 0)}
+    function create_if_block$5(ctx) {
+    	let current_block_type_index;
+    	let if_block;
+    	let if_block_anchor;
+    	let current;
+    	const if_block_creators = [create_if_block_1$3, create_else_block];
+    	const if_blocks = [];
+
+    	function select_block_type_1(ctx, dirty) {
+    		if (/*sortable*/ ctx[1] || /*extendable*/ ctx[20] || /*shrinkable*/ ctx[19]) return 0;
+    		return 1;
+    	}
+
+    	current_block_type_index = select_block_type_1(ctx);
+    	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+
+    	return {
+    		c() {
+    			if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			if_blocks[current_block_type_index].m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			let previous_block_index = current_block_type_index;
+    			current_block_type_index = select_block_type_1(ctx);
+
+    			if (current_block_type_index === previous_block_index) {
+    				if_blocks[current_block_type_index].p(ctx, dirty);
+    			} else {
+    				group_outros();
+
+    				transition_out(if_blocks[previous_block_index], 1, 1, () => {
+    					if_blocks[previous_block_index] = null;
+    				});
+
+    				check_outros();
+    				if_block = if_blocks[current_block_type_index];
+
+    				if (!if_block) {
+    					if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+    					if_block.c();
+    				} else {
+    					if_block.p(ctx, dirty);
+    				}
+
+    				transition_in(if_block, 1);
+    				if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if_blocks[current_block_type_index].d(detaching);
+    			if (detaching) detach(if_block_anchor);
+    		}
+    	};
+    }
+
+    // (50:4) {:else}
+    function create_else_block(ctx) {
+    	let each_blocks = [];
+    	let each_1_lookup = new Map();
+    	let each_1_anchor;
+    	let current;
+    	let each_value_1 = /*List*/ ctx[0];
+    	const get_key = ctx => /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]);
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		let child_ctx = get_each_context_1(ctx, each_value_1, i);
+    		let key = get_key(child_ctx);
+    		each_1_lookup.set(key, each_blocks[i] = create_each_block_1(key, child_ctx));
+    	}
+
+    	return {
+    		c() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			each_1_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert(target, each_1_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*isSelected, List, handleClick, TransitionStarted, KeyOf*/ 1075970113 | dirty[1] & /*TransitionEnded, $$scope*/ 4194305) {
+    				each_value_1 = /*List*/ ctx[0];
+    				group_outros();
+    				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value_1, each_1_lookup, each_1_anchor.parentNode, outro_and_destroy_block, create_each_block_1, each_1_anchor, get_each_context_1);
+    				check_outros();
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+
+    			for (let i = 0; i < each_value_1.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o(local) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
+    		d(detaching) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].d(detaching);
+    			}
+
+    			if (detaching) detach(each_1_anchor);
+    		}
+    	};
+    }
+
+    // (15:4) {#if sortable || extendable || shrinkable}
+    function create_if_block_1$3(ctx) {
+    	let each_blocks = [];
+    	let each_1_lookup = new Map();
+    	let t;
+    	let if_block_anchor;
+    	let current;
+    	let each_value = /*List*/ ctx[0];
+    	const get_key = ctx => /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]);
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		let child_ctx = get_each_context$1(ctx, each_value, i);
+    		let key = get_key(child_ctx);
+    		each_1_lookup.set(key, each_blocks[i] = create_each_block$1(key, child_ctx));
+    	}
+
+    	let if_block = (/*sortable*/ ctx[1] || /*extendable*/ ctx[20]) && create_if_block_2$2(ctx);
+
+    	return {
+    		c() {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			t = space();
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(target, anchor);
+    			}
+
+    			insert(target, t, anchor);
+    			if (if_block) if_block.m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*onlyFrom, neverFrom, dynamicDummy, List, DataOffered, onDragStart, onDragEnd, onDropped, TypesAccepted, onDrop, onDroppableEnter, onDroppableMove, onDroppableLeave, HoldDelay, onDroppableHold, ListViewElement, PanSensorWidth, PanSensorHeight, PanSpeed, draggedItemList, isSelected, handleClick, TransitionStarted, KeyOf*/ 2145910721 | dirty[1] & /*TransitionEnded, $$scope*/ 4194305) {
+    				each_value = /*List*/ ctx[0];
+    				group_outros();
+    				for (let i = 0; i < each_blocks.length; i += 1) each_blocks[i].r();
+    				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, t.parentNode, fix_and_outro_and_destroy_block, create_each_block$1, t, get_each_context$1);
+    				for (let i = 0; i < each_blocks.length; i += 1) each_blocks[i].a();
+    				check_outros();
+    			}
+
+    			if (/*sortable*/ ctx[1] || /*extendable*/ ctx[20]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+    				} else {
+    					if_block = create_if_block_2$2(ctx);
+    					if_block.c();
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				if_block.d(1);
+    				if_block = null;
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+
+    			for (let i = 0; i < each_value.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o(local) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
+    		d(detaching) {
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].d(detaching);
+    			}
+
+    			if (detaching) detach(t);
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach(if_block_anchor);
+    		}
+    	};
+    }
+
+    // (58:31)  
+    function fallback_block_1(ctx) {
+    	let t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "";
+    	let t;
+
+    	return {
+    		c() {
+    			t = text(t_value);
+    		},
+    		m(target, anchor) {
+    			insert(target, t, anchor);
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*KeyOf, List*/ 131073 && t_value !== (t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "")) set_data(t, t_value);
+    		},
+    		d(detaching) {
+    			if (detaching) detach(t);
+    		}
+    	};
+    }
+
+    // (51:6) {#each List as Item,Index (KeyOf(Item,Index))}
+    function create_each_block_1(key_1, ctx) {
+    	let li;
+    	let t;
+    	let li_transition;
+    	let current;
+    	let mounted;
+    	let dispose;
+    	const default_slot_template = /*#slots*/ ctx[54].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[53], get_default_slot_context_1);
+    	const default_slot_or_fallback = default_slot || fallback_block_1(ctx);
+
+    	function click_handler_1(...args) {
+    		return /*click_handler_1*/ ctx[56](/*Item*/ ctx[72], ...args);
+    	}
+
+    	return {
+    		key: key_1,
+    		first: null,
+    		c() {
+    			li = element("li");
+    			if (default_slot_or_fallback) default_slot_or_fallback.c();
+    			t = space();
+    			toggle_class(li, "ListItemView", true);
+    			toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			this.first = li;
+    		},
+    		m(target, anchor) {
+    			insert(target, li, anchor);
+
+    			if (default_slot_or_fallback) {
+    				default_slot_or_fallback.m(li, null);
+    			}
+
+    			append(li, t);
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen(li, "click", click_handler_1),
+    					listen(li, "outrostart", /*TransitionStarted*/ ctx[30]),
+    					listen(li, "outroend", /*TransitionEnded*/ ctx[31])
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p(new_ctx, dirty) {
+    			ctx = new_ctx;
+
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty[0] & /*List*/ 1 | dirty[1] & /*$$scope*/ 4194304)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[53], !current ? [-1, -1, -1] : dirty, get_default_slot_changes_1, get_default_slot_context_1);
+    				}
+    			} else {
+    				if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*KeyOf, List*/ 131073)) {
+    					default_slot_or_fallback.p(ctx, !current ? [-1, -1, -1] : dirty);
+    				}
+    			}
+
+    			if (dirty[0] & /*isSelected, List*/ 65) {
+    				toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(default_slot_or_fallback, local);
+
+    			add_render_callback(() => {
+    				if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, true);
+    				li_transition.run(1);
+    			});
+
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(default_slot_or_fallback, local);
+    			if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, false);
+    			li_transition.run(0);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (detaching) detach(li);
+    			if (default_slot_or_fallback) default_slot_or_fallback.d(detaching);
+    			if (detaching && li_transition) li_transition.end();
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+    }
+
+    // (36:31)  
+    function fallback_block(ctx) {
+    	let t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "";
+    	let t;
+
+    	return {
+    		c() {
+    			t = text(t_value);
+    		},
+    		m(target, anchor) {
+    			insert(target, t, anchor);
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*KeyOf, List*/ 131073 && t_value !== (t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "")) set_data(t, t_value);
+    		},
+    		d(detaching) {
+    			if (detaching) detach(t);
+    		}
+    	};
+    }
+
+    // (16:6) {#each List as Item,Index (KeyOf(Item,Index))}
+    function create_each_block$1(key_1, ctx) {
+    	let li;
+    	let asDroppable_action;
+    	let asDropZone_action;
+    	let li_transition;
+    	let rect;
+    	let stop_animation = noop;
+    	let current;
+    	let mounted;
+    	let dispose;
+    	const default_slot_template = /*#slots*/ ctx[54].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[53], get_default_slot_context);
+    	const default_slot_or_fallback = default_slot || fallback_block(ctx);
+
+    	function click_handler(...args) {
+    		return /*click_handler*/ ctx[55](/*Item*/ ctx[72], ...args);
+    	}
+
+    	return {
+    		key: key_1,
+    		first: null,
+    		c() {
+    			li = element("li");
+    			if (default_slot_or_fallback) default_slot_or_fallback.c();
+    			toggle_class(li, "ListItemView", true);
+    			toggle_class(li, "dragged", /*draggedItemList*/ ctx[18].indexOf(/*Item*/ ctx[72]) >= 0);
+    			toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			this.first = li;
+    		},
+    		m(target, anchor) {
+    			insert(target, li, anchor);
+
+    			if (default_slot_or_fallback) {
+    				default_slot_or_fallback.m(li, null);
+    			}
+
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen(li, "click", click_handler),
+    					action_destroyer(asDroppable_action = asDroppable.call(null, li, {
+    						onlyFrom: /*onlyFrom*/ ctx[7],
+    						neverFrom: /*neverFrom*/ ctx[8],
+    						Dummy: /*dynamicDummy*/ ctx[22],
+    						Extras: {
+    							List: /*List*/ ctx[0],
+    							Item: /*Item*/ ctx[72]
+    						},
+    						DataToOffer: /*DataOffered*/ ctx[14],
+    						onDragStart: /*onDragStart*/ ctx[23],
+    						onDragEnd: /*onDragEnd*/ ctx[24],
+    						onDropped: /*onDropped*/ ctx[25]
+    					})),
+    					action_destroyer(asDropZone_action = asDropZone.call(null, li, {
+    						Extras: {
+    							List: /*List*/ ctx[0],
+    							Item: /*Item*/ ctx[72]
+    						},
+    						TypesToAccept: /*TypesAccepted*/ ctx[15],
+    						onDrop: /*onDrop*/ ctx[29],
+    						onDroppableEnter: /*onDroppableEnter*/ ctx[26],
+    						onDroppableMove: /*onDroppableMove*/ ctx[27],
+    						onDroppableLeave: /*onDroppableLeave*/ ctx[28],
+    						HoldDelay: /*HoldDelay*/ ctx[12],
+    						onDroppableHold: /*onDroppableHold*/ ctx[13],
+    						Pannable: /*ListViewElement*/ ctx[16],
+    						PanSensorWidth: /*PanSensorWidth*/ ctx[9],
+    						PanSensorHeight: /*PanSensorHeight*/ ctx[10],
+    						PanSpeed: /*PanSpeed*/ ctx[11]
+    					})),
+    					listen(li, "outrostart", /*TransitionStarted*/ ctx[30]),
+    					listen(li, "outroend", /*TransitionEnded*/ ctx[31])
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p(new_ctx, dirty) {
+    			ctx = new_ctx;
+
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty[0] & /*List*/ 1 | dirty[1] & /*$$scope*/ 4194304)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[53], !current ? [-1, -1, -1] : dirty, get_default_slot_changes, get_default_slot_context);
+    				}
+    			} else {
+    				if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*KeyOf, List*/ 131073)) {
+    					default_slot_or_fallback.p(ctx, !current ? [-1, -1, -1] : dirty);
+    				}
+    			}
+
+    			if (asDroppable_action && is_function(asDroppable_action.update) && dirty[0] & /*onlyFrom, neverFrom, List, DataOffered*/ 16769) asDroppable_action.update.call(null, {
+    				onlyFrom: /*onlyFrom*/ ctx[7],
+    				neverFrom: /*neverFrom*/ ctx[8],
+    				Dummy: /*dynamicDummy*/ ctx[22],
+    				Extras: {
+    					List: /*List*/ ctx[0],
+    					Item: /*Item*/ ctx[72]
+    				},
+    				DataToOffer: /*DataOffered*/ ctx[14],
+    				onDragStart: /*onDragStart*/ ctx[23],
+    				onDragEnd: /*onDragEnd*/ ctx[24],
+    				onDropped: /*onDropped*/ ctx[25]
+    			});
+
+    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted, HoldDelay, onDroppableHold, ListViewElement, PanSensorWidth, PanSensorHeight, PanSpeed*/ 114177) asDropZone_action.update.call(null, {
+    				Extras: {
+    					List: /*List*/ ctx[0],
+    					Item: /*Item*/ ctx[72]
+    				},
+    				TypesToAccept: /*TypesAccepted*/ ctx[15],
+    				onDrop: /*onDrop*/ ctx[29],
+    				onDroppableEnter: /*onDroppableEnter*/ ctx[26],
+    				onDroppableMove: /*onDroppableMove*/ ctx[27],
+    				onDroppableLeave: /*onDroppableLeave*/ ctx[28],
+    				HoldDelay: /*HoldDelay*/ ctx[12],
+    				onDroppableHold: /*onDroppableHold*/ ctx[13],
+    				Pannable: /*ListViewElement*/ ctx[16],
+    				PanSensorWidth: /*PanSensorWidth*/ ctx[9],
+    				PanSensorHeight: /*PanSensorHeight*/ ctx[10],
+    				PanSpeed: /*PanSpeed*/ ctx[11]
+    			});
+
+    			if (dirty[0] & /*draggedItemList, List*/ 262145) {
+    				toggle_class(li, "dragged", /*draggedItemList*/ ctx[18].indexOf(/*Item*/ ctx[72]) >= 0);
+    			}
+
+    			if (dirty[0] & /*isSelected, List*/ 65) {
+    				toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			}
+    		},
+    		r() {
+    			rect = li.getBoundingClientRect();
+    		},
+    		f() {
+    			fix_position(li);
+    			stop_animation();
+    			add_transform(li, rect);
+    		},
+    		a() {
+    			stop_animation();
+    			stop_animation = create_animation(li, rect, flip, {});
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(default_slot_or_fallback, local);
+
+    			add_render_callback(() => {
+    				if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, true);
+    				li_transition.run(1);
+    			});
+
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(default_slot_or_fallback, local);
+    			if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, false);
+    			li_transition.run(0);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (detaching) detach(li);
+    			if (default_slot_or_fallback) default_slot_or_fallback.d(detaching);
+    			if (detaching && li_transition) li_transition.end();
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+    }
+
+    // (40:6) {#if sortable || extendable}
+    function create_if_block_2$2(ctx) {
+    	let li;
+    	let raw_value = (/*AttachmentRegion*/ ctx[4] || "") + "";
+    	let asDropZone_action;
+    	let mounted;
+    	let dispose;
+
+    	return {
+    		c() {
+    			li = element("li");
+    			toggle_class(li, "AttachmentRegion", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, li, anchor);
+    			li.innerHTML = raw_value;
+
+    			if (!mounted) {
+    				dispose = action_destroyer(asDropZone_action = asDropZone.call(null, li, {
+    					Extras: { List: /*List*/ ctx[0], Item: undefined },
+    					TypesToAccept: /*TypesAccepted*/ ctx[15],
+    					onDroppableEnter: /*onDroppableEnter*/ ctx[26],
+    					onDroppableMove: /*onDroppableMove*/ ctx[27],
+    					onDrop: /*onDrop*/ ctx[29],
+    					HoldDelay: /*HoldDelay*/ ctx[12],
+    					onDroppableHold: /*onDroppableHold*/ ctx[13]
+    				}));
+
+    				mounted = true;
+    			}
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*AttachmentRegion*/ 16 && raw_value !== (raw_value = (/*AttachmentRegion*/ ctx[4] || "") + "")) li.innerHTML = raw_value;
+    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted, HoldDelay, onDroppableHold*/ 45057) asDropZone_action.update.call(null, {
+    				Extras: { List: /*List*/ ctx[0], Item: undefined },
+    				TypesToAccept: /*TypesAccepted*/ ctx[15],
+    				onDroppableEnter: /*onDroppableEnter*/ ctx[26],
+    				onDroppableMove: /*onDroppableMove*/ ctx[27],
+    				onDrop: /*onDrop*/ ctx[29],
+    				HoldDelay: /*HoldDelay*/ ctx[12],
+    				onDroppableHold: /*onDroppableHold*/ ctx[13]
+    			});
+    		},
+    		d(detaching) {
+    			if (detaching) detach(li);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+    }
+
+    function create_fragment$8(ctx) {
+    	let ul;
+    	let current_block_type_index;
+    	let if_block;
+    	let current;
+    	const if_block_creators = [create_if_block$5, create_if_block_3$2, create_else_block_1];
+    	const if_blocks = [];
+
+    	function select_block_type(ctx, dirty) {
+    		if (/*List*/ ctx[0].length > 0) return 0;
+    		if (/*extendable*/ ctx[20]) return 1;
+    		return 2;
+    	}
+
+    	current_block_type_index = select_block_type(ctx);
+    	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+
+    	let ul_levels = [
+    		{ class: /*ClassNames*/ ctx[2] },
+    		{ style: /*style*/ ctx[3] },
+    		/*$$restProps*/ ctx[32]
+    	];
+
+    	let ul_data = {};
+
+    	for (let i = 0; i < ul_levels.length; i += 1) {
+    		ul_data = assign(ul_data, ul_levels[i]);
+    	}
+
+    	return {
+    		c() {
+    			ul = element("ul");
+    			if_block.c();
+    			set_attributes(ul, ul_data);
+    			toggle_class(ul, "defaultListView", /*ClassNames*/ ctx[2] == null);
+    			toggle_class(ul, "withoutTextSelection", true);
+    			toggle_class(ul, "svelte-1tfuj23", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, ul, anchor);
+    			if_blocks[current_block_type_index].m(ul, null);
+    			/*ul_binding*/ ctx[57](ul);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			let previous_block_index = current_block_type_index;
+    			current_block_type_index = select_block_type(ctx);
+
+    			if (current_block_type_index === previous_block_index) {
+    				if_blocks[current_block_type_index].p(ctx, dirty);
+    			} else {
+    				group_outros();
+
+    				transition_out(if_blocks[previous_block_index], 1, 1, () => {
+    					if_blocks[previous_block_index] = null;
+    				});
+
+    				check_outros();
+    				if_block = if_blocks[current_block_type_index];
+
+    				if (!if_block) {
+    					if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+    					if_block.c();
+    				} else {
+    					if_block.p(ctx, dirty);
+    				}
+
+    				transition_in(if_block, 1);
+    				if_block.m(ul, null);
+    			}
+
+    			set_attributes(ul, ul_data = get_spread_update(ul_levels, [
+    				(!current || dirty[0] & /*ClassNames*/ 4) && { class: /*ClassNames*/ ctx[2] },
+    				(!current || dirty[0] & /*style*/ 8) && { style: /*style*/ ctx[3] },
+    				dirty[1] & /*$$restProps*/ 2 && /*$$restProps*/ ctx[32]
+    			]));
+
+    			toggle_class(ul, "defaultListView", /*ClassNames*/ ctx[2] == null);
+    			toggle_class(ul, "withoutTextSelection", true);
+    			toggle_class(ul, "svelte-1tfuj23", true);
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (detaching) detach(ul);
+    			if_blocks[current_block_type_index].d();
+    			/*ul_binding*/ ctx[57](null);
+    		}
+    	};
+    }
+
+
+
+    function scale(Element, Options) {
+    	const currentStyle = window.getComputedStyle(Element);
+
+    	const currentTransform = currentStyle.transform === "none"
+    	? ""
+    	: currentStyle.transform;
+
+    	return {
+    		delay: 0,
+    		duration: 300,
+    		css: (t, u) => `transform: ${currentTransform} translateX(-${50 * u}%) scaleX(${t})`
+    	};
+    }
+
+    function instance$8($$self, $$props, $$invalidate) {
+    	const omit_props_names = [
+    		"class","style","List","Key","SelectionLimit","AttachmentRegion","Placeholder","select","selectOnly","selectAll","selectRange","deselect","deselectAll","toggleSelectionOf","selectedItems","SelectionCount","isSelected","sortable","onlyFrom","neverFrom","onSortRequest","onSort","PanSensorWidth","PanSensorHeight","PanSpeed","Operations","DataToOffer","TypesToAccept","onOuterDropRequest","onDroppedOutside","onDropFromOutside","HoldDelay","onDroppableHold"
+    	];
+
+    	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	let privateKey = newUniqueId();
+    	const dispatch = createEventDispatcher();
+    	let ListViewElement; // will refer to the list view's DOM element
+
+    	/**** common Attributes ****/
+    	let { class: ClassNames = undefined } = $$props;
+
+    	let { style = undefined } = $$props; // ...control styling
+    	let { List } = $$props;
+    	let { Key = undefined } = $$props;
+    	let { SelectionLimit = undefined } = $$props;
+    	let { AttachmentRegion = undefined } = $$props;
+    	let { Placeholder = undefined } = $$props;
+    	let KeyOf;
+
+    	/**** Key Validation and quick Lookup ****/
+    	let ItemSet;
+
+    	function updateItemSet(...ArgumentsAreForReactivityOnly) {
+    		ItemSet = Object.create(null);
+
+    		List.forEach(Item => {
+    			let Key = KeyOf(Item);
+
+    			if (Key in ItemSet) {
+    				if (ItemSet[Key] === Item) {
+    					throwError("InvalidArgument: the given \"List\" contains the same item " + "multiple times");
+    				} else {
+    					throwError("InvalidArgument: the given \"Key\" does not produce unique keys " + "for every \"List\" item");
+    				}
+    			} else {
+    				ItemSet[Key] = Item;
+    			}
+    		});
+    	}
+
+    	//----------------------------------------------------------------------------//
+    	//                         Selection and Deselection                          //
+    	//----------------------------------------------------------------------------//
+    	let SelectionSet = new WeakMap(); // automatically "updates" on list changes
+
+    	function select(...ItemList) {
+    		let curSelectionCount = SelectionCount();
+
+    		ItemList.forEach(Item => {
+    			let Key = KeyOf(Item);
+
+    			if (Key in ItemSet) {
+    				if (!SelectionSet.has(Item)) {
+    					if (SelectionLimit == null || curSelectionCount < SelectionLimit) {
+    						SelectionSet.set(Item, true);
+    						curSelectionCount++;
+    						dispatch("selected-item", Item);
+    					}
+    				}
+    			} else {
+    				throwError("InvalidArgument: one or multiple of the given items to select " + "are not part of the given \"List\"");
+    			}
+    		});
+
+    		SelectionRangeBoundaryA = ItemList.length === 1 ? ItemList[0] : undefined;
+    		SelectionRangeBoundaryB = undefined;
+    		triggerRedraw();
+    	}
+
+    	function selectOnly(...ItemList) {
+    		if (ValuesDiffer(selectedItems(), ItemList, "by-reference")) {
+    			// not perfect...
+    			deselectAll();
+
+    			select(...ItemList);
+    		} //    triggerRedraw()                                     // already done before
+    	}
+
+    	function selectAll() {
+    		let curSelectionCount = SelectionCount();
+
+    		List.forEach(Item => {
+    			if (!SelectionSet.has(Item)) {
+    				if (SelectionLimit == null || curSelectionCount < SelectionLimit) {
+    					SelectionSet.set(Item, true);
+    					curSelectionCount++;
+    					dispatch("selected-item", Item);
+    				}
+    			}
+    		});
+
+    		SelectionRangeBoundaryA = SelectionRangeBoundaryB = undefined;
+    		triggerRedraw();
+    	}
+
+    	let SelectionRangeBoundaryA;
+    	let SelectionRangeBoundaryB;
+
+    	function selectRange(RangeBoundary) {
+    		if (SelectionRangeBoundaryA == null) {
+    			select(RangeBoundary); // will also set SelectionRangeBoundaryA
+    			return;
+    		}
+
+    		if (SelectionRangeBoundaryA === RangeBoundary) {
+    			return;
+    		}
+
+    		if (SelectionRangeBoundaryB != null) {
+    			deselectRange(SelectionRangeBoundaryB);
+    		}
+
+    		let IndexA = List.indexOf(SelectionRangeBoundaryA);
+    		let IndexB = List.indexOf(RangeBoundary);
+    		let firstIndex = Math.min(IndexA, IndexB);
+    		let lastIndex = Math.max(IndexA, IndexB);
+    		let curSelectionCount = SelectionCount();
+
+    		for (let i = firstIndex; i <= lastIndex; i++) {
+    			if (!SelectionSet.has(List[i])) {
+    				if (SelectionLimit == null || curSelectionCount < SelectionLimit) {
+    					SelectionSet.set(List[i], true);
+    					dispatch("selected-item", List[i]);
+    				}
+    			}
+    		}
+
+    		SelectionRangeBoundaryB = RangeBoundary;
+    		triggerRedraw();
+    	}
+
+    	/**** deselectRange (internal only) ****/
+    	function deselectRange(RangeBoundary) {
+    		let IndexA = List.indexOf(SelectionRangeBoundaryA);
+    		let IndexB = List.indexOf(RangeBoundary);
+    		let firstIndex = Math.min(IndexA, IndexB);
+    		let lastIndex = Math.max(IndexA, IndexB);
+
+    		for (let i = firstIndex; i <= lastIndex; i++) {
+    			if (SelectionSet.has(List[i])) {
+    				SelectionSet.delete(List[i]);
+    				dispatch("deselected-item", List[i]);
+    			}
+    		}
+    	}
+
+    	function deselect(...ItemList) {
+    		ItemList.forEach(Item => {
+    			let Key = KeyOf(Item);
+
+    			if (Key in ItemSet) {
+    				if (SelectionSet.has(Item)) {
+    					SelectionSet.delete(Item);
+    					dispatch("deselected-item", Item);
+    				}
+    			} else {
+    				throwError("InvalidArgument: one or multiple of the given items to deselect " + "are not part of the given \"List\"");
+    			}
+    		});
+
+    		SelectionRangeBoundaryA = SelectionRangeBoundaryB = undefined;
+    		triggerRedraw();
+    	}
+
+    	function deselectAll() {
+    		List.forEach(Item => {
+    			if (SelectionSet.has(Item)) {
+    				SelectionSet.delete(Item);
+    				dispatch("deselected-item", Item);
+    			}
+    		});
+
+    		SelectionRangeBoundaryA = SelectionRangeBoundaryB = undefined;
+    		triggerRedraw();
+    	}
+
+    	function toggleSelectionOf(...ItemList) {
+    		SelectionRangeBoundaryA = undefined;
+    		let ItemsToBeSelected = [];
+
+    		ItemList.forEach(Item => {
+    			let Key = KeyOf(Item);
+
+    			if (Key in ItemSet) {
+    				if (SelectionSet.has(Item)) {
+    					SelectionSet.delete(Item);
+    					dispatch("deselected-item", Item);
+    				} else {
+    					ItemsToBeSelected.push(Item);
+    				}
+    			} else {
+    				throwError("InvalidArgument: one or multiple of the given items to select " + "or deselect are not part of the given \"List\"");
+    			}
+    		});
+
+    		let curSelectionCount = SelectionCount();
+
+    		if (SelectionLimit != null) {
+    			let maxToBeSelected = SelectionLimit - curSelectionCount;
+
+    			if (maxToBeSelected < ItemsToBeSelected.length) {
+    				ItemsToBeSelected.length = maxToBeSelected;
+    			}
+    		}
+
+    		ItemsToBeSelected.forEach(Item => {
+    			SelectionSet.set(Item, true);
+    			dispatch("selected-item", Item);
+
+    			if (ItemList.length === 1) {
+    				SelectionRangeBoundaryA = Item;
+    				SelectionRangeBoundaryB = undefined;
+    			}
+    		});
+
+    		triggerRedraw();
+    	}
+
+    	function selectedItems() {
+    		let Result = List.filter(Item => SelectionSet.has(Item));
+    		return Result;
+    	}
+
+    	function SelectionCount() {
+    		return List.reduce((Count, Item) => Count + (SelectionSet.has(Item) ? 1 : 0), 0);
+    	}
+
+    	function isSelected(Item) {
+    		return SelectionSet.has(Item);
+    	}
+
+    	/**** handleClick ****/
+    	function handleClick(Event, Item) {
+    		switch (true) {
+    			case Event.buttons === 0 && Event.button !== 0:
+    				return;
+    			case Event.buttons !== 0 && Event.buttons !== 1:
+    				return;
+    			case svelteDeviceInfo.PointingAccuracy === "coarse":
+    			case Event.ctrlKey:
+    			case Event.metaKey:
+    				toggleSelectionOf(Item);
+    				break;
+    			case Event.shiftKey:
+    				selectRange(Item);
+    				break;
+    			default:
+    				selectOnly(Item);
+    				break;
+    		} // workaround
+    		// ...for bug
+
+    		Event.preventDefault();
+    		Event.stopPropagation();
+    	}
+
+    	//----------------------------------------------------------------------------//
+    	//                           Drag-and-Drop Handling                           //
+    	//----------------------------------------------------------------------------//
+    	let isDragging = false;
+
+    	let draggedItemList = []; // needed for rendering ony
+    	let { sortable = false } = $$props; // does this list view support "sorting"?
+    	let { onlyFrom = undefined } = $$props;
+    	let { neverFrom = undefined } = $$props;
+    	let { onSortRequest = undefined } = $$props;
+    	let { onSort = undefined } = $$props;
+    	let { PanSensorWidth = undefined } = $$props;
+    	let { PanSensorHeight = undefined } = $$props;
+    	let { PanSpeed = undefined } = $$props;
+    	let { Operations = undefined } = $$props;
+    	let { DataToOffer = undefined } = $$props;
+    	let { TypesToAccept = undefined } = $$props;
+    	let { onOuterDropRequest = undefined } = $$props;
+    	let { onDroppedOutside = undefined } = $$props;
+    	let { onDropFromOutside = undefined } = $$props; // returns act. accepted type (if known)
+    	let { HoldDelay = undefined } = $$props;
+    	let { onDroppableHold = undefined } = $$props;
+    	let DataOffered;
+    	let TypesAccepted;
+
+    	/**** parsedOperations ****/
+    	function parsedOperations(Description, Argument, Default = "copy move link") {
+    		let Operations = allowedString(Description, Argument) || Default;
+
+    		switch (Operations.trim()) {
+    			case "all":
+    				return "copy move link";
+    			case "none":
+    				return "";
+    		}
+
+    		let OperationList = Operations.trim().replace(/\s+/g, " ").split(" ");
+    		allowListSatisfying(Description, OperationList, Operation => ValueIsOneOf(Operation, DropOperations));
+
+    		return OperationList.reduce(
+    			(Result, Operation) => Result.indexOf(Operation) < 0
+    			? Result + Operation + " "
+    			: Result,
+    			" "
+    		);
+    	}
+
+    	/**** prepare for drag-and-drop ****/
+    	function hasNonPrivateTypes(TypeSet) {
+    		for (let Type in TypeSet) {
+    			if (TypeSet.hasOwnProperty(Type) && Type !== privateKey) {
+    				return true;
+    			}
+    		}
+
+    		return false;
+    	}
+
+    	let shrinkable = false;
+    	let extendable = false;
+
+    	/**** ad-hoc Dummy Creation ****/
+    	function dynamicDummy(DroppableExtras, Element) {
+    		let auxiliaryElement = Element.cloneNode(true);
+    		auxiliaryElement.style.display = "block";
+    		auxiliaryElement.style.position = "absolute";
+    		auxiliaryElement.style.left = document.body.scrollWidth + 100 + "px";
+    		auxiliaryElement.style.width = Element.clientWidth + "px"; // not perfect
+    		auxiliaryElement.style.height = Element.clientHeight + "px"; // dto.
+
+    		if (draggedItemList.length > 1) {
+    			// called after "onDragStart"
+    			let Badge = document.createElement("div");
+
+    			Badge.setAttribute("style", "display:block; position:absolute; " + "top:-10px; right:-10px; width:20px; height:20px; " + "background:red; color:white; " + "border:none; border-radius:10px; margin:0px; padding:0px 4px 0px 4px; " + "line-height:20px; text-align:center");
+    			Badge.innerText = "+" + (draggedItemList.length - 1);
+    			auxiliaryElement.appendChild(Badge);
+    		}
+
+    		document.body.appendChild(auxiliaryElement);
+
+    		setTimeout(
+    			() => {
+    				document.body.removeChild(auxiliaryElement);
+    			},
+    			0
+    		);
+
+    		return auxiliaryElement;
+    	}
+
+    	/**** onDragStart ****/
+    	function onDragStart(DroppableExtras) {
+    		$$invalidate(52, isDragging = true);
+
+    		if (!isSelected(DroppableExtras.Item)) {
+    			selectOnly(DroppableExtras.Item);
+    		}
+
+    		$$invalidate(18, draggedItemList = DroppableExtras.ItemList = selectedItems());
+    		return { x: 0, y: 0 };
+    	}
+
+    	/**** onDragEnd ****/
+    	function onDragEnd(x, y, dx, dy, DroppableExtras) {
+    		$$invalidate(52, isDragging = false);
+    		delete DroppableExtras.ItemList;
+    		$$invalidate(18, draggedItemList.length = 0, draggedItemList);
+    	}
+
+    	/**** onDropped ****/
+    	function onDropped(
+    		x,
+    	y,
+    	Operation,
+    	TypeTransferred,
+    	DataTransferred,
+    	DropZoneExtras,
+    	DroppableExtras
+    	) {
+    		let droppedHere = List === (DropZoneExtras && DropZoneExtras.List);
+
+    		if (!droppedHere) {
+    			if (onDroppedOutside == null) {
+    				let droppedItems = DroppableExtras.ItemList;
+    				let DroppableSet = SetOfItemsIn(droppedItems);
+
+    				for (let i = List.length - 1; i >= 0; i--) {
+    					let Key = KeyOf(List[i]);
+
+    					if (Key in DroppableSet) {
+    						List.splice(i, 1);
+    					}
+    				}
+
+    				dispatch("removed-items", droppedItems.slice());
+    				triggerRedraw();
+    			} else {
+    				try {
+    					onDroppedOutside(x, y, Operation, TypeTransferred, DataTransferred, DropZoneExtras, DroppableExtras);
+    				} catch(Signal) {
+    					console.error("RuntimeError: callback \"onDroppedOutside\" failed", Signal);
+    				} // no event to be dispatched (there is already the callback)
+
+    				triggerRedraw(); // just to be on the safe side
+    			}
+    		}
+    	}
+
+    	/**** onDroppableEnter ****/
+    	function onDroppableEnter(x, y, Operation, offeredTypeList, DroppableExtras, DropZoneExtras) {
+    		if (List === (DroppableExtras && DroppableExtras.List) && List.indexOf(DroppableExtras.Item) >= 0 && // not a foreign item
+    		DroppableExtras.ItemList.indexOf(DropZoneExtras.Item) >= 0) {
+
+    			triggerRedraw();
+    			return false;
+    		}
+
+    		let mayBeInsertedHere = true; // because dnd-action already checked a bit
+
+    		if (List === (DroppableExtras && DroppableExtras.List)) {
+    			// own elements
+    			if (sortable) {
+    				if (onSortRequest != null) {
+    					try {
+    						mayBeInsertedHere = onSortRequest(x, y, DroppableExtras, DropZoneExtras);
+    					} catch(Signal) {
+    						mayBeInsertedHere = false;
+    						console.error("RuntimeError: callback \"onSortRequest\" failed", Signal);
+    					}
+    				}
+    			} else {
+    				// not sortable? then own list items may not be dropped here
+    				mayBeInsertedHere = false;
+    			}
+    		} else {
+    			// foreign elements want to be dropped here
+    			if (onOuterDropRequest != null) {
+    				try {
+    					mayBeInsertedHere = onOuterDropRequest(x, y, Operation, offeredTypeList, DroppableExtras, DroppableExtras);
+    				} catch(Signal) {
+    					mayBeInsertedHere = false;
+    					console.error("RuntimeError: callback \"onOuterDropRequest\" failed", Signal);
+    				}
+    			}
+    		}
+
+    		mayBeInsertedHere ? DropZoneExtras.Item : undefined;
+    		triggerRedraw();
+    		return mayBeInsertedHere && Operation !== "link";
+    	}
+
+    	/**** onDroppableMove ****/
+    	const onDroppableMove = onDroppableEnter;
+
+    	/**** onDroppableLeave ****/
+    	function onDroppableLeave(DroppableExtras, DropZoneExtras) {
+    	} //  triggerRedraw()
+
+    	/**** onDrop ****/
+    	function onDrop(x, y, Operation, DataOffered, DroppableExtras, DropZoneExtras) {
+
+    		if (List === (DroppableExtras && DroppableExtras.List) && List.indexOf(DroppableExtras.Item) >= 0 && // not a foreign item
+    		DroppableExtras.ItemList.indexOf(DropZoneExtras.Item) >= 0) {
+
+    			triggerRedraw();
+    			return "none";
+    		}
+
+    		if (List === (DroppableExtras && DroppableExtras.List)) {
+    			// own elements
+    			if (sortable) {
+    				let droppedItems = DroppableExtras.ItemList;
+
+    				if (onSort == null) {
+    					let DroppableSet = SetOfItemsIn(droppedItems);
+
+    					for (let i = List.length - 1; i >= 0; i--) {
+    						let Key = KeyOf(List[i]);
+
+    						if (Key in DroppableSet) {
+    							List.splice(i, 1);
+    						}
+    					}
+
+    					let InsertionIndex = List.indexOf(DropZoneExtras.Item);
+
+    					if (InsertionIndex < 0) {
+    						InsertionIndex = List.length;
+    					} // for append
+
+    					// @ts-ignore argument list of "apply" is known to be correct
+    					List.splice.apply(List, [InsertionIndex, 0].concat(droppedItems));
+
+    					dispatch("sorted-items", [droppedItems.slice(), InsertionIndex]);
+    					triggerRedraw();
+    				} else {
+    					try {
+    						onSort(DropZoneExtras.Item, droppedItems.slice());
+    					} catch(Signal) {
+    						console.error("RuntimeError: callback \"onSort\" failed", Signal);
+    					} // no event to be dispatched (there is already the callback)
+
+    					triggerRedraw(); // just to be on the safe side
+    				}
+
+    				return Operation; // should be 'move', but 'copy' gives better feedback
+    			} else {
+    				return "none";
+    			}
+    		} else {
+    			// foreign elements want to be dropped here
+    			if (onDropFromOutside == null) {
+    				let ItemsToBeInserted = DroppableExtras && DroppableExtras.ItemList;
+
+    				if (!ValueIsList(ItemsToBeInserted)) {
+    					return "none";
+    				}
+
+    				let InsertionIndex = List.indexOf(DropZoneExtras.Item);
+
+    				if (InsertionIndex < 0) {
+    					InsertionIndex = List.length;
+    				} // for "append"
+
+    				// @ts-ignore argument list of "apply" is known to be correct
+    				List.splice.apply(List, [InsertionIndex, 0].concat(ItemsToBeInserted));
+
+    				dispatch("inserted-items", [ItemsToBeInserted.slice(), InsertionIndex]);
+    				triggerRedraw();
+    				return undefined; // accepted type is unknown
+    			} else {
+    				let acceptedType = undefined;
+
+    				try {
+    					acceptedType = onDropFromOutside(x, y, Operation, DataOffered, DroppableExtras, DropZoneExtras);
+    				} catch(Signal) {
+    					console.error("RuntimeError: callback \"onSort\" failed", Signal);
+    				} // no event to be dispatched (there is already the callback)
+
+    				triggerRedraw(); // just to be on the safe side
+    				return acceptedType; // accepted type is unknown
+    			}
+    		}
+    	}
+
+    	/**** TransitionStarted ****/
+    	function TransitionStarted() {
+    		ListViewElement.classList.add("transitioning");
+    	}
+
+    	function TransitionEnded() {
+    		ListViewElement.classList.remove("transitioning");
+    	}
+
+    	/**** SetOfItemsIn ****/
+    	function SetOfItemsIn(ItemList) {
+    		let ItemSet = Object.create(null);
+
+    		ItemList.forEach(Item => {
+    			let Key = KeyOf(Item);
+    			ItemSet[Key] = Item;
+    		});
+
+    		return ItemSet;
+    	}
+
+    	/**** triggerRedraw ****/
+    	function triggerRedraw() {
+    		$$invalidate(0, List);
+    	}
+
+    	const click_handler = (Item, Event) => handleClick(Event, Item);
+    	const click_handler_1 = (Item, Event) => handleClick(Event, Item);
+
+    	function ul_binding($$value) {
+    		binding_callbacks[$$value ? "unshift" : "push"](() => {
+    			ListViewElement = $$value;
+    			$$invalidate(16, ListViewElement);
+    		});
+    	}
+
+    	$$self.$$set = $$new_props => {
+    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
+    		$$invalidate(32, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("class" in $$new_props) $$invalidate(2, ClassNames = $$new_props.class);
+    		if ("style" in $$new_props) $$invalidate(3, style = $$new_props.style);
+    		if ("List" in $$new_props) $$invalidate(0, List = $$new_props.List);
+    		if ("Key" in $$new_props) $$invalidate(33, Key = $$new_props.Key);
+    		if ("SelectionLimit" in $$new_props) $$invalidate(34, SelectionLimit = $$new_props.SelectionLimit);
+    		if ("AttachmentRegion" in $$new_props) $$invalidate(4, AttachmentRegion = $$new_props.AttachmentRegion);
+    		if ("Placeholder" in $$new_props) $$invalidate(5, Placeholder = $$new_props.Placeholder);
+    		if ("sortable" in $$new_props) $$invalidate(1, sortable = $$new_props.sortable);
+    		if ("onlyFrom" in $$new_props) $$invalidate(7, onlyFrom = $$new_props.onlyFrom);
+    		if ("neverFrom" in $$new_props) $$invalidate(8, neverFrom = $$new_props.neverFrom);
+    		if ("onSortRequest" in $$new_props) $$invalidate(44, onSortRequest = $$new_props.onSortRequest);
+    		if ("onSort" in $$new_props) $$invalidate(45, onSort = $$new_props.onSort);
+    		if ("PanSensorWidth" in $$new_props) $$invalidate(9, PanSensorWidth = $$new_props.PanSensorWidth);
+    		if ("PanSensorHeight" in $$new_props) $$invalidate(10, PanSensorHeight = $$new_props.PanSensorHeight);
+    		if ("PanSpeed" in $$new_props) $$invalidate(11, PanSpeed = $$new_props.PanSpeed);
+    		if ("Operations" in $$new_props) $$invalidate(46, Operations = $$new_props.Operations);
+    		if ("DataToOffer" in $$new_props) $$invalidate(47, DataToOffer = $$new_props.DataToOffer);
+    		if ("TypesToAccept" in $$new_props) $$invalidate(48, TypesToAccept = $$new_props.TypesToAccept);
+    		if ("onOuterDropRequest" in $$new_props) $$invalidate(49, onOuterDropRequest = $$new_props.onOuterDropRequest);
+    		if ("onDroppedOutside" in $$new_props) $$invalidate(50, onDroppedOutside = $$new_props.onDroppedOutside);
+    		if ("onDropFromOutside" in $$new_props) $$invalidate(51, onDropFromOutside = $$new_props.onDropFromOutside);
+    		if ("HoldDelay" in $$new_props) $$invalidate(12, HoldDelay = $$new_props.HoldDelay);
+    		if ("onDroppableHold" in $$new_props) $$invalidate(13, onDroppableHold = $$new_props.onDroppableHold);
+    		if ("$$scope" in $$new_props) $$invalidate(53, $$scope = $$new_props.$$scope);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty[0] & /*ClassNames*/ 4) {
+    			allowNonEmptyString("\"class\" attribute", ClassNames);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*style*/ 8) {
+    			allowNonEmptyString("\"style\" attribute", style);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*List*/ 1) {
+    			$$invalidate(0, List = allowedListSatisfying("\"List\" attribute", List, ValueIsObject) || []);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*Key*/ 4) {
+    			switch (true) {
+    				case Key == null:
+    					$$invalidate(17, KeyOf = Item => String(Item));
+    					break;
+    				case ValueIsNonEmptyString(Key):
+    					$$invalidate(17, KeyOf = Item => String(Item[Key]));
+    					break;
+    				case ValueIsFunction(Key):
+    					$$invalidate(17, KeyOf = (Item, Index) => String(Key(Item, Index)));
+    					break;
+    				default:
+    					throwError("InvalidArgument: the given \"Key\" attribute is neither " + "a non-empty string nor a function returning such a string");
+    			}
+    		}
+
+    		if ($$self.$$.dirty[1] & /*SelectionLimit*/ 8) {
+    			allowOrdinal("selection limit", SelectionLimit);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*AttachmentRegion*/ 16) {
+    			allowNonEmptyString("\"AttachmentRegion\" attribute", AttachmentRegion);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*Placeholder*/ 32) {
+    			allowNonEmptyString("\"Placeholder\" attribute", Placeholder);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*List*/ 1 | $$self.$$.dirty[1] & /*Key*/ 4) {
+    			updateItemSet(List, Key);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*List*/ 1 | $$self.$$.dirty[1] & /*SelectionLimit*/ 8) {
+    			if (SelectionLimit != null && SelectionCount() > SelectionLimit) {
+    				let Count = 0;
+
+    				List.forEach(Item => {
+    					if (SelectionSet.has(Item)) {
+    						Count++;
+
+    						if (Count > SelectionLimit) {
+    							deselect(Item);
+    						}
+    					}
+    				});
+    			} // decreasing the selection limit with an active selection is very bad style
+    		}
+
+    		if ($$self.$$.dirty[0] & /*sortable*/ 2) {
+    			$$invalidate(1, sortable = allowedBoolean("\"sortable\" attribute", sortable) || false);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*onlyFrom*/ 128) {
+    			allowNonEmptyString("\"onlyFrom\" CSS selector list", onlyFrom);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*neverFrom*/ 256) {
+    			allowNonEmptyString("\"neverFrom\" CSS selector list", neverFrom);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*onSortRequest*/ 8192) {
+    			allowFunction("\"onSortRequest\" callback", onSortRequest);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*onSort*/ 16384) {
+    			allowFunction("\"onSort\" callback", onSort);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*PanSensorWidth*/ 512) {
+    			allowOrdinal("panning sensor width", PanSensorWidth);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*PanSensorHeight*/ 1024) {
+    			allowOrdinal("panning sensor height", PanSensorHeight);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*PanSpeed*/ 2048) {
+    			allowOrdinal("panning speed", PanSpeed);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*Operations*/ 32768) {
+    			parsedOperations("list of allowed operations", Operations);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*DataToOffer*/ 65536) {
+    			allowPlainObject("\"DataToOffer\" attribute", DataToOffer);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*TypesToAccept*/ 131072) {
+    			allowPlainObject("\"TypesToAccept\" attribute", TypesToAccept);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*onOuterDropRequest*/ 262144) {
+    			allowFunction("\"onOuterDropRequest\" callback", onOuterDropRequest);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*onDroppedOutside*/ 524288) {
+    			allowFunction("\"onDroppedOutside\" callback", onDroppedOutside);
+    		}
+
+    		if ($$self.$$.dirty[1] & /*onDropFromOutside*/ 1048576) {
+    			allowFunction("\"onDropFromOutside\" callback", onDropFromOutside);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*HoldDelay*/ 4096) {
+    			allowIntegerInRange("\"HoldDelay\" attribute", HoldDelay, 0);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*onDroppableHold*/ 8192) {
+    			allowFunction("\"onDroppableHold\" callback", onDroppableHold);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*DataOffered, sortable*/ 16386 | $$self.$$.dirty[1] & /*isDragging, DataToOffer*/ 2162688) {
+    			if (!isDragging) {
+    				// do not update while already dragging
+    				$$invalidate(14, DataOffered = Object.assign({}, DataToOffer));
+
+    				if ("none" in DataOffered) throwError("InvalidArgument: \"none\" is not a valid data type");
+
+    				// @ts-ignore "DataOffered" is definitely not undefined
+    				if (sortable) {
+    					$$invalidate(14, DataOffered[privateKey] = "", DataOffered);
+    				}
+    			}
+    		}
+
+    		if ($$self.$$.dirty[0] & /*sortable*/ 2 | $$self.$$.dirty[1] & /*isDragging, TypesToAccept*/ 2228224) {
+    			if (!isDragging) {
+    				// do not update while already dragging
+    				$$invalidate(15, TypesAccepted = {});
+
+    				if (TypesToAccept != null && "none" in TypesToAccept) throwError("InvalidArgument: \"none\" is not a valid data type");
+
+    				for (let Type in TypesToAccept) {
+    					if (TypesToAccept.hasOwnProperty(Type)) {
+    						// @ts-ignore "TypesAccepted" is definitely not undefined
+    						$$invalidate(15, TypesAccepted[Type] = parsedOperations("list of accepted operations for type " + quoted(Type), TypesToAccept[Type]), TypesAccepted);
+    					}
+    				}
+
+    				// @ts-ignore "TypesAccepted" is definitely not undefined
+    				if (sortable) {
+    					$$invalidate(15, TypesAccepted[privateKey] = "copy move", TypesAccepted);
+    				}
+    			} // 'copy' because of the better visual feedback from native drag-and-drop
+    		}
+
+    		if ($$self.$$.dirty[0] & /*DataOffered, TypesAccepted*/ 49152 | $$self.$$.dirty[1] & /*isDragging*/ 2097152) {
+    			if (!isDragging) {
+    				// do not update while already dragging
+    				$$invalidate(19, shrinkable = hasNonPrivateTypes(DataOffered));
+
+    				$$invalidate(20, extendable = hasNonPrivateTypes(TypesAccepted));
+    			}
+    		}
+    	};
+
+    	return [
+    		List,
+    		sortable,
+    		ClassNames,
+    		style,
+    		AttachmentRegion,
+    		Placeholder,
+    		isSelected,
+    		onlyFrom,
+    		neverFrom,
+    		PanSensorWidth,
+    		PanSensorHeight,
+    		PanSpeed,
+    		HoldDelay,
+    		onDroppableHold,
+    		DataOffered,
+    		TypesAccepted,
+    		ListViewElement,
+    		KeyOf,
+    		draggedItemList,
+    		shrinkable,
+    		extendable,
+    		handleClick,
+    		dynamicDummy,
+    		onDragStart,
+    		onDragEnd,
+    		onDropped,
+    		onDroppableEnter,
+    		onDroppableMove,
+    		onDroppableLeave,
+    		onDrop,
+    		TransitionStarted,
+    		TransitionEnded,
+    		$$restProps,
+    		Key,
+    		SelectionLimit,
+    		select,
+    		selectOnly,
+    		selectAll,
+    		selectRange,
+    		deselect,
+    		deselectAll,
+    		toggleSelectionOf,
+    		selectedItems,
+    		SelectionCount,
+    		onSortRequest,
+    		onSort,
+    		Operations,
+    		DataToOffer,
+    		TypesToAccept,
+    		onOuterDropRequest,
+    		onDroppedOutside,
+    		onDropFromOutside,
+    		isDragging,
+    		$$scope,
+    		slots,
+    		click_handler,
+    		click_handler_1,
+    		ul_binding
+    	];
+    }
+
+    class Svelte_sortable_flat_list_view extends SvelteComponent {
+    	constructor(options) {
+    		super();
+
+    		init(
+    			this,
+    			options,
+    			instance$8,
+    			create_fragment$8,
+    			safe_not_equal,
+    			{
+    				class: 2,
+    				style: 3,
+    				List: 0,
+    				Key: 33,
+    				SelectionLimit: 34,
+    				AttachmentRegion: 4,
+    				Placeholder: 5,
+    				select: 35,
+    				selectOnly: 36,
+    				selectAll: 37,
+    				selectRange: 38,
+    				deselect: 39,
+    				deselectAll: 40,
+    				toggleSelectionOf: 41,
+    				selectedItems: 42,
+    				SelectionCount: 43,
+    				isSelected: 6,
+    				sortable: 1,
+    				onlyFrom: 7,
+    				neverFrom: 8,
+    				onSortRequest: 44,
+    				onSort: 45,
+    				PanSensorWidth: 9,
+    				PanSensorHeight: 10,
+    				PanSpeed: 11,
+    				Operations: 46,
+    				DataToOffer: 47,
+    				TypesToAccept: 48,
+    				onOuterDropRequest: 49,
+    				onDroppedOutside: 50,
+    				onDropFromOutside: 51,
+    				HoldDelay: 12,
+    				onDroppableHold: 13
+    			},
+    			[-1, -1, -1]
+    		);
+    	}
+
+    	get class() {
+    		return this.$$.ctx[2];
+    	}
+
+    	set class(ClassNames) {
+    		this.$set({ class: ClassNames });
+    		flush();
+    	}
+
+    	get style() {
+    		return this.$$.ctx[3];
+    	}
+
+    	set style(style) {
+    		this.$set({ style });
+    		flush();
+    	}
+
+    	get List() {
+    		return this.$$.ctx[0];
+    	}
+
+    	set List(List) {
+    		this.$set({ List });
+    		flush();
+    	}
+
+    	get Key() {
+    		return this.$$.ctx[33];
+    	}
+
+    	set Key(Key) {
+    		this.$set({ Key });
+    		flush();
+    	}
+
+    	get SelectionLimit() {
+    		return this.$$.ctx[34];
+    	}
+
+    	set SelectionLimit(SelectionLimit) {
+    		this.$set({ SelectionLimit });
+    		flush();
+    	}
+
+    	get AttachmentRegion() {
+    		return this.$$.ctx[4];
+    	}
+
+    	set AttachmentRegion(AttachmentRegion) {
+    		this.$set({ AttachmentRegion });
+    		flush();
+    	}
+
+    	get Placeholder() {
+    		return this.$$.ctx[5];
+    	}
+
+    	set Placeholder(Placeholder) {
+    		this.$set({ Placeholder });
+    		flush();
+    	}
+
+    	get select() {
+    		return this.$$.ctx[35];
+    	}
+
+    	get selectOnly() {
+    		return this.$$.ctx[36];
+    	}
+
+    	get selectAll() {
+    		return this.$$.ctx[37];
+    	}
+
+    	get selectRange() {
+    		return this.$$.ctx[38];
+    	}
+
+    	get deselect() {
+    		return this.$$.ctx[39];
+    	}
+
+    	get deselectAll() {
+    		return this.$$.ctx[40];
+    	}
+
+    	get toggleSelectionOf() {
+    		return this.$$.ctx[41];
+    	}
+
+    	get selectedItems() {
+    		return this.$$.ctx[42];
+    	}
+
+    	get SelectionCount() {
+    		return this.$$.ctx[43];
+    	}
+
+    	get isSelected() {
+    		return this.$$.ctx[6];
+    	}
+
+    	get sortable() {
+    		return this.$$.ctx[1];
+    	}
+
+    	set sortable(sortable) {
+    		this.$set({ sortable });
+    		flush();
+    	}
+
+    	get onlyFrom() {
+    		return this.$$.ctx[7];
+    	}
+
+    	set onlyFrom(onlyFrom) {
+    		this.$set({ onlyFrom });
+    		flush();
+    	}
+
+    	get neverFrom() {
+    		return this.$$.ctx[8];
+    	}
+
+    	set neverFrom(neverFrom) {
+    		this.$set({ neverFrom });
+    		flush();
+    	}
+
+    	get onSortRequest() {
+    		return this.$$.ctx[44];
+    	}
+
+    	set onSortRequest(onSortRequest) {
+    		this.$set({ onSortRequest });
+    		flush();
+    	}
+
+    	get onSort() {
+    		return this.$$.ctx[45];
+    	}
+
+    	set onSort(onSort) {
+    		this.$set({ onSort });
+    		flush();
+    	}
+
+    	get PanSensorWidth() {
+    		return this.$$.ctx[9];
+    	}
+
+    	set PanSensorWidth(PanSensorWidth) {
+    		this.$set({ PanSensorWidth });
+    		flush();
+    	}
+
+    	get PanSensorHeight() {
+    		return this.$$.ctx[10];
+    	}
+
+    	set PanSensorHeight(PanSensorHeight) {
+    		this.$set({ PanSensorHeight });
+    		flush();
+    	}
+
+    	get PanSpeed() {
+    		return this.$$.ctx[11];
+    	}
+
+    	set PanSpeed(PanSpeed) {
+    		this.$set({ PanSpeed });
+    		flush();
+    	}
+
+    	get Operations() {
+    		return this.$$.ctx[46];
+    	}
+
+    	set Operations(Operations) {
+    		this.$set({ Operations });
+    		flush();
+    	}
+
+    	get DataToOffer() {
+    		return this.$$.ctx[47];
+    	}
+
+    	set DataToOffer(DataToOffer) {
+    		this.$set({ DataToOffer });
+    		flush();
+    	}
+
+    	get TypesToAccept() {
+    		return this.$$.ctx[48];
+    	}
+
+    	set TypesToAccept(TypesToAccept) {
+    		this.$set({ TypesToAccept });
+    		flush();
+    	}
+
+    	get onOuterDropRequest() {
+    		return this.$$.ctx[49];
+    	}
+
+    	set onOuterDropRequest(onOuterDropRequest) {
+    		this.$set({ onOuterDropRequest });
+    		flush();
+    	}
+
+    	get onDroppedOutside() {
+    		return this.$$.ctx[50];
+    	}
+
+    	set onDroppedOutside(onDroppedOutside) {
+    		this.$set({ onDroppedOutside });
+    		flush();
+    	}
+
+    	get onDropFromOutside() {
+    		return this.$$.ctx[51];
+    	}
+
+    	set onDropFromOutside(onDropFromOutside) {
+    		this.$set({ onDropFromOutside });
+    		flush();
+    	}
+
+    	get HoldDelay() {
+    		return this.$$.ctx[12];
+    	}
+
+    	set HoldDelay(HoldDelay) {
+    		this.$set({ HoldDelay });
+    		flush();
+    	}
+
+    	get onDroppableHold() {
+    		return this.$$.ctx[13];
+    	}
+
+    	set onDroppableHold(onDroppableHold) {
+    		this.$set({ onDroppableHold });
+    		flush();
+    	}
+    }
+
+    var css_248z$4 = ".WAD-AppletOverviewPane.svelte-1arfddw{display:flex;position:relative;flex-flow:column nowrap;width:100%;height:100%;padding:4px}";
+    styleInject(css_248z$4,{"insertAt":"top"});
+
+    /* src/AppletOverviewPane.svelte generated by Svelte v3.38.3 */
+
+    function create_fragment$7(ctx) {
+    	let div1;
+    	let div0;
+    	let t1;
+    	let listview;
+    	let current;
+
+    	listview = new Svelte_sortable_flat_list_view({
+    			props: {
+    				style: "flex:1 1 auto; border:solid 1px #969696; padding:2px",
+    				List: /*$AppletList*/ ctx[0],
+    				Key: func,
+    				SelectionLimit: 1
+    			}
+    		});
+
+    	return {
+    		c() {
+    			div1 = element("div");
+    			div0 = element("div");
+    			div0.textContent = "designable Applets:";
+    			t1 = space();
+    			create_component(listview.$$.fragment);
+    			set_style(div0, "height", "24px");
+    			set_style(div0, "line-height", "22px");
+    			attr(div1, "class", "WAD-AppletOverviewPane svelte-1arfddw");
+    		},
+    		m(target, anchor) {
+    			insert(target, div1, anchor);
+    			append(div1, div0);
+    			append(div1, t1);
+    			mount_component(listview, div1, null);
+    			current = true;
+    		},
+    		p(ctx, [dirty]) {
+    			const listview_changes = {};
+    			if (dirty & /*$AppletList*/ 1) listview_changes.List = /*$AppletList*/ ctx[0];
+    			listview.$set(listview_changes);
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(listview.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(listview.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (detaching) detach(div1);
+    			destroy_component(listview);
+    		}
+    	};
+    }
+
+    const func = (Applet, Index) => Applet.Id || "Applet #" + Index;
+
+    function instance$7($$self, $$props, $$invalidate) {
+    	let $AppletList;
+    	component_subscribe($$self, AppletList, $$value => $$invalidate(0, $AppletList = $$value));
+    	return [$AppletList];
+    }
+
+    class AppletOverviewPane extends SvelteComponent {
+    	constructor(options) {
+    		super();
+    		init(this, options, instance$7, create_fragment$7, safe_not_equal, {});
+    	}
+    }
+
+    /*
+      export type WAD_Mode = (
+        'applet'|'master'|'card'|'overlay'|'component'|'import-export'|'search'
+      )
+      export type WAD_Pane = (
+        'overview'|'selection-globals'|'selection-resources'|'selection-properties'|
+        'selection-configuration'|'selection-script'|'selection-contents'
+      )
+    */
+      const initialInspectorState = {
+        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN,
+        Mode:'applet', Pane:'overview'
+      };
+
+      let currentlyChosenApplet$3 = undefined;
+      let currentInspectorState = Object.assign({}, initialInspectorState);
+
+      const InspectorStateStore = writable(currentInspectorState); // subscript. mgmt
+      const InspectorStateSet   = new WeakMap();  // applet-specific Inspector states
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet$3 !== newChosenApplet) {
+          currentlyChosenApplet$3 = newChosenApplet;
+
+          if (currentlyChosenApplet$3 == null) {
+            currentInspectorState = Object.assign({}, initialInspectorState);
+          } else {
+            if (InspectorStateSet.has(currentlyChosenApplet$3)) {
+              currentInspectorState = InspectorStateSet.get(currentlyChosenApplet$3);
+            } else {
+              currentInspectorState = Object.assign({}, initialInspectorState);
+              InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
+            }
+            InspectorStateStore.set(currentInspectorState);
+          }
+        }
+      });
+
+    /**** validate changes to "InspectorState" ****/
+
+      function setInspectorState (newInspectorState) {
+        if (currentlyChosenApplet$3 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentInspectorState,newInspectorState)) {
+            currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState);
+            InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
+            InspectorStateStore.set(currentInspectorState);
+          }
+        }
+      }
+
+    /**** setMode ****/
+
+      function setMode (newMode) {
+        if (newMode != currentInspectorState.Mode) {
+          let newPane;
+            if ((newMode === 'import-export') || (newMode === 'search')) {
+              newPane = undefined;
+            } else {
+              newPane = currentInspectorState.Pane || 'overview';
+            }
+          setInspectorState({ ...currentInspectorState, Mode:newMode, Pane:newPane });
+        }
+      }
+
+    /**** setPane ****/
+
+      function setPane (newPane) {
+        if (newPane != currentInspectorState.Pane) {
+          if ('import-export search'.indexOf(currentInspectorState.Mode) >= 0) {
+            newPane = undefined;
+          }
+          setInspectorState({ ...currentInspectorState, Pane:newPane });
+        }
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const InspectorState = {
+        subscribe: (Callback) => InspectorStateStore.subscribe(Callback),
+        set:       setInspectorState,
+        setMode, setPane
+      };
+
+    //----------------------------------------------------------------------------//
+    /**** tintedBitmapAsURL ****/
+    function tintedBitmapAsURL(Bitmap, TintColor) {
+        expectInstanceOf('bitmap', Bitmap, HTMLImageElement, 'HTML image element');
+        expectColor('tint color', TintColor);
+        if (!Bitmap.complete)
+            throwError('InvalidArgument: the given bitmap has not yet been completely loaded');
+        var Canvas = document.createElement('canvas');
+        Canvas.width = Bitmap.width;
+        Canvas.height = Bitmap.height;
+        var Context = Canvas.getContext('2d');
+        Context.drawImage(Bitmap, 0, 0);
+        Context.globalCompositeOperation = 'source-in';
+        Context.fillStyle = TintColor;
+        Context.fillRect(0, 0, Bitmap.width, Bitmap.height);
+        return Canvas.toDataURL('image/png');
+    }
+
+    var css_248z$3 = ".WAD-IconButton.svelte-gg0gm3{display:block;position:absolute;width:32px;height:32px;background:var(--normal-image-url)}.WAD-IconButton.svelte-gg0gm3:not([disabled]):hover,.WAD-IconButton[disabled=\"false\"].svelte-gg0gm3:hover{background:var(--hovered-image-url)}.WAD-IconButton.active.svelte-gg0gm3:not([disabled]):not(:hover),.WAD-IconButton.active[disabled=\"false\"].svelte-gg0gm3:not(:hover){background:var(--active-image-url)}.WAD-IconButton[disabled=\"true\"].svelte-gg0gm3{opacity:0.3 }";
+    styleInject(css_248z$3,{"insertAt":"top"});
+
+    /* src/IconButton.svelte generated by Svelte v3.38.3 */
+
+    function create_fragment$6(ctx) {
+    	let div;
+    	let div_style_value;
+    	let mounted;
+    	let dispose;
+
+    	let div_levels = [
+    		/*$$restProps*/ ctx[6],
+    		{ class: "WAD-IconButton" },
+    		{
+    			style: div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
+			? /*activeHoveredImageURL*/ ctx[5]
+			: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]
+    		}
+    	];
+
+    	let div_data = {};
+
+    	for (let i = 0; i < div_levels.length; i += 1) {
+    		div_data = assign(div_data, div_levels[i]);
+    	}
+
+    	return {
+    		c() {
+    			div = element("div");
+    			set_attributes(div, div_data);
+    			toggle_class(div, "active", /*active*/ ctx[0]);
+    			toggle_class(div, "svelte-gg0gm3", true);
+    		},
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+
+    			if (!mounted) {
+    				dispose = listen(div, "click", /*click_handler*/ ctx[10]);
+    				mounted = true;
+    			}
+    		},
+    		p(ctx, [dirty]) {
+    			set_attributes(div, div_data = get_spread_update(div_levels, [
+    				dirty & /*$$restProps*/ 64 && /*$$restProps*/ ctx[6],
+    				{ class: "WAD-IconButton" },
+    				dirty & /*normalImageURL, active, activeHoveredImageURL, hoveredImageURL, activeImageURL, style*/ 63 && div_style_value !== (div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
+				? /*activeHoveredImageURL*/ ctx[5]
+				: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]) && { style: div_style_value }
+    			]));
+
+    			toggle_class(div, "active", /*active*/ ctx[0]);
+    			toggle_class(div, "svelte-gg0gm3", true);
+    		},
+    		i: noop,
+    		o: noop,
+    		d(detaching) {
+    			if (detaching) detach(div);
+    			mounted = false;
+    			dispose();
+    		}
+    	};
+    }
+    const hoveredColor = "#FFEC2E";
+    const activeColor = "#7FFF00"; /* chartreuse */
+
+    function instance$6($$self, $$props, $$invalidate) {
+    	const omit_props_names = ["ImageURL","active","activeURL","style"];
+    	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let { ImageURL } = $$props; // bitmap as Data URL
+    	let { active = false } = $$props;
+    	let { activeURL = undefined } = $$props; // opt. image URL for active state
+    	let { style = "" } = $$props; // since {...$$restProps} does not help here
+    	let normalImageURL = ""; // just for the beginning
+    	let hoveredImageURL = ""; // dto.
+    	let activeImageURL = ""; // dto.
+    	let activeHoveredImageURL = ""; // dto.
+    	let auxImage;
+
+    	function tintOriginalImage() {
+    		$$invalidate(3, hoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
+
+    		if (activeURL == null) {
+    			$$invalidate(4, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
+    			$$invalidate(5, activeHoveredImageURL = hoveredImageURL);
+    			$$invalidate(9, auxImage = undefined);
+    		} else {
+    			$$invalidate(9, auxImage = document.createElement("img")); // new image element necessary
+    			$$invalidate(9, auxImage.src = activeURL, auxImage);
+
+    			if (auxImage.complete) {
+    				// just in case
+    				tintActiveImage();
+    			} else {
+    				auxImage.addEventListener("load", tintActiveImage);
+    			}
+    		}
+    	}
+
+    	function tintActiveImage() {
+    		$$invalidate(4, activeImageURL = tintedBitmapAsURL(auxImage, activeColor));
+    		$$invalidate(5, activeHoveredImageURL = tintedBitmapAsURL(auxImage, hoveredColor));
+    		$$invalidate(9, auxImage = undefined);
+    	}
+
+    	function click_handler(event) {
+    		bubble.call(this, $$self, event);
+    	}
+
+    	$$self.$$set = $$new_props => {
+    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
+    		$$invalidate(6, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("ImageURL" in $$new_props) $$invalidate(7, ImageURL = $$new_props.ImageURL);
+    		if ("active" in $$new_props) $$invalidate(0, active = $$new_props.active);
+    		if ("activeURL" in $$new_props) $$invalidate(8, activeURL = $$new_props.activeURL);
+    		if ("style" in $$new_props) $$invalidate(1, style = $$new_props.style);
+    	};
+
+    	$$self.$$.update = () => {
+    		if ($$self.$$.dirty & /*ImageURL, normalImageURL, auxImage*/ 644) {
+    			{
+    				switch (true) {
+    					case ImageURL == null:
+    						$$invalidate(2, normalImageURL = $$invalidate(3, hoveredImageURL = $$invalidate(4, activeImageURL = "")));
+    					case ImageURL === normalImageURL:
+    						// prevents multiple conversions
+    						break;
+    					default:
+    						$$invalidate(2, normalImageURL = ImageURL);
+    						$$invalidate(9, auxImage = document.createElement("img"));
+    						$$invalidate(9, auxImage.src = ImageURL, auxImage);
+    						if (auxImage.complete) {
+    							// just in case
+    							tintOriginalImage();
+    						} else {
+    							auxImage.addEventListener("load", tintOriginalImage);
+    						}
+    				}
+    			}
+    		}
+    	};
+
+    	return [
+    		active,
+    		style,
+    		normalImageURL,
+    		hoveredImageURL,
+    		activeImageURL,
+    		activeHoveredImageURL,
+    		$$restProps,
+    		ImageURL,
+    		activeURL,
+    		auxImage,
+    		click_handler
+    	];
+    }
+
+    class IconButton extends SvelteComponent {
+    	constructor(options) {
+    		super();
+
+    		init(this, options, instance$6, create_fragment$6, safe_not_equal, {
+    			ImageURL: 7,
+    			active: 0,
+    			activeURL: 8,
+    			style: 1
+    		});
+    	}
+    }
+
+    const initialDialogOrder = { Dialogs:[], zIndexOf };
+
+      let currentlyChosenApplet$2 = undefined;
+      let currentDialogOrder = { Dialogs:[], zIndexOf };
+
+      const DialogOrderStore = writable(currentDialogOrder);     // subscription mgmt
+      const DialogOrderSet   = new WeakMap();        // applet-specific dialog orders
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet$2 !== newChosenApplet) {
+          currentlyChosenApplet$2 = newChosenApplet;
+
+          if (currentlyChosenApplet$2 == null) {
+            currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
+          } else {
+            if (DialogOrderSet.has(currentlyChosenApplet$2)) {
+              currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet$2);
+            } else {
+              currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
+              DialogOrderSet.set(currentlyChosenApplet$2,currentDialogOrder);
+            }
+            DialogOrderStore.set(currentDialogOrder);
+          }
+        }
+      });
+
+    /**** validate changes to "DialogOrder" ****/
+
+      function setDialogOrder (newDialogOrder) {
+        if (currentlyChosenApplet$2 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder)) {
+            currentDialogOrder = newDialogOrder;
+            DialogOrderSet.set(currentlyChosenApplet$2,newDialogOrder);
+            DialogOrderStore.set(newDialogOrder);
+          }
+        }
+      }
+
+    /**** open ****/
+
+      function open (DialogElement) {
+        if (
+          (DialogElement != null) &&
+          (currentDialogOrder.Dialogs.indexOf(DialogElement) < 0)
+        ) {
+          let Dialogs = currentDialogOrder.Dialogs.slice();
+            Dialogs.push(DialogElement);
+          setDialogOrder({ Dialogs, zIndexOf });
+        }
+      }
+
+    /**** close ****/
+
+      function close (DialogElement) {
+        if (DialogElement != null) {
+          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
+          if (DialogIndex >= 0) {
+            let Dialogs = currentDialogOrder.Dialogs.slice();
+              Dialogs.splice(DialogIndex,1);
+            setDialogOrder({ Dialogs, zIndexOf });
+          }
+        }
+      }
+
+    /**** raise ****/
+
+      function raise (DialogElement) {
+        if (DialogElement != null) {
+          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
+          if (DialogIndex >= 0) {
+            let Dialogs = currentDialogOrder.Dialogs.slice();
+              Dialogs.splice(DialogIndex,1);
+              Dialogs.push(DialogElement);
+            setDialogOrder({ Dialogs, zIndexOf });
+          }
+        }
+      }
+
+    /**** zIndexOf ****/
+
+      function zIndexOf (DialogElement) {
+        if (DialogElement != null) {
+          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
+          if (DialogIndex >= 0) { return 1000000 + DialogIndex }
+        }
+        return 'auto'
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const DialogOrder = {
+        subscribe: (Callback) => DialogOrderStore.subscribe(Callback),
+        open, close, raise, zIndexOf
+      };
+
+    var css_248z$2 = ".WAD-Dialog.svelte-76xq3y{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-76xq3y{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-76xq3y{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-76xq3y{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-76xq3y:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-76xq3y{display:inline-flex;flex-flow:column nowrap;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ResizeHandle.svelte-76xq3y{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-76xq3y:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
     styleInject(css_248z$2,{"insertAt":"top"});
 
     /* src/Dialog.svelte generated by Svelte v3.38.3 */
@@ -2293,12 +5719,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (default_slot) default_slot.c();
     			t3 = space();
     			if (if_block) if_block.c();
-    			attr(div0, "class", "WAD-Title svelte-18t6msy");
-    			attr(div1, "class", "WAD-CloseButton svelte-18t6msy");
-    			attr(div2, "class", "WAD-Titlebar svelte-18t6msy");
-    			attr(div3, "class", "WAD-ContentArea svelte-18t6msy");
+    			attr(div0, "class", "WAD-Title svelte-76xq3y");
+    			attr(div1, "class", "WAD-CloseButton svelte-76xq3y");
+    			attr(div2, "class", "WAD-Titlebar svelte-76xq3y");
+    			attr(div3, "class", "WAD-ContentArea svelte-76xq3y");
     			set_attributes(div4, div4_data);
-    			toggle_class(div4, "svelte-18t6msy", true);
+    			toggle_class(div4, "svelte-76xq3y", true);
     		},
     		m(target, anchor) {
     			insert(target, div4, anchor);
@@ -2371,7 +5797,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				(!current || dirty & /*Applet, State, $DialogOrder, DialogElement*/ 51 && div4_style_value !== (div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px;\n    z-index:" + /*$DialogOrder*/ ctx[5].zIndexOf(/*DialogElement*/ ctx[4]) + "\n  ")) && { style: div4_style_value }
     			]));
 
-    			toggle_class(div4, "svelte-18t6msy", true);
+    			toggle_class(div4, "svelte-76xq3y", true);
     		},
     		i(local) {
     			if (current) return;
@@ -2398,7 +5824,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (158:4) {#if resizable}
+    // (157:4) {#if resizable}
     function create_if_block_1$2(ctx) {
     	let div;
     	let iconbutton;
@@ -2414,7 +5840,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		c() {
     			div = element("div");
     			create_component(iconbutton.$$.fragment);
-    			attr(div, "class", "WAD-ResizeHandle svelte-18t6msy");
+    			attr(div, "class", "WAD-ResizeHandle svelte-76xq3y");
     		},
     		m(target, anchor) {
     			insert(target, div, anchor);
@@ -2715,45 +6141,123 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     // (111:6) {#if $InspectorState.Pane === 'overview'}
     function create_if_block_9(ctx) {
-    	return { c: noop, m: noop, d: noop };
+    	let if_block_anchor;
+    	let current;
+    	let if_block = /*$InspectorState*/ ctx[2].Mode === "applet" && create_if_block_10();
+
+    	return {
+    		c() {
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty();
+    		},
+    		m(target, anchor) {
+    			if (if_block) if_block.m(target, anchor);
+    			insert(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p(ctx, dirty) {
+    			if (/*$InspectorState*/ ctx[2].Mode === "applet") {
+    				if (if_block) {
+    					if (dirty & /*$InspectorState*/ 4) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block_10();
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(if_block);
+    			current = false;
+    		},
+    		d(detaching) {
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach(if_block_anchor);
+    		}
+    	};
     }
 
-    // (114:6) {#if $InspectorState.Pane === 'selection-globals'}
+    // (112:8) {#if $InspectorState.Mode === 'applet'}
+    function create_if_block_10(ctx) {
+    	let appletoverviewpane;
+    	let current;
+    	appletoverviewpane = new AppletOverviewPane({});
+
+    	return {
+    		c() {
+    			create_component(appletoverviewpane.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(appletoverviewpane, target, anchor);
+    			current = true;
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(appletoverviewpane.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(appletoverviewpane.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(appletoverviewpane, detaching);
+    		}
+    	};
+    }
+
+    // (115:6) {#if $InspectorState.Pane === 'selection-globals'}
     function create_if_block_8(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (117:6) {#if $InspectorState.Pane === 'selection-resources'}
+    // (118:6) {#if $InspectorState.Pane === 'selection-resources'}
     function create_if_block_7(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (120:6) {#if $InspectorState.Pane === 'selection-properties'}
+    // (121:6) {#if $InspectorState.Pane === 'selection-properties'}
     function create_if_block_6(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (123:6) {#if $InspectorState.Pane === 'selection-configuration'}
+    // (124:6) {#if $InspectorState.Pane === 'selection-configuration'}
     function create_if_block_5(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (126:6) {#if $InspectorState.Pane === 'selection-script'}
+    // (127:6) {#if $InspectorState.Pane === 'selection-script'}
     function create_if_block_4(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (129:6) {#if $InspectorState.Pane === 'selection-contents'}
+    // (130:6) {#if $InspectorState.Pane === 'selection-contents'}
     function create_if_block_3$1(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (132:6) {#if $InspectorState.Mode === 'import-export'}
+    // (133:6) {#if $InspectorState.Mode === 'import-export'}
     function create_if_block_2$1(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
 
-    // (135:6) {#if $InspectorState.Mode === 'search'}
+    // (136:6) {#if $InspectorState.Mode === 'search'}
     function create_if_block_1$1(ctx) {
     	return { c: noop, m: noop, d: noop };
     }
@@ -2948,7 +6452,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		});
 
     	iconbutton13.$on("click", /*click_handler_13*/ ctx[16]);
-    	let if_block0 = /*$InspectorState*/ ctx[2].Pane === "overview" && create_if_block_9();
+    	let if_block0 = /*$InspectorState*/ ctx[2].Pane === "overview" && create_if_block_9(ctx);
     	let if_block1 = /*$InspectorState*/ ctx[2].Pane === "selection-globals" && create_if_block_8();
     	let if_block2 = /*$InspectorState*/ ctx[2].Pane === "selection-resources" && create_if_block_7();
     	let if_block3 = /*$InspectorState*/ ctx[2].Pane === "selection-properties" && create_if_block_6();
@@ -3130,14 +6634,26 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			iconbutton13.$set(iconbutton13_changes);
 
     			if (/*$InspectorState*/ ctx[2].Pane === "overview") {
-    				if (if_block0) ; else {
-    					if_block0 = create_if_block_9();
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
+
+    					if (dirty & /*$InspectorState*/ 4) {
+    						transition_in(if_block0, 1);
+    					}
+    				} else {
+    					if_block0 = create_if_block_9(ctx);
     					if_block0.c();
+    					transition_in(if_block0, 1);
     					if_block0.m(div1, t14);
     				}
     			} else if (if_block0) {
-    				if_block0.d(1);
-    				if_block0 = null;
+    				group_outros();
+
+    				transition_out(if_block0, 1, 1, () => {
+    					if_block0 = null;
+    				});
+
+    				check_outros();
     			}
 
     			if (/*$InspectorState*/ ctx[2].Pane === "selection-globals") {
@@ -3244,6 +6760,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_in(iconbutton11.$$.fragment, local);
     			transition_in(iconbutton12.$$.fragment, local);
     			transition_in(iconbutton13.$$.fragment, local);
+    			transition_in(if_block0);
     			transition_in(messageview.$$.fragment, local);
     			current = true;
     		},
@@ -3262,6 +6779,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_out(iconbutton11.$$.fragment, local);
     			transition_out(iconbutton12.$$.fragment, local);
     			transition_out(iconbutton13.$$.fragment, local);
+    			transition_out(if_block0);
     			transition_out(messageview.$$.fragment, local);
     			current = false;
     		},
@@ -4548,7 +8066,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
     }
 
-    var css_248z$1 = ".WAD-DesignerButton.svelte-uao6lg{display:block;position:absolute;width:32px;height:32px;cursor:pointer;pointer-events:auto}";
+    var css_248z$1 = ".WAD-DesignerButton.svelte-vi4zzc{display:block;position:absolute;width:32px;height:32px;cursor:pointer;pointer-events:auto}";
     styleInject(css_248z$1,{"insertAt":"top"});
 
     /* src/DesignerButton.svelte generated by Svelte v3.38.3 */
@@ -4565,7 +8083,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		c() {
     			div = element("div");
     			create_component(iconbutton.$$.fragment);
-    			attr(div, "class", "WAD-DesignerButton svelte-uao6lg");
+    			attr(div, "class", "WAD-DesignerButton svelte-vi4zzc");
     			set_style(div, "left", /*Applet*/ ctx[0].x + /*Offset*/ ctx[1].x + "px");
     			set_style(div, "top", /*Applet*/ ctx[0].y + /*Offset*/ ctx[1].y + "px\n");
     		},
@@ -5027,7 +8545,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (96:4) {#if $chosenApplet !== Applet}
+    // (95:4) {#if $chosenApplet !== Applet}
     function create_if_block_3(ctx) {
     	let designerbutton;
     	let updating_preferredPosition;
@@ -5084,7 +8602,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (95:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (94:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let if_block_anchor;
@@ -5149,7 +8667,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (103:2) {#if ($chosenApplet !== null)}
+    // (102:2) {#if ($chosenApplet !== null)}
     function create_if_block_2(ctx) {
     	let toolboxview;
     	let current;
@@ -5189,7 +8707,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (107:2) {#if ($chosenApplet !== null) && $NudgerState.isVisible }
+    // (106:2) {#if ($chosenApplet !== null) && $NudgerState.isVisible }
     function create_if_block_1(ctx) {
     	let nudgerview;
     	let current;
@@ -5229,7 +8747,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (111:2) {#if ($chosenApplet !== null) && $InspectorState.isVisible }
+    // (110:2) {#if ($chosenApplet !== null) && $InspectorState.isVisible }
     function create_if_block(ctx) {
     	let inspectorview;
     	let current;
