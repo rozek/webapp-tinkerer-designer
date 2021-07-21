@@ -7,7 +7,7 @@
   import      Dialog      from './Dialog.svelte'
   import    IconButton    from './IconButton.svelte'
   import { chosenApplet } from './chosenApplet.js'
-  import {  NudgerState } from './NudgerState.js'
+//import {  NudgerState } from './NudgerState.js'      // causes Svelte warnings
 
 /**** normal IconButton images as Data URLs ****/
 
@@ -27,6 +27,8 @@
 </script>
 
 <script lang="ts">
+  import {  NudgerState } from './NudgerState.js'
+
   export let Applet:WAT_Applet
   export let PositionAroundPreferredPosition:(Width:WAT_Dimension,Height:WAT_Dimension) => WAT_Position
 
