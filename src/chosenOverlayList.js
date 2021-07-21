@@ -15,7 +15,7 @@
       currentlyChosenApplet = newChosenApplet
 
       let newOverlayList = (newChosenApplet == null ? [] : newChosenApplet.OverlayList)
-      if (ValuesDiffer(currentOverlayList,newOverlayList)) {
+      if (ValuesDiffer(currentOverlayList,newOverlayList,'by-reference')) {
         currentOverlayList = newOverlayList
         chosenOverlayListStore.set(currentOverlayList)
       }
@@ -27,7 +27,7 @@
   function updateChosenOverlayList () {
     if (currentlyChosenApplet != null) {
       let newOverlayList = currentlyChosenApplet.OverlayList
-      if (ValuesDiffer(currentOverlayList,newOverlayList)) {
+      if (ValuesDiffer(currentOverlayList,newOverlayList,'by-reference')) {
         currentOverlayList = newOverlayList
         chosenOverlayListStore.set(currentOverlayList)
       }
