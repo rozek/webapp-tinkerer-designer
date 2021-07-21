@@ -71,8 +71,8 @@
 /**** Svelte Stores ****/
 
   import {   AppletList   } from './AppletList.js'
-  import {   NudgerState  } from './NudgerState.js'
-  import { InspectorState } from './InspectorState.js'
+//import {   NudgerState  } from './NudgerState.js'    // causes Svelte warnings
+//import { InspectorState } from './InspectorState.js'                   // dto.
 
 /**** Svelte Components ****/
 
@@ -84,6 +84,9 @@
 </script>
 
 <script lang="ts">
+  import {   NudgerState  } from './NudgerState.js'
+  import { InspectorState } from './InspectorState.js'
+
   export const Version = '0.1.0'
 
 /**** Colors ****/
