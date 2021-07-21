@@ -67,22 +67,22 @@
 
 /**** styled scrollbars for divs and textareas ****/
 
-  .WAD-ContentArea textarea::-webkit-scrollbar { width:10px; height:10px }
-  .WAD-ContentArea textarea::-webkit-scrollbar-thumb {
+  .WAD-ContentArea :global(textarea::-webkit-scrollbar) { width:10px; height:10px }
+  .WAD-ContentArea :global(textarea::-webkit-scrollbar-thumb) {
     background-color:#808080; border-radius:4px;
     -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.5);
   }
-  .WAD-ContentArea textarea::-webkit-scrollbar-track-piece { background-color:rgba(0,0,0,0.1) }
-  .WAD-ContentArea textarea::-webkit-scrollbar-corner      { background-color:rgba(0,0,0,0.1) }
+  .WAD-ContentArea :global(textarea::-webkit-scrollbar-track-piece) { background-color:rgba(0,0,0,0.1) }
+  .WAD-ContentArea :global(textarea::-webkit-scrollbar-corner)      { background-color:rgba(0,0,0,0.1) }
 
 
-  .WAD-ContentArea div::-webkit-scrollbar { width:10px; height:10px }
-  .WAD-ContentArea div::-webkit-scrollbar-thumb {
+  .WAD-ContentArea :global(div::-webkit-scrollbar) { width:10px; height:10px }
+  .WAD-ContentArea :global(div::-webkit-scrollbar-thumb) {
     background-color:#808080; border-radius:4px;
     -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.5);
   }
-  .WAD-ContentArea div::-webkit-scrollbar-track-piece { background-color:rgba(0,0,0,0.1) }
-  .WAD-ContentArea div::-webkit-scrollbar-corner      { background-color:rgba(0,0,0,0.1) }
+  .WAD-ContentArea :global(div::-webkit-scrollbar-track-piece) { background-color:rgba(0,0,0,0.1) }
+  .WAD-ContentArea :global(div::-webkit-scrollbar-corner)      { background-color:rgba(0,0,0,0.1) }
 /**** ResizeHandle ****/
 
   .WAD-ResizeHandle {
