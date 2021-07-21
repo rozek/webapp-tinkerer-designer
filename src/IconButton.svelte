@@ -23,7 +23,7 @@
 
 /**** Colors ****/
 
-  const normalColor  = '#969696'
+  const normalColor  = '#AAAAAA'
   const hoveredColor = '#FFEC2E'
   const activeColor  = '#7FFF00' /* chartreuse */
 
@@ -49,8 +49,6 @@
       case (ImageURL === normalImageURL):       // prevents multiple conversions
         break
       default:
-        normalImageURL = ImageURL
-
         auxImage = document.createElement('img')
           auxImage.src = ImageURL as string
         if (auxImage.complete) {                                 // just in case
@@ -62,6 +60,7 @@
   }
 
   function tintOriginalImage () {
+    normalImageURL  = tintedBitmapAsURL(auxImage as HTMLImageElement,normalColor)
     hoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,hoveredColor)
 
     if (activeURL == null) {
