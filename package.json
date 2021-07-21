@@ -51,6 +51,7 @@
     "svelte-drag-and-drop-actions": "^0.1.35",
     "svelte-drag-drop-touch": "^0.1.9",
     "svelte-sortable-flat-list-view": "^0.1.22",
+    "svelte-touch-to-mouse": "^0.1.12",
     "tinted-bitmap": "^0.1.3",
     "webapp-tinkerer-runtime": "file:../webapp-tinkerer-runtime"
   }
