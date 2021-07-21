@@ -13,7 +13,7 @@
   import       Dialog       from './Dialog.svelte'
   import     IconButton     from './IconButton.svelte'
   import {  chosenApplet  } from './chosenApplet.js'
-  import { InspectorState } from './InspectorState.js'
+//import { InspectorState } from './InspectorState.js' // causes Svelte warnings
   import AppletOverviewPane from './AppletOverviewPane.svelte'
   import {  MessageState  } from './MessageState.js'
   import    MessageView     from './MessageView.svelte'
@@ -42,6 +42,8 @@
 </script>
 
 <script lang="ts">
+  import { InspectorState } from './InspectorState.js'
+
   export let Applet:WAT_Applet
   export let PositionAroundPreferredPosition:(Width:WAT_Dimension,Height:WAT_Dimension) => WAT_Position
 
