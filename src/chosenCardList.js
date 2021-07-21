@@ -15,7 +15,7 @@
       currentlyChosenApplet = newChosenApplet
 
       let newCardList = (newChosenApplet == null ? [] : newChosenApplet.CardList)
-      if (ValuesDiffer(currentCardList,newCardList)) {
+      if (ValuesDiffer(currentCardList,newCardList,'by-reference')) {
         currentCardList = newCardList
         chosenCardListStore.set(currentCardList)
       }
@@ -27,7 +27,7 @@
   function updateChosenCardList () {
     if (currentlyChosenApplet != null) {
       let newCardList = currentlyChosenApplet.CardList
-      if (ValuesDiffer(currentCardList,newCardList)) {
+      if (ValuesDiffer(currentCardList,newCardList,'by-reference')) {
         currentCardList = newCardList
         chosenCardListStore.set(currentCardList)
       }
