@@ -1014,15 +1014,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return { set, update, subscribe };
     }
 
-    let currentAppletList$1 = [];
+    let currentAppletList$2 = [];
 
-      const AppletList = readable(currentAppletList$1, (set) => {
+      const AppletList = readable(currentAppletList$2, (set) => {
         function updateAppletList () {
           let newAppletList = webappTinkererRuntime.AppletPeersInDocument()
             .map((AppletPeer) => webappTinkererRuntime.VisualForElement(AppletPeer))
             .filter((Applet) => Applet.mayBeDesigned);
-          if (webappTinkererRuntime.ValuesDiffer(currentAppletList$1,newAppletList)) {
-            currentAppletList$1 = newAppletList;
+          if (webappTinkererRuntime.ValuesDiffer(currentAppletList$2,newAppletList)) {
+            currentAppletList$2 = newAppletList;
             set(newAppletList);
           }
 
@@ -1041,7 +1041,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return () => {}
       });
 
-    let currentAppletList     = [];
+    let currentAppletList$1     = [];
       let currentlyChosenApplet$5 = undefined;
 
       const chosenAppletStore = writable(undefined);   // for subscription management
@@ -1049,7 +1049,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** keep track of changes in "AppletList" ****/
 
       AppletList.subscribe((newAppletList) => {      // implements a "derived" store
-        currentAppletList = newAppletList;
+        currentAppletList$1 = newAppletList;
         if (
           (currentlyChosenApplet$5 != null) &&
           (newAppletList.indexOf(currentlyChosenApplet$5) < 0)
@@ -1064,7 +1064,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
       function setChosenApplet (Applet) {
         if (                   // "Applet" must be in the list of designable applets
           (Applet != null) &&
-          (currentAppletList.indexOf(Applet) < 0)
+          (currentAppletList$1.indexOf(Applet) < 0)
         ) {
           Applet = undefined;
         }
@@ -4316,6 +4316,13 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			case Event.buttons !== 0 && Event.buttons !== 1:
     				return;
     			case svelteDeviceInfo.PointingAccuracy === "coarse":
+    				if (// special handling for touch devices to feel "familiar"
+    				SelectionLimit === 1 && !isSelected(Item) && !Event.ctrlKey && !Event.metaKey && !Event.shiftKey) {
+    					selectOnly(Item); // workaround
+    					// ...for bug
+
+    					break;
+    				}
     			case Event.ctrlKey:
     			case Event.metaKey:
     				toggleSelectionOf(Item);
@@ -4326,12 +4333,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			default:
     				selectOnly(Item);
     				break;
-    		} // workaround
-    		// ...for bug
-
-    		Event.preventDefault();
-    		Event.stopPropagation();
-    	}
+    		}
+    	} //  Event.preventDefault()
+    	//  Event.stopPropagation()
 
     	//----------------------------------------------------------------------------//
     	//                           Drag-and-Drop Handling                           //
@@ -5213,7 +5217,75 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
     }
 
-    var css_248z$4 = ".WAD-AppletOverviewPane.svelte-1arfddw{display:flex;position:relative;flex-flow:column nowrap;width:100%;height:100%;padding:4px}";
+    let currentAppletList = [];
+
+      const initialSelectionList = [];
+      let   currentSelectionList = [];
+
+      const SelectionListStore = writable(currentSelectionList); // subscription mgmt
+
+    /**** keep track of changes in "AppletList" ****/
+
+      AppletList.subscribe((newAppletList) => {      // implements a "derived" store
+        currentAppletList = newAppletList;
+
+        let newSelectionList = currentSelectionList.filter(
+          (Applet) => (currentAppletList.indexOf(Applet) >= 0)
+        );
+        if (webappTinkererRuntime.ValuesDiffer(currentSelectionList,newSelectionList,'by-reference')) {
+          currentSelectionList = newSelectionList;
+          SelectionListStore.set(currentSelectionList);
+        }
+      });
+
+    /**** select ****/
+
+      function select (Applet) {
+        let AppletIndex = currentSelectionList.indexOf(Applet);
+        if ((AppletIndex < 0) && (currentAppletList.indexOf(Applet) >= 0)) {
+          currentSelectionList = currentSelectionList.slice();
+            currentSelectionList.push(Applet);
+          SelectionListStore.set(currentSelectionList);
+        }
+      }
+
+    /**** deselect ****/
+
+      function deselect (Applet) {
+        let AppletIndex = currentSelectionList.indexOf(Applet);
+        if (AppletIndex >= 0) {
+          currentSelectionList = currentSelectionList.slice();
+            currentSelectionList.splice(AppletIndex,1);
+          SelectionListStore.set(currentSelectionList);
+        }
+      }
+
+    /**** clear ****/
+
+      function clear (Applet) {
+        if (currentSelectionList.length > 0) {
+          currentSelectionList = initialSelectionList;
+          SelectionListStore.set(currentSelectionList);
+        }
+      }
+
+    /**** validate changes to "SelectionList" ****/
+
+      function setSelectionList (newSelectionList) {
+        if (webappTinkererRuntime.ValuesDiffer(currentSelectionList,newSelectionList,'by-reference')) {
+          currentSelectionList = newSelectionList.slice();
+          SelectionListStore.set(currentSelectionList);
+        }
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const selectedAppletList = {
+        subscribe: (Subscription) => SelectionListStore.subscribe(Subscription),
+        set:setSelectionList, select, deselect, clear
+      };
+
+    var css_248z$4 = ".WAD-AppletOverviewPane.svelte-1rlx4sl{display:flex;position:absolute;flex-flow:column nowrap;width:100%;height:100%;padding:4px}";
     styleInject(css_248z$4,{"insertAt":"top"});
 
     /* src/AppletOverviewPane.svelte generated by Svelte v3.38.3 */
@@ -5224,6 +5296,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let t1;
     	let listview;
     	let current;
+    	let mounted;
+    	let dispose;
 
     	listview = new Svelte_sortable_flat_list_view({
     			props: {
@@ -5234,6 +5308,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
     		});
 
+    	listview.$on("selected-item", selectApplet);
+    	listview.$on("deselected-item", deselectApplet);
+
     	return {
     		c() {
     			div1 = element("div");
@@ -5243,7 +5320,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			create_component(listview.$$.fragment);
     			set_style(div0, "height", "24px");
     			set_style(div0, "line-height", "22px");
-    			attr(div1, "class", "WAD-AppletOverviewPane svelte-1arfddw");
+    			attr(div1, "class", "WAD-AppletOverviewPane svelte-1rlx4sl");
     		},
     		m(target, anchor) {
     			insert(target, div1, anchor);
@@ -5251,6 +5328,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			append(div1, t1);
     			mount_component(listview, div1, null);
     			current = true;
+
+    			if (!mounted) {
+    				dispose = listen(div1, "dblclick", /*chooseApplet*/ ctx[1]);
+    				mounted = true;
+    			}
     		},
     		p(ctx, [dirty]) {
     			const listview_changes = {};
@@ -5269,16 +5351,36 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		d(detaching) {
     			if (detaching) detach(div1);
     			destroy_component(listview);
+    			mounted = false;
+    			dispose();
     		}
     	};
+    }
+
+    function selectApplet(Event) {
+    	selectedAppletList.select(Event.detail);
+    }
+
+    function deselectApplet(Event) {
+    	selectedAppletList.deselect(Event.detail);
     }
 
     const func = (Applet, Index) => Applet.Id || "Applet #" + Index;
 
     function instance$7($$self, $$props, $$invalidate) {
+    	let $selectedAppletList;
     	let $AppletList;
+    	component_subscribe($$self, selectedAppletList, $$value => $$invalidate(2, $selectedAppletList = $$value));
     	component_subscribe($$self, AppletList, $$value => $$invalidate(0, $AppletList = $$value));
-    	return [$AppletList];
+
+    	function chooseApplet() {
+    		let Applet = $selectedAppletList[0];
+    		selectedAppletList.clear();
+    		selectedAppletList.select(Applet);
+    		chosenApplet.set(Applet);
+    	}
+
+    	return [$AppletList, chooseApplet];
     }
 
     class AppletOverviewPane extends SvelteComponent {
@@ -5287,91 +5389,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		init(this, options, instance$7, create_fragment$7, safe_not_equal, {});
     	}
     }
-
-    /*
-      export type WAD_Mode = (
-        'applet'|'master'|'card'|'overlay'|'component'|'import-export'|'search'
-      )
-      export type WAD_Pane = (
-        'overview'|'selection-globals'|'selection-resources'|'selection-properties'|
-        'selection-configuration'|'selection-script'|'selection-contents'
-      )
-    */
-      const initialInspectorState = {
-        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN,
-        Mode:'applet', Pane:'overview'
-      };
-
-      let currentlyChosenApplet$3 = undefined;
-      let currentInspectorState = Object.assign({}, initialInspectorState);
-
-      const InspectorStateStore = writable(currentInspectorState); // subscript. mgmt
-      const InspectorStateSet   = new WeakMap();  // applet-specific Inspector states
-
-    /**** keep track of changes in "chosenApplet" ****/
-
-      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$3 !== newChosenApplet) {
-          currentlyChosenApplet$3 = newChosenApplet;
-
-          if (currentlyChosenApplet$3 == null) {
-            currentInspectorState = Object.assign({}, initialInspectorState);
-          } else {
-            if (InspectorStateSet.has(currentlyChosenApplet$3)) {
-              currentInspectorState = InspectorStateSet.get(currentlyChosenApplet$3);
-            } else {
-              currentInspectorState = Object.assign({}, initialInspectorState);
-              InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
-            }
-            InspectorStateStore.set(currentInspectorState);
-          }
-        }
-      });
-
-    /**** validate changes to "InspectorState" ****/
-
-      function setInspectorState (newInspectorState) {
-        if (currentlyChosenApplet$3 !== null) {
-          if (webappTinkererRuntime.ValuesDiffer(currentInspectorState,newInspectorState)) {
-            currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState);
-            InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
-            InspectorStateStore.set(currentInspectorState);
-          }
-        }
-      }
-
-    /**** setMode ****/
-
-      function setMode (newMode) {
-        if (newMode != currentInspectorState.Mode) {
-          let newPane;
-            if ((newMode === 'import-export') || (newMode === 'search')) {
-              newPane = undefined;
-            } else {
-              newPane = currentInspectorState.Pane || 'overview';
-            }
-          setInspectorState({ ...currentInspectorState, Mode:newMode, Pane:newPane });
-        }
-      }
-
-    /**** setPane ****/
-
-      function setPane (newPane) {
-        if (newPane != currentInspectorState.Pane) {
-          if ('import-export search'.indexOf(currentInspectorState.Mode) >= 0) {
-            newPane = undefined;
-          }
-          setInspectorState({ ...currentInspectorState, Pane:newPane });
-        }
-      }
-
-    /**** export an explicitly implemented store ****/
-
-      const InspectorState = {
-        subscribe: (Callback) => InspectorStateStore.subscribe(Callback),
-        set:       setInspectorState,
-        setMode, setPane
-      };
 
     //----------------------------------------------------------------------------//
     /**** tintedBitmapAsURL ****/
@@ -5404,7 +5421,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	let div_levels = [
     		/*$$restProps*/ ctx[6],
-    		{ class: "WAD-IconButton" },
     		{
     			style: div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
 			? /*activeHoveredImageURL*/ ctx[5]
@@ -5422,6 +5438,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		c() {
     			div = element("div");
     			set_attributes(div, div_data);
+    			toggle_class(div, "WAD-IconButton", true);
     			toggle_class(div, "active", /*active*/ ctx[0]);
     			toggle_class(div, "svelte-gg0gm3", true);
     		},
@@ -5436,12 +5453,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		p(ctx, [dirty]) {
     			set_attributes(div, div_data = get_spread_update(div_levels, [
     				dirty & /*$$restProps*/ 64 && /*$$restProps*/ ctx[6],
-    				{ class: "WAD-IconButton" },
     				dirty & /*normalImageURL, active, activeHoveredImageURL, hoveredImageURL, activeImageURL, style*/ 63 && div_style_value !== (div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
 				? /*activeHoveredImageURL*/ ctx[5]
 				: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]) && { style: div_style_value }
     			]));
 
+    			toggle_class(div, "WAD-IconButton", true);
     			toggle_class(div, "active", /*active*/ ctx[0]);
     			toggle_class(div, "svelte-gg0gm3", true);
     		},
@@ -5563,7 +5580,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     const initialDialogOrder = { Dialogs:[], zIndexOf };
 
-      let currentlyChosenApplet$2 = undefined;
+      let currentlyChosenApplet$3 = undefined;
       let currentDialogOrder = { Dialogs:[], zIndexOf };
 
       const DialogOrderStore = writable(currentDialogOrder);     // subscription mgmt
@@ -5572,17 +5589,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** keep track of changes in "chosenApplet" ****/
 
       chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$2 !== newChosenApplet) {
-          currentlyChosenApplet$2 = newChosenApplet;
+        if (currentlyChosenApplet$3 !== newChosenApplet) {
+          currentlyChosenApplet$3 = newChosenApplet;
 
-          if (currentlyChosenApplet$2 == null) {
+          if (currentlyChosenApplet$3 == null) {
             currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
           } else {
-            if (DialogOrderSet.has(currentlyChosenApplet$2)) {
-              currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet$2);
+            if (DialogOrderSet.has(currentlyChosenApplet$3)) {
+              currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet$3);
             } else {
               currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
-              DialogOrderSet.set(currentlyChosenApplet$2,currentDialogOrder);
+              DialogOrderSet.set(currentlyChosenApplet$3,currentDialogOrder);
             }
             DialogOrderStore.set(currentDialogOrder);
           }
@@ -5592,10 +5609,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** validate changes to "DialogOrder" ****/
 
       function setDialogOrder (newDialogOrder) {
-        if (currentlyChosenApplet$2 !== null) {
-          if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder)) {
+        if (currentlyChosenApplet$3 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder,'by-reference')) {
             currentDialogOrder = newDialogOrder;
-            DialogOrderSet.set(currentlyChosenApplet$2,newDialogOrder);
+            DialogOrderSet.set(currentlyChosenApplet$3,newDialogOrder);
             DialogOrderStore.set(newDialogOrder);
           }
         }
@@ -5658,7 +5675,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         open, close, raise, zIndexOf
       };
 
-    var css_248z$2 = ".WAD-Dialog.svelte-76xq3y{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-76xq3y{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-76xq3y{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-76xq3y{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-76xq3y:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-76xq3y{display:inline-flex;flex-flow:column nowrap;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ResizeHandle.svelte-76xq3y{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-76xq3y:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
+    var css_248z$2 = ".WAD-Dialog.svelte-1wfaqg9.svelte-1wfaqg9{display:flex;flex-flow:column nowrap;position:absolute;z-index:10000;overflow:hidden;border:solid 1px #454545;border-radius:8px;background-color:#555555;box-shadow:0px 0px 60px 0px rgba(0,0,0,0.5);font-family:\"Source Sans Pro\",\"Helvetica Neue\",Helvetica,Arial,sans-serif;font-size:14px;line-height:normal;text-align:left;color:#CCCCCC;pointer-events:auto;-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-Titlebar.svelte-1wfaqg9.svelte-1wfaqg9{display:flex;flex-flow:row nowrap;flex:0 0 auto;position:relative;overflow:hidden;height:24px;min-width:60px;min-height:24px;border-top-left-radius:7px;border-top-right-radius:7px;background-image:linear-gradient(180deg, rgb(128,128,128),rgb(64,64,64) 70%);background-image:-webkit-linear-gradient(270deg, rgb(128,128,128),rgb(64,64,64) 70%);background-clip:border-box;-webkit-background-clip:border-box;cursor:-webkit-grab;cursor:grab}.WAD-Title.svelte-1wfaqg9.svelte-1wfaqg9{display:inline-block;position:relative;flex:1 1 auto;padding:0px 4px 0px 4px;background-color:transparent;line-height:24px;color:#7FFF00}.WAD-CloseButton.svelte-1wfaqg9.svelte-1wfaqg9{display:inline-block;position:relative;flex:0 0 auto;width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAhElEQVRIS+2UQQ7AIAgE9bs8iO+24WBiDDIcStomenXdgVXsrXj1Yv92AJjwexGp6jXKExG3kIxm28F82EArhPZHcWnADFnNvQIQYALPyLvVXYSmxUsmSGSeAkSdkPk3AKURkTnNSRhR9BQfeaY0SLSPc5D5BjIanAP8LkFwAJjg/yO6AX98SBk+NsXnAAAAAElFTkSuQmCC\");cursor:pointer}.WAD-CloseButton.svelte-1wfaqg9.svelte-1wfaqg9:hover{width:24px;height:24px;background-color:transparent;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAi0lEQVRIS+2UwQ2AMAwDmx2Yg/3nYA52aFUkUBU1ufCI4FG+CT7X1EhJfiRZvywAJvxdRPXc621PtmNqJLJjnmB8uYM0hOaPOStELTBCvJnWc7/BTGhmyIrwMkXXgCCeeAjQlywIif8DkBoRiVNP3IjSrykVieavipbyq6B+ROdYtKiQtbcAmGB6RA0CC0gZD0CxdwAAAABJRU5ErkJggg==\")}.WAD-ContentArea.svelte-1wfaqg9.svelte-1wfaqg9{display:inline-flex;flex-flow:column nowrap;flex:1 1 auto;position:relative;overflow:hidden;min-height:24px}.WAD-ContentArea.svelte-1wfaqg9 div.svelte-1wfaqg9::-webkit-scrollbar{width:10px;height:10px }.WAD-ContentArea.svelte-1wfaqg9 div.svelte-1wfaqg9::-webkit-scrollbar-thumb{background-color:#808080;border-radius:4px;-webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.5)}.WAD-ContentArea.svelte-1wfaqg9 div.svelte-1wfaqg9::-webkit-scrollbar-track-piece{background-color:rgba(0,0,0,0.1) }.WAD-ContentArea.svelte-1wfaqg9 div.svelte-1wfaqg9::-webkit-scrollbar-corner{background-color:rgba(0,0,0,0.1) }.WAD-ResizeHandle.svelte-1wfaqg9.svelte-1wfaqg9{display:block;position:absolute;right:0px;bottom:0px;width:32px;height:32px;background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiklEQVRYR+WUwQ3AIAwDm3UzUNZtxQ8hhBpIbGhZIKezsVzkJ4z7ZnaXu6oq/wSorVMMwAHqzNvOQQzQAUY/DWIADjBSXmDSd4AO4FnXb3TAozxlB+gAnsxTDMABVpSH7AAdYEX5mR2IVD5lgA4QmfmUAThApvJXO0AHyFS+ZweQyrsG6ADIzNtbD4OSoCHdTWtaAAAAAElFTkSuQmCC\");-webkit-touch-callout:none;-ms-touch-action:none;touch-action:none;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;user-select:none}.WAD-ResizeHandle.svelte-1wfaqg9.svelte-1wfaqg9:hover{background-image:url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVRYR+WU0Q2AIBBDvR2cw/3ncA53wPBHiCEeXFtQFriX11LbxM8U99N1pHzX9tP+CVBalxigA5SZ152jGJADtH4axQAdoKU8w8B3QA7gWddvdMCjHLIDcgBP5hADdIAR5SE7IAcYUb5mByKVdxmQA0Rm3mWADoBU/moH5ABI5XN2gKn80YAcgJl5fesG8FKgIRkBhjAAAAAASUVORK5CYII=\")}";
     styleInject(css_248z$2,{"insertAt":"top"});
 
     /* src/Dialog.svelte generated by Svelte v3.38.3 */
@@ -5693,7 +5710,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	let div4_levels = [
     		/*$$restProps*/ ctx[11],
-    		{ class: "WAD-Dialog" },
     		{
     			style: div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px;\n    z-index:" + /*$DialogOrder*/ ctx[5].zIndexOf(/*DialogElement*/ ctx[4]) + "\n  "
     		}
@@ -5719,12 +5735,13 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (default_slot) default_slot.c();
     			t3 = space();
     			if (if_block) if_block.c();
-    			attr(div0, "class", "WAD-Title svelte-76xq3y");
-    			attr(div1, "class", "WAD-CloseButton svelte-76xq3y");
-    			attr(div2, "class", "WAD-Titlebar svelte-76xq3y");
-    			attr(div3, "class", "WAD-ContentArea svelte-76xq3y");
+    			attr(div0, "class", "WAD-Title svelte-1wfaqg9");
+    			attr(div1, "class", "WAD-CloseButton svelte-1wfaqg9");
+    			attr(div2, "class", "WAD-Titlebar svelte-1wfaqg9");
+    			attr(div3, "class", "WAD-ContentArea svelte-1wfaqg9");
     			set_attributes(div4, div4_data);
-    			toggle_class(div4, "svelte-76xq3y", true);
+    			toggle_class(div4, "WAD-Dialog", true);
+    			toggle_class(div4, "svelte-1wfaqg9", true);
     		},
     		m(target, anchor) {
     			insert(target, div4, anchor);
@@ -5793,11 +5810,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     			set_attributes(div4, div4_data = get_spread_update(div4_levels, [
     				dirty & /*$$restProps*/ 2048 && /*$$restProps*/ ctx[11],
-    				{ class: "WAD-Dialog" },
     				(!current || dirty & /*Applet, State, $DialogOrder, DialogElement*/ 51 && div4_style_value !== (div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px;\n    z-index:" + /*$DialogOrder*/ ctx[5].zIndexOf(/*DialogElement*/ ctx[4]) + "\n  ")) && { style: div4_style_value }
     			]));
 
-    			toggle_class(div4, "svelte-76xq3y", true);
+    			toggle_class(div4, "WAD-Dialog", true);
+    			toggle_class(div4, "svelte-1wfaqg9", true);
     		},
     		i(local) {
     			if (current) return;
@@ -5824,7 +5841,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (157:4) {#if resizable}
+    // (175:4) {#if resizable}
     function create_if_block_1$2(ctx) {
     	let div;
     	let iconbutton;
@@ -5840,7 +5857,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		c() {
     			div = element("div");
     			create_component(iconbutton.$$.fragment);
-    			attr(div, "class", "WAD-ResizeHandle svelte-76xq3y");
+    			attr(div, "class", "WAD-ResizeHandle svelte-1wfaqg9");
     		},
     		m(target, anchor) {
     			insert(target, div, anchor);
@@ -6068,6 +6085,91 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		});
     	}
     }
+
+    /*
+      export type WAD_Mode = (
+        'applet'|'master'|'card'|'overlay'|'component'|'import-export'|'search'
+      )
+      export type WAD_Pane = (
+        'overview'|'selection-globals'|'selection-resources'|'selection-properties'|
+        'selection-configuration'|'selection-script'|'selection-contents'
+      )
+    */
+      const initialInspectorState = {
+        isVisible:false, Offset:{ x:NaN,y:NaN }, Width:NaN,Height:NaN,
+        Mode:'applet', Pane:'overview'
+      };
+
+      let currentlyChosenApplet$2 = undefined;
+      let currentInspectorState = Object.assign({}, initialInspectorState);
+
+      const InspectorStateStore = writable(currentInspectorState); // subscript. mgmt
+      const InspectorStateSet   = new WeakMap();  // applet-specific Inspector states
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet$2 !== newChosenApplet) {
+          currentlyChosenApplet$2 = newChosenApplet;
+
+          if (currentlyChosenApplet$2 == null) {
+            currentInspectorState = Object.assign({}, initialInspectorState);
+          } else {
+            if (InspectorStateSet.has(currentlyChosenApplet$2)) {
+              currentInspectorState = InspectorStateSet.get(currentlyChosenApplet$2);
+            } else {
+              currentInspectorState = Object.assign({}, initialInspectorState);
+              InspectorStateSet.set(currentlyChosenApplet$2,currentInspectorState);
+            }
+            InspectorStateStore.set(currentInspectorState);
+          }
+        }
+      });
+
+    /**** validate changes to "InspectorState" ****/
+
+      function setInspectorState (newInspectorState) {
+        if (currentlyChosenApplet$2 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentInspectorState,newInspectorState)) {
+            currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState);
+            InspectorStateSet.set(currentlyChosenApplet$2,currentInspectorState);
+            InspectorStateStore.set(currentInspectorState);
+          }
+        }
+      }
+
+    /**** setMode ****/
+
+      function setMode (newMode) {
+        if (newMode != currentInspectorState.Mode) {
+          let newPane;
+            if ((newMode === 'import-export') || (newMode === 'search')) {
+              newPane = undefined;
+            } else {
+              newPane = currentInspectorState.Pane || 'overview';
+            }
+          setInspectorState({ ...currentInspectorState, Mode:newMode, Pane:newPane });
+        }
+      }
+
+    /**** setPane ****/
+
+      function setPane (newPane) {
+        if (newPane != currentInspectorState.Pane) {
+          if ('import-export search'.indexOf(currentInspectorState.Mode) >= 0) {
+            newPane = undefined;
+          }
+          setInspectorState({ ...currentInspectorState, Pane:newPane });
+        }
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const InspectorState = {
+        subscribe: (Callback) => InspectorStateStore.subscribe(Callback),
+        set:       setInspectorState,
+        setMode, setPane
+      };
 
     /* src/InspectorView.svelte generated by Svelte v3.38.3 */
 
@@ -7088,7 +7190,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (31:2) <Dialog class="WAD-Nudger" {Applet} Title="WAT-Designer: Nudger" resizable={false}     {PositionAroundPreferredPosition} bind:State={$NudgerState}   >
+    // (32:2) <Dialog class="WAD-Nudger" {Applet} Title="WAT-Designer: Nudger" resizable={false}     {PositionAroundPreferredPosition} bind:State={$NudgerState}   >
     function create_default_slot$1(ctx) {
     	let iconbutton0;
     	let t0;
@@ -7301,6 +7403,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
 
 
+    //import {  NudgerState } from './NudgerState.js'      // causes Svelte warnings
     /**** normal IconButton images as Data URLs ****/
     let MoveUpImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAh0lEQVRYR+3XQQqAMAxE0fa6PVCuq3TRjaBJpuhHiHuZ78MK9gZfHd5vFVAC/xYws2OeojGG/CDyjXMYDVjj6zuiKsgCaMB1fEdBEkAD7sZVhbQAGuCNKwopATQgOp5VCAugAdnxjEJIAA1Qx6MKrgAasDseUXgUwAO++Gdw34G3IyqgBHCBE0spSCFzAkqKAAAAAElFTkSuQmCC";
 
@@ -8193,6 +8296,70 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
     }
 
+    //----------------------------------------------------------------------------//
+    //                           Svelte Touch-to-Mouse                            //
+    //----------------------------------------------------------------------------//
+    // see https://stackoverflow.com/questions/1517924/javascript-mapping-touch-events-to-mouse-events
+    // and https://stackoverflow.com/questions/5885808/includes-touch-events-clientx-y-scrolling-or-not
+    // Important!
+    // for all elements affected by "mapTouchToMouseFor" (i.e., for all elements
+    // selected by "Selector"), don't forget to set the following style properties
+    //
+    // -webkit-touch-callout:none;
+    // -ms-touch-action: none; touch-action: none;
+    //
+    // either in a stylesheet or inline
+    function mapTouchToMouseFor(Selector) {
+        function TouchEventMapper(originalEvent) {
+            var Target = originalEvent.target;
+            if (!Target.matches(Selector)) {
+                return;
+            }
+            var simulatedEventType;
+            switch (originalEvent.type) {
+                case 'touchstart':
+                    simulatedEventType = 'mousedown';
+                    break;
+                case 'touchmove':
+                    simulatedEventType = 'mousemove';
+                    break;
+                case 'touchend':
+                    simulatedEventType = 'mouseup';
+                    break;
+                case 'touchcancel':
+                    simulatedEventType = 'mouseup';
+                    break;
+                default: return;
+            }
+            var firstTouch = originalEvent.changedTouches[0];
+            var clientX = firstTouch.clientX, pageX = firstTouch.pageX, PageXOffset = window.pageXOffset;
+            var clientY = firstTouch.clientY, pageY = firstTouch.pageY, PageYOffset = window.pageYOffset;
+            if ((pageX === 0) && (Math.floor(clientX) > Math.floor(pageX)) ||
+                (pageY === 0) && (Math.floor(clientY) > Math.floor(pageY))) {
+                clientX -= PageXOffset;
+                clientY -= PageYOffset;
+            }
+            else if ((clientX < pageX - PageXOffset) || (clientY < pageY - PageYOffset)) {
+                clientX = pageX - PageXOffset;
+                clientY = pageY - PageYOffset;
+            }
+            var simulatedEvent = new MouseEvent(simulatedEventType, {
+                bubbles: true, cancelable: true,
+                screenX: firstTouch.screenX, screenY: firstTouch.screenY,
+                // @ts-ignore we definitely want "pageX" and "pageY"
+                clientX: clientX, clientY: clientY, pageX: pageX, pageY: pageY, buttons: 1, button: 0,
+                ctrlKey: originalEvent.ctrlKey, shiftKey: originalEvent.shiftKey,
+                altKey: originalEvent.altKey, metaKey: originalEvent.metaKey
+            });
+            firstTouch.target.dispatchEvent(simulatedEvent);
+            //    originalEvent.preventDefault()
+        }
+        document.addEventListener('touchstart', TouchEventMapper, true);
+        document.addEventListener('touchmove', TouchEventMapper, true);
+        document.addEventListener('touchend', TouchEventMapper, true);
+        document.addEventListener('touchcancel', TouchEventMapper, true);
+    }
+
     var DragDropTouch;
     (function (DragDropTouchExport) {
         var DataTransfer = (function () {
@@ -8545,7 +8712,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	return child_ctx;
     }
 
-    // (95:4) {#if $chosenApplet !== Applet}
+    // (97:4) {#if $chosenApplet !== Applet}
     function create_if_block_3(ctx) {
     	let designerbutton;
     	let updating_preferredPosition;
@@ -8602,7 +8769,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (94:2) {#each $AppletList as Applet (Applet['uniqueId'])}
+    // (96:2) {#each $AppletList as Applet (Applet['uniqueId'])}
     function create_each_block(key_1, ctx) {
     	let first;
     	let if_block_anchor;
@@ -8667,7 +8834,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (102:2) {#if ($chosenApplet !== null)}
+    // (104:2) {#if ($chosenApplet !== null)}
     function create_if_block_2(ctx) {
     	let toolboxview;
     	let current;
@@ -8707,7 +8874,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (106:2) {#if ($chosenApplet !== null) && $NudgerState.isVisible }
+    // (108:2) {#if ($chosenApplet !== null) && $NudgerState.isVisible }
     function create_if_block_1(ctx) {
     	let nudgerview;
     	let current;
@@ -8747,7 +8914,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (110:2) {#if ($chosenApplet !== null) && $InspectorState.isVisible }
+    // (112:2) {#if ($chosenApplet !== null) && $InspectorState.isVisible }
     function create_if_block(ctx) {
     	let inspectorview;
     	let current;
@@ -8963,6 +9130,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		}
     	};
     }
+
+    mapTouchToMouseFor("#webapp-tinkerer-designer *");
 
     function inhibitsEventsFrom(Visual) {
     	return false;
