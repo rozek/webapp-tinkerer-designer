@@ -14,6 +14,7 @@
   import     IconButton     from './IconButton.svelte'
   import {  chosenApplet  } from './chosenApplet.js'
   import { InspectorState } from './InspectorState.js'
+  import AppletOverviewPane from './AppletOverviewPane.svelte'
   import {  MessageState  } from './MessageState.js'
   import    MessageView     from './MessageView.svelte'
 
@@ -121,6 +122,7 @@ $:if (Applet != null) {                                            // needs "$:"
       border:none; border-top:solid 1px #969696; border-bottom:solid 1px #454545;
     ">
       {#if $InspectorState.Pane === 'overview'}
+        {#if $InspectorState.Mode === 'applet'}<AppletOverviewPane/>{/if}
       {/if}
 
       {#if $InspectorState.Pane === 'selection-globals'}
