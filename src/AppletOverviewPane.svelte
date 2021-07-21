@@ -7,31 +7,48 @@
 </style>
 
 <script context="module" lang="ts">
+  import type { WAT_Applet } from 'webapp-tinkerer-runtime'
+
   import {     AppletList     } from './AppletList.js'
   import {    chosenApplet    } from './chosenApplet.js'
   import { selectedAppletList } from './selectedAppletList.js'
   import        ListView        from 'svelte-sortable-flat-list-view'
+  import         Button         from './Button.svelte'
 </script>
 
 <script lang="ts">
-  function selectApplet (Event) {
+  function selectApplet (Event:CustomEvent) {
     selectedAppletList.select(Event.detail)
   }
 
-  function deselectApplet (Event) {
+  function deselectApplet (Event:CustomEvent) {
     selectedAppletList.deselect(Event.detail)
   }
 
-  function chooseApplet () {
+  function onDoubleClick () {
     let Applet = $selectedAppletList[0]
       selectedAppletList.clear()
       selectedAppletList.select(Applet)
     chosenApplet.set(Applet)
   }
+
+  function editSelection () {
+    let Applet = $selectedAppletList[0]
+    if (Applet != null) {  chosenApplet.set(Applet) }
+  }
 </script>
 
-<div class="WAD-AppletOverviewPane" on:dblclick={chooseApplet}>
-  <div style="height:24px; line-height:22px">designable Applets:</div>
+<div class="WAD-AppletOverviewPane" on:dblclick={onDoubleClick}>
+  <div style="
+    display:flex; flex-flow:row nowrap; align-items:flex-end;
+    padding:0px; padding-bottom:2px;
+    height:30px
+  ">
+    <span style="flex:1 1 auto; line-height:24px">designable Applets:</span>
+    <Button disabled={$selectedAppletList.length === 0} on:click={editSelection}
+    >design</Button>
+  </div>
+
   <ListView style="flex:1 1 auto; border:solid 1px #969696; padding:2px"
     List={$AppletList} Key={(Applet,Index) => (Applet.Id || ('Applet #' + Index))}
     SelectionLimit={1}
