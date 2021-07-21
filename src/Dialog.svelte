@@ -65,6 +65,24 @@
     min-height:24px;
   }
 
+/**** styled scrollbars for divs and textareas ****/
+
+  .WAD-ContentArea textarea::-webkit-scrollbar { width:10px; height:10px }
+  .WAD-ContentArea textarea::-webkit-scrollbar-thumb {
+    background-color:#808080; border-radius:4px;
+    -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .WAD-ContentArea textarea::-webkit-scrollbar-track-piece { background-color:rgba(0,0,0,0.1) }
+  .WAD-ContentArea textarea::-webkit-scrollbar-corner      { background-color:rgba(0,0,0,0.1) }
+
+
+  .WAD-ContentArea div::-webkit-scrollbar { width:10px; height:10px }
+  .WAD-ContentArea div::-webkit-scrollbar-thumb {
+    background-color:#808080; border-radius:4px;
+    -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.5);
+  }
+  .WAD-ContentArea div::-webkit-scrollbar-track-piece { background-color:rgba(0,0,0,0.1) }
+  .WAD-ContentArea div::-webkit-scrollbar-corner      { background-color:rgba(0,0,0,0.1) }
 /**** ResizeHandle ****/
 
   .WAD-ResizeHandle {
@@ -92,7 +110,7 @@
   import {        onMount        } from 'svelte'
 
   import   IconButton    from './IconButton.svelte'
-  import { DialogOrder } from './DialogOrder.js'
+//import { DialogOrder } from './DialogOrder.js'       // causes Svelte warnings
 
   export type WAD_DialogState = {
     isVisible:boolean,
@@ -106,6 +124,8 @@
 </script>
 
 <script lang="ts">
+  import { DialogOrder } from './DialogOrder.js'
+
   const dispatch = createEventDispatcher()
 
   export let Applet:WAT_Applet
@@ -156,7 +176,7 @@ $:if ((DialogElement != null) && State.isVisible) {
 </script>
 
 {#if (Applet != null) && State.isVisible}
-  <div {...$$restProps} bind:this={DialogElement} class="WAD-Dialog" style="
+  <div {...$$restProps} bind:this={DialogElement} class:WAD-Dialog={true} style="
     left:{Applet.x + State.Offset.x}px; top:{Applet.y + State.Offset.y}px;
     width:{State.Width}px; height:{State.Height}px;
     z-index:{$DialogOrder.zIndexOf(DialogElement)}
