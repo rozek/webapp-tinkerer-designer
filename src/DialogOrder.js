@@ -35,7 +35,7 @@
 
   function setDialogOrder (newDialogOrder) {
     if (currentlyChosenApplet !== null) {
-      if (ValuesDiffer(currentDialogOrder,newDialogOrder)) {
+      if (ValuesDiffer(currentDialogOrder,newDialogOrder,'by-reference')) {
         currentDialogOrder = newDialogOrder
         DialogOrderSet.set(currentlyChosenApplet,newDialogOrder)
         DialogOrderStore.set(newDialogOrder)
