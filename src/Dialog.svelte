@@ -89,8 +89,10 @@
 
   import {      asDraggable      } from 'svelte-drag-and-drop-actions'
   import { createEventDispatcher } from 'svelte'
+  import {        onMount        } from 'svelte'
 
-  import IconButton from './IconButton.svelte'
+  import   IconButton    from './IconButton.svelte'
+  import { DialogOrder } from './DialogOrder.js'
 
   export type WAD_DialogState = {
     isVisible:boolean,
@@ -123,6 +125,19 @@ $:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
     }}
   }
 
+  let DialogElement:HTMLElement
+$:if ((DialogElement != null) && State.isVisible) {
+    DialogOrder.open(DialogElement)
+  } else {
+    DialogOrder.close(DialogElement)
+  }
+
+  onMount(() => {
+    DialogElement.addEventListener('mousedown', (Event:MouseEvent) => {
+      DialogOrder.raise(DialogElement)
+    })
+  })
+
 /**** Event Handling ****/
 
   function onDragStart ()                 { return State.Offset }
@@ -141,9 +156,10 @@ $:if ((Applet != null) && isNaN(State.Offset.x)) {              // requires "$:"
 </script>
 
 {#if (Applet != null) && State.isVisible}
-  <div {...$$restProps} class="WAD-Dialog" style="
+  <div {...$$restProps} bind:this={DialogElement} class="WAD-Dialog" style="
     left:{Applet.x + State.Offset.x}px; top:{Applet.y + State.Offset.y}px;
-    width:{State.Width}px; height:{State.Height}px
+    width:{State.Width}px; height:{State.Height}px;
+    z-index:{$DialogOrder.zIndexOf(DialogElement)}
   ">
     <div class="WAD-Titlebar"
       use:asDraggable={{ relativeTo:document.body, onDragStart, onDragMove }}
