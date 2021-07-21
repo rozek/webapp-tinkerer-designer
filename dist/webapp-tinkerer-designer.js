@@ -280,6 +280,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
             throw new Error('Function called outside component initialization');
         return current_component;
     }
+    function onMount(fn) {
+        get_current_component().$$.on_mount.push(fn);
+    }
     function createEventDispatcher() {
         const component = get_current_component();
         return (type, detail) => {
@@ -749,7 +752,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
       });
 
     let currentAppletList     = [];
-      let currentlyChosenApplet$4 = undefined;
+      let currentlyChosenApplet$5 = undefined;
 
       const chosenAppletStore = writable(undefined);   // for subscription management
 
@@ -758,10 +761,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
       AppletList.subscribe((newAppletList) => {      // implements a "derived" store
         currentAppletList = newAppletList;
         if (
-          (currentlyChosenApplet$4 != null) &&
-          (newAppletList.indexOf(currentlyChosenApplet$4) < 0)
+          (currentlyChosenApplet$5 != null) &&
+          (newAppletList.indexOf(currentlyChosenApplet$5) < 0)
         ) {
-          currentlyChosenApplet$4 = undefined;
+          currentlyChosenApplet$5 = undefined;
           chosenAppletStore.set(undefined);
         }
       });
@@ -776,8 +779,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
           Applet = undefined;
         }
 
-        if (currentlyChosenApplet$4 !== Applet) {
-          currentlyChosenApplet$4 = Applet;
+        if (currentlyChosenApplet$5 !== Applet) {
+          currentlyChosenApplet$5 = Applet;
           chosenAppletStore.set(Applet);
         }
       }
@@ -798,7 +801,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         MessageType:'info', Message:'', MessageSource:undefined
       };
 
-      let currentlyChosenApplet$3 = undefined;
+      let currentlyChosenApplet$4 = undefined;
       let currentMessageState = Object.assign({}, initialMessageState);
 
       const MessageStateStore = writable(currentMessageState);   // subscription mgmt
@@ -807,17 +810,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** keep track of changes in "chosenApplet" ****/
 
       chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$3 !== newChosenApplet) {
-          currentlyChosenApplet$3 = newChosenApplet;
+        if (currentlyChosenApplet$4 !== newChosenApplet) {
+          currentlyChosenApplet$4 = newChosenApplet;
 
-          if (currentlyChosenApplet$3 == null) {
+          if (currentlyChosenApplet$4 == null) {
             currentMessageState = Object.assign({}, initialMessageState);
           } else {
-            if (MessageStateSet.has(currentlyChosenApplet$3)) {
-              currentMessageState = MessageStateSet.get(currentlyChosenApplet$3);
+            if (MessageStateSet.has(currentlyChosenApplet$4)) {
+              currentMessageState = MessageStateSet.get(currentlyChosenApplet$4);
             } else {
               currentMessageState = Object.assign({}, initialMessageState);
-              MessageStateSet.set(currentlyChosenApplet$3,currentMessageState);
+              MessageStateSet.set(currentlyChosenApplet$4,currentMessageState);
             }
             MessageStateStore.set(currentMessageState);
           }
@@ -827,10 +830,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** validate changes to "MessageState" ****/
 
       function setMessageState (newMessageState) {
-        if (currentlyChosenApplet$3 !== null) {
+        if (currentlyChosenApplet$4 !== null) {
           if (webappTinkererRuntime.ValuesDiffer(currentMessageState,newMessageState)) {
             currentMessageState = Object.assign({}, newMessageState);
-            MessageStateSet.set(currentlyChosenApplet$3,newMessageState);
+            MessageStateSet.set(currentlyChosenApplet$4,newMessageState);
             MessageStateStore.set(newMessageState);
           }
         }
@@ -983,7 +986,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         Mode:'applet', Pane:'overview'
       };
 
-      let currentlyChosenApplet$2 = undefined;
+      let currentlyChosenApplet$3 = undefined;
       let currentInspectorState = Object.assign({}, initialInspectorState);
 
       const InspectorStateStore = writable(currentInspectorState); // subscript. mgmt
@@ -992,17 +995,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** keep track of changes in "chosenApplet" ****/
 
       chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$2 !== newChosenApplet) {
-          currentlyChosenApplet$2 = newChosenApplet;
+        if (currentlyChosenApplet$3 !== newChosenApplet) {
+          currentlyChosenApplet$3 = newChosenApplet;
 
-          if (currentlyChosenApplet$2 == null) {
+          if (currentlyChosenApplet$3 == null) {
             currentInspectorState = Object.assign({}, initialInspectorState);
           } else {
-            if (InspectorStateSet.has(currentlyChosenApplet$2)) {
-              currentInspectorState = InspectorStateSet.get(currentlyChosenApplet$2);
+            if (InspectorStateSet.has(currentlyChosenApplet$3)) {
+              currentInspectorState = InspectorStateSet.get(currentlyChosenApplet$3);
             } else {
               currentInspectorState = Object.assign({}, initialInspectorState);
-              InspectorStateSet.set(currentlyChosenApplet$2,currentInspectorState);
+              InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
             }
             InspectorStateStore.set(currentInspectorState);
           }
@@ -1012,10 +1015,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** validate changes to "InspectorState" ****/
 
       function setInspectorState (newInspectorState) {
-        if (currentlyChosenApplet$2 !== null) {
+        if (currentlyChosenApplet$3 !== null) {
           if (webappTinkererRuntime.ValuesDiffer(currentInspectorState,newInspectorState)) {
             currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState);
-            InspectorStateSet.set(currentlyChosenApplet$2,currentInspectorState);
+            InspectorStateSet.set(currentlyChosenApplet$3,currentInspectorState);
             InspectorStateStore.set(currentInspectorState);
           }
         }
@@ -1541,6 +1544,103 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		});
     	}
     }
+
+    const initialDialogOrder = { Dialogs:[], zIndexOf };
+
+      let currentlyChosenApplet$2 = undefined;
+      let currentDialogOrder = { Dialogs:[], zIndexOf };
+
+      const DialogOrderStore = writable(currentDialogOrder);     // subscription mgmt
+      const DialogOrderSet   = new WeakMap();        // applet-specific dialog orders
+
+    /**** keep track of changes in "chosenApplet" ****/
+
+      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
+        if (currentlyChosenApplet$2 !== newChosenApplet) {
+          currentlyChosenApplet$2 = newChosenApplet;
+
+          if (currentlyChosenApplet$2 == null) {
+            currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
+          } else {
+            if (DialogOrderSet.has(currentlyChosenApplet$2)) {
+              currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet$2);
+            } else {
+              currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
+              DialogOrderSet.set(currentlyChosenApplet$2,currentDialogOrder);
+            }
+            DialogOrderStore.set(currentDialogOrder);
+          }
+        }
+      });
+
+    /**** validate changes to "DialogOrder" ****/
+
+      function setDialogOrder (newDialogOrder) {
+        if (currentlyChosenApplet$2 !== null) {
+          if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder)) {
+            currentDialogOrder = newDialogOrder;
+            DialogOrderSet.set(currentlyChosenApplet$2,newDialogOrder);
+            DialogOrderStore.set(newDialogOrder);
+          }
+        }
+      }
+
+    /**** open ****/
+
+      function open (DialogElement) {
+        if (
+          (DialogElement != null) &&
+          (currentDialogOrder.Dialogs.indexOf(DialogElement) < 0)
+        ) {
+          let Dialogs = currentDialogOrder.Dialogs.slice();
+            Dialogs.push(DialogElement);
+          setDialogOrder({ Dialogs, zIndexOf });
+        }
+      }
+
+    /**** close ****/
+
+      function close (DialogElement) {
+        if (DialogElement != null) {
+          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
+          if (DialogIndex >= 0) {
+            let Dialogs = currentDialogOrder.Dialogs.slice();
+              Dialogs.splice(DialogIndex,1);
+            setDialogOrder({ Dialogs, zIndexOf });
+          }
+        }
+      }
+
+    /**** raise ****/
+
+      function raise (DialogElement) {
+        if (DialogElement != null) {
+          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
+          if (DialogIndex >= 0) {
+            let Dialogs = currentDialogOrder.Dialogs.slice();
+              Dialogs.splice(DialogIndex,1);
+              Dialogs.push(DialogElement);
+            setDialogOrder({ Dialogs, zIndexOf });
+          }
+        }
+      }
+
+    /**** zIndexOf ****/
+
+      function zIndexOf (DialogElement) {
+        if (DialogElement != null) {
+          let DialogIndex = currentDialogOrder.Dialogs.indexOf(DialogElement);
+          if (DialogIndex >= 0) { return 1000000 + DialogIndex }
+        }
+        return 'auto'
+      }
+
+    /**** export an explicitly implemented store ****/
+
+      const DialogOrder = {
+        subscribe: (Callback) => DialogOrderStore.subscribe(Callback),
+        open, close, raise, zIndexOf
+      };
 
     //----------------------------------------------------------------------------//
     //                        Svelte Coordinate Conversion                        //
@@ -2161,15 +2261,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
     		});
 
-    	const default_slot_template = /*#slots*/ ctx[14].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[13], null);
+    	const default_slot_template = /*#slots*/ ctx[16].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[15], null);
     	let if_block = /*resizable*/ ctx[3] && create_if_block_1$2(ctx);
 
     	let div4_levels = [
-    		/*$$restProps*/ ctx[9],
+    		/*$$restProps*/ ctx[11],
     		{ class: "WAD-Dialog" },
     		{
-    			style: div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px\n  "
+    			style: div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px;\n    z-index:" + /*$DialogOrder*/ ctx[5].zIndexOf(/*DialogElement*/ ctx[4]) + "\n  "
     		}
     	];
 
@@ -2217,15 +2317,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     			append(div4, t3);
     			if (if_block) if_block.m(div4, null);
+    			/*div4_binding*/ ctx[17](div4);
     			current = true;
 
     			if (!mounted) {
     				dispose = [
-    					listen(div1, "click", /*closeDialog*/ ctx[8]),
+    					listen(div1, "click", /*closeDialog*/ ctx[10]),
     					action_destroyer(asDraggable_action = asDraggable.call(null, div2, {
     						relativeTo: document.body,
-    						onDragStart: /*onDragStart*/ ctx[4],
-    						onDragMove: /*onDragMove*/ ctx[5]
+    						onDragStart: /*onDragStart*/ ctx[6],
+    						onDragMove: /*onDragMove*/ ctx[7]
     					}))
     				];
 
@@ -2236,8 +2337,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!current || dirty & /*Title*/ 4) set_data(t0, /*Title*/ ctx[2]);
 
     			if (default_slot) {
-    				if (default_slot.p && (!current || dirty & /*$$scope*/ 8192)) {
-    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[13], !current ? -1 : dirty, null, null);
+    				if (default_slot.p && (!current || dirty & /*$$scope*/ 32768)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[15], !current ? -1 : dirty, null, null);
     				}
     			}
 
@@ -2265,9 +2366,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
 
     			set_attributes(div4, div4_data = get_spread_update(div4_levels, [
-    				dirty & /*$$restProps*/ 512 && /*$$restProps*/ ctx[9],
+    				dirty & /*$$restProps*/ 2048 && /*$$restProps*/ ctx[11],
     				{ class: "WAD-Dialog" },
-    				(!current || dirty & /*Applet, State*/ 3 && div4_style_value !== (div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px\n  ")) && { style: div4_style_value }
+    				(!current || dirty & /*Applet, State, $DialogOrder, DialogElement*/ 51 && div4_style_value !== (div4_style_value = "\n    left:" + (/*Applet*/ ctx[1].x + /*State*/ ctx[0].Offset.x) + "px; top:" + (/*Applet*/ ctx[1].y + /*State*/ ctx[0].Offset.y) + "px;\n    width:" + /*State*/ ctx[0].Width + "px; height:" + /*State*/ ctx[0].Height + "px;\n    z-index:" + /*$DialogOrder*/ ctx[5].zIndexOf(/*DialogElement*/ ctx[4]) + "\n  ")) && { style: div4_style_value }
     			]));
 
     			toggle_class(div4, "svelte-18t6msy", true);
@@ -2290,13 +2391,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			destroy_component(iconbutton);
     			if (default_slot) default_slot.d(detaching);
     			if (if_block) if_block.d();
+    			/*div4_binding*/ ctx[17](null);
     			mounted = false;
     			run_all(dispose);
     		}
     	};
     }
 
-    // (143:4) {#if resizable}
+    // (158:4) {#if resizable}
     function create_if_block_1$2(ctx) {
     	let div;
     	let iconbutton;
@@ -2321,8 +2423,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     			if (!mounted) {
     				dispose = action_destroyer(asDraggable.call(null, div, {
-    					onDragStart: /*startResizing*/ ctx[6],
-    					onDragMove: /*continueResizing*/ ctx[7]
+    					onDragStart: /*startResizing*/ ctx[8],
+    					onDragMove: /*continueResizing*/ ctx[9]
     				}));
 
     				mounted = true;
@@ -2415,6 +2517,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	];
 
     	let $$restProps = compute_rest_props($$props, omit_props_names);
+    	let $DialogOrder;
+    	component_subscribe($$self, DialogOrder, $$value => $$invalidate(5, $DialogOrder = $$value));
     	let { $$slots: slots = {}, $$scope } = $$props;
     	const dispatch = createEventDispatcher();
     	let { Applet } = $$props;
@@ -2424,6 +2528,13 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let { minHeight = 80 } = $$props;
     	let { State } = $$props;
     	let { PositionAroundPreferredPosition } = $$props;
+    	let DialogElement;
+
+    	onMount(() => {
+    		DialogElement.addEventListener("mousedown", Event => {
+    			DialogOrder.raise(DialogElement);
+    		});
+    	});
 
     	/**** Event Handling ****/
     	function onDragStart() {
@@ -2448,21 +2559,28 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		dispatch("close");
     	}
 
+    	function div4_binding($$value) {
+    		binding_callbacks[$$value ? "unshift" : "push"](() => {
+    			DialogElement = $$value;
+    			$$invalidate(4, DialogElement);
+    		});
+    	}
+
     	$$self.$$set = $$new_props => {
     		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(9, $$restProps = compute_rest_props($$props, omit_props_names));
+    		$$invalidate(11, $$restProps = compute_rest_props($$props, omit_props_names));
     		if ("Applet" in $$new_props) $$invalidate(1, Applet = $$new_props.Applet);
     		if ("Title" in $$new_props) $$invalidate(2, Title = $$new_props.Title);
     		if ("resizable" in $$new_props) $$invalidate(3, resizable = $$new_props.resizable);
-    		if ("minWidth" in $$new_props) $$invalidate(10, minWidth = $$new_props.minWidth);
-    		if ("minHeight" in $$new_props) $$invalidate(11, minHeight = $$new_props.minHeight);
+    		if ("minWidth" in $$new_props) $$invalidate(12, minWidth = $$new_props.minWidth);
+    		if ("minHeight" in $$new_props) $$invalidate(13, minHeight = $$new_props.minHeight);
     		if ("State" in $$new_props) $$invalidate(0, State = $$new_props.State);
-    		if ("PositionAroundPreferredPosition" in $$new_props) $$invalidate(12, PositionAroundPreferredPosition = $$new_props.PositionAroundPreferredPosition);
-    		if ("$$scope" in $$new_props) $$invalidate(13, $$scope = $$new_props.$$scope);
+    		if ("PositionAroundPreferredPosition" in $$new_props) $$invalidate(14, PositionAroundPreferredPosition = $$new_props.PositionAroundPreferredPosition);
+    		if ("$$scope" in $$new_props) $$invalidate(15, $$scope = $$new_props.$$scope);
     	};
 
     	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*Applet, State, PositionAroundPreferredPosition*/ 4099) {
+    		if ($$self.$$.dirty & /*Applet, State, PositionAroundPreferredPosition*/ 16387) {
     			if (Applet != null && isNaN(State.Offset.x)) {
     				// requires "$:"
     				let GeometryOnDisplay = Applet.GeometryOnDisplay;
@@ -2477,6 +2595,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				}));
     			}
     		}
+
+    		if ($$self.$$.dirty & /*DialogElement, State*/ 17) {
+    			if (DialogElement != null && State.isVisible) {
+    				DialogOrder.open(DialogElement);
+    			} else {
+    				DialogOrder.close(DialogElement);
+    			}
+    		}
     	};
 
     	return [
@@ -2484,6 +2610,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		Applet,
     		Title,
     		resizable,
+    		DialogElement,
+    		$DialogOrder,
     		onDragStart,
     		onDragMove,
     		startResizing,
@@ -2494,7 +2622,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		minHeight,
     		PositionAroundPreferredPosition,
     		$$scope,
-    		slots
+    		slots,
+    		div4_binding
     	];
     }
 
@@ -2506,10 +2635,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			Applet: 1,
     			Title: 2,
     			resizable: 3,
-    			minWidth: 10,
-    			minHeight: 11,
+    			minWidth: 12,
+    			minHeight: 13,
     			State: 0,
-    			PositionAroundPreferredPosition: 12
+    			PositionAroundPreferredPosition: 14
     		});
     	}
     }
