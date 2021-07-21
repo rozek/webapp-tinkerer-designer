@@ -12,11 +12,14 @@
 </style>
 
 <script context="module" lang="ts">
+  mapTouchToMouseFor('#webapp-tinkerer-designer *')
+
   import type { Writable } from 'svelte/store'
 
 /**** Support for Mobile Devices ****/
 
-  import DragDropTouch from 'svelte-drag-drop-touch'
+  import   DragDropTouch    from 'svelte-drag-drop-touch'
+  import mapTouchToMouseFor from 'svelte-touch-to-mouse'
 
 /**** import from 'javascript-interface-library', use from WAT ****/
 
