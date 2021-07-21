@@ -9,7 +9,7 @@
 
     font-family:"Source Sans Pro","Helvetica Neue",Helvetica,Arial,sans-serif;
     font-size:14px; line-height:normal; text-align:left;
-    color:#CCCCCC;
+    color:#AAAAAA;
 
     pointer-events:auto;
 
