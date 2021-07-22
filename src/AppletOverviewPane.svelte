@@ -25,11 +25,13 @@
 </script>
 
 <script lang="ts">
-  function selectApplet (Event:CustomEvent) {
+  let AppletListView:ListView
+
+  function selectApplet (Event:CustomEvent) {           // triggered by ListView
     selectedAppletList.select(Event.detail)
   }
 
-  function deselectApplet (Event:CustomEvent) {
+  function deselectApplet (Event:CustomEvent) {         // triggered by ListView
     selectedAppletList.deselect(Event.detail)
   }
 
@@ -38,6 +40,8 @@
       selectedAppletList.clear()
       selectedAppletList.select(Applet)
     chosenApplet.set(Applet)
+
+    AppletListView.select(Applet)
   }
 
   function editSelection () {
@@ -59,7 +63,8 @@
     >design</Button>
   </div>
 
-  <ListView style="flex:1 1 auto; border:solid 1px #969696; padding:2px"
+  <ListView bind:this={AppletListView}
+    style="flex:1 1 auto; border:solid 1px {normalColor}; padding:2px"
     List={$AppletList} Key={(Applet,Index) => Applet.Id}
     SelectionLimit={1}
     on:selected-item={selectApplet} on:deselected-item={deselectApplet}
