@@ -85,10 +85,9 @@
   }
 </script>
 
-<div {...$$restProps} class:WAD-IconButton={true} class:active={active} style={
-  `--normal-image-url:url(${normalImageURL});`   +
-  `--hovered-image-url:url(${active ? activeHoveredImageURL : hoveredImageURL});` +
-  `--active-image-url:url(${activeImageURL});`   +
-  style
-} on:click></div>
+<div {...$$restProps} class:WAD-IconButton={true} class:active={active} style="
+  --normal-image-url:url({normalImageURL});
+  --hovered-image-url:url({active ? activeHoveredImageURL : hoveredImageURL});
+  --active-image-url:url({activeImageURL}); {style}
+" on:click></div>
 
