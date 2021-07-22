@@ -70,22 +70,22 @@
 
 /**** Svelte Stores ****/
 
-  import {   AppletList   } from './AppletList.js'
-//import {   NudgerState  } from './NudgerState.js'    // causes Svelte warnings
-//import { InspectorState } from './InspectorState.js'                   // dto.
+  import {   AppletList   } from './stores/AppletList.js'
+//import {   NudgerState  } from './stores/NudgerState.js'    // causes warnings
+//import { InspectorState } from './stores/InspectorState.js'            // dto.
 
-/**** Svelte Components ****/
+/**** Svelte Components and Views ****/
 
-  import DesignerButton from './DesignerButton.svelte'
-  import ToolboxView    from './ToolboxView.svelte'
-  import NudgerView     from './NudgerView.svelte'
-  import InspectorView  from './InspectorView.svelte'
+  import DesignerButton from './components/DesignerButton.svelte'
+  import ToolboxView    from './views/ToolboxView.svelte'
+  import NudgerView     from './views/NudgerView.svelte'
+  import InspectorView  from './views/InspectorView.svelte'
 
 </script>
 
 <script lang="ts">
-  import {   NudgerState  } from './NudgerState.js'
-  import { InspectorState } from './InspectorState.js'
+  import {   NudgerState  } from './stores/NudgerState.js'
+  import { InspectorState } from './stores/InspectorState.js'
 
   export const Version = '0.1.0'
 
@@ -141,7 +141,7 @@
 //                                  Choices                                   //
 //----------------------------------------------------------------------------//
 
-  import { chosenApplet } from './chosenApplet.js'
+  import { chosenApplet } from './stores/chosenApplet.js'
 
 /**** chooseApplet ****/
 
