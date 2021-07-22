@@ -37,8 +37,8 @@
           currentInspectorState = Object.assign({}, initialInspectorState)
           InspectorStateSet.set(currentlyChosenApplet,currentInspectorState)
         }
-        InspectorStateStore.set(currentInspectorState)
       }
+      InspectorStateStore.set(currentInspectorState)
     }
   })
 
