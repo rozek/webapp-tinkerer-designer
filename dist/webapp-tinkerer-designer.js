@@ -1939,7 +1939,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     //----------------------------------------------------------------------------//
     //                        Svelte Coordinate Conversion                        //
     //----------------------------------------------------------------------------//
-    function fromViewportTo(System, originalPosition, Target) {
+    function fromViewportTo$1(System, originalPosition, Target) {
         switch (true) {
             case (originalPosition == null):
                 throw new Error('no "Position" given');
@@ -1979,7 +1979,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
                 throw new Error('invalid coordinate system given');
         }
     }
-    function fromDocumentTo(System, originalPosition, Target) {
+    function fromDocumentTo$1(System, originalPosition, Target) {
         switch (true) {
             case (originalPosition == null):
                 throw new Error('no "Position" given');
@@ -2019,7 +2019,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
                 throw new Error('invalid coordinate system given');
         }
     }
-    function fromLocalTo(System, originalPosition, Source) {
+    function fromLocalTo$1(System, originalPosition, Source) {
         switch (true) {
             case (originalPosition == null):
                 throw new Error('no "Position" given');
@@ -2063,19 +2063,19 @@ var WAD = (function (exports, webappTinkererRuntime) {
                 throw new Error('invalid coordinate system given');
         }
     }
-    var svelteCoordinateConversion = {
-        fromViewportTo: fromViewportTo,
-        fromDocumentTo: fromDocumentTo,
-        fromLocalTo: fromLocalTo
+    var svelteCoordinateConversion$1 = {
+        fromViewportTo: fromViewportTo$1,
+        fromDocumentTo: fromDocumentTo$1,
+        fromLocalTo: fromLocalTo$1
     };
 
     //----------------------------------------------------------------------------//
-    var Context = ( // make this package a REAL singleton
+    var Context$1 = ( // make this package a REAL singleton
     '__DragAndDropActions' in global$2
         ? global$2.__DragAndDropActions
         : global$2.__DragAndDropActions = {});
     /**** parsedDraggableOptions ****/
-    function parsedDraggableOptions(Options) {
+    function parsedDraggableOptions$1(Options) {
         Options = allowedPlainObject('drag options', Options) || {};
         var Extras, relativeTo;
         var onlyFrom, neverFrom;
@@ -2158,7 +2158,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         if (PanSpeed == null) {
             PanSpeed = 10;
         }
-        if (ValueIsPosition(Options.onDragStart)) {
+        if (ValueIsPosition$1(Options.onDragStart)) {
             var _a = Options.onDragStart, x_1 = _a.x, y_1 = _a.y;
             onDragStart = function () { return ({ x: x_1, y: y_1 }); };
         }
@@ -2190,170 +2190,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
             onDragCancel: onDragCancel
         };
     }
-    /**** use:asDraggable={options} ****/
-    function asDraggable(Element, Options) {
-        var isDragged;
-        var currentDraggableOptions;
-        var PositionReference; // element with user coordinate system
-        var ReferenceDeltaX, ReferenceDeltaY; // mouse -> user coord.s
-        var PositioningWasDelayed; // workaround for prob. with "drag" events
-        var DragImage;
-        var initialPosition; // given in user coordinates
-        var lastPosition; // dto.
-        isDragged = false;
-        currentDraggableOptions = parsedDraggableOptions(Options);
-        /**** startDragging ****/
-        function startDragging(originalEvent) {
-            var Options = currentDraggableOptions;
-            if (fromForbiddenElement(Element, Options, originalEvent)) {
-                originalEvent.stopPropagation();
-                originalEvent.preventDefault();
-                return false;
-            }
-            PositionReference = PositionReferenceFor(Element, Options);
-            var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
-            ReferenceDeltaX = ReferenceDeltaY = 0;
-            initialPosition = { x: 0, y: 0 };
-            if (Options.onDragStart == null) {
-                initialPosition = { x: 0, y: 0 }; // given in user coordinates
-            }
-            else {
-                try {
-                    var StartPosition = Options.onDragStart(Options.Extras);
-                    if (ValueIsPlainObject(StartPosition)) {
-                        var x = allowedFiniteNumber('x start position', StartPosition.x);
-                        var y = allowedFiniteNumber('y start position', StartPosition.y);
-                        ReferenceDeltaX = x - relativePosition.left;
-                        ReferenceDeltaY = y - relativePosition.top;
-                        x = constrained(x, Options.minX, Options.maxX);
-                        y = constrained(y, Options.minY, Options.maxY);
-                        initialPosition = { x: x, y: y }; // given in user coordinates
-                    }
-                }
-                catch (Signal) {
-                    console.error('"onDragStart" handler failed', Signal);
-                }
-            }
-            lastPosition = initialPosition;
-            PositioningWasDelayed = false; // initializes workaround
-            if (Options.Dummy == null) {
-                Options.Dummy = 'none'; // this is the default for "use.asDraggable"
-            }
-            DragImage = DragImageFor(Element, Options);
-            if ((DragImage != null) && (originalEvent.dataTransfer != null)) {
-                var OffsetX = Options.DummyOffsetX;
-                var OffsetY = Options.DummyOffsetY;
-                if ((OffsetX == null) || (OffsetY == null)) {
-                    var PositionInDraggable = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element);
-                    if (OffsetX == null) {
-                        OffsetX = PositionInDraggable.left;
-                    }
-                    if (OffsetY == null) {
-                        OffsetY = PositionInDraggable.top;
-                    }
-                }
-                switch (true) {
-                    case (Options.Dummy === 'none'):
-                        originalEvent.dataTransfer.setDragImage(DragImage, 0, 0);
-                        setTimeout(function () {
-                            document.body.removeChild(DragImage);
-                        }, 0);
-                        break;
-                    case ValueIsString(Options.Dummy):
-                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
-                        setTimeout(function () {
-                            document.body.removeChild(DragImage.parentElement);
-                        }, 0);
-                        break;
-                    default:
-                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
-                }
-            }
-            if (originalEvent.dataTransfer != null) {
-                originalEvent.dataTransfer.effectAllowed = 'none';
-            }
-            isDragged = true;
-            setTimeout(function () { return Element.classList.add('dragged'); }, 0);
-            originalEvent.stopPropagation();
-        }
-        /**** continueDragging ****/
-        function continueDragging(originalEvent) {
-            if (!isDragged) {
-                return false;
-            }
-            var Options = currentDraggableOptions;
-            if ((originalEvent.screenX === 0) && (originalEvent.screenY === 0) &&
-                !PositioningWasDelayed) {
-                PositioningWasDelayed = true; // last "drag" event contains wrong coord.s
-            }
-            else {
-                PositioningWasDelayed = false;
-                performPanningFor('draggable', Element, Options, originalEvent.pageX, originalEvent.pageY);
-                var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
-                var x = relativePosition.left + ReferenceDeltaX; // in user coordinates
-                var y = relativePosition.top + ReferenceDeltaY;
-                x = constrained(x, Options.minX, Options.maxX);
-                y = constrained(y, Options.minY, Options.maxY);
-                var dx = x - lastPosition.x; // calculated AFTER constraining x,y
-                var dy = y - lastPosition.y; // dto.
-                lastPosition = { x: x, y: y };
-                invokeHandler('onDragMove', Options, x, y, dx, dy, Options.Extras);
-            }
-            originalEvent.stopPropagation();
-        }
-        /**** finishDragging ****/
-        function finishDragging(originalEvent) {
-            if (!isDragged) {
-                return false;
-            }
-            //    continueDragging(originalEvent)           // NO! positions might be wrong!
-            var Options = currentDraggableOptions;
-            if (Options.onDragEnd != null) {
-                var x = constrained(lastPosition.x, Options.minX, Options.maxX);
-                var y = constrained(lastPosition.y, Options.minY, Options.maxY);
-                var dx = x - lastPosition.x;
-                var dy = y - lastPosition.y;
-                invokeHandler('onDragEnd', Options, x, y, dx, dy, Options.Extras);
-            }
-            isDragged = false;
-            Element.classList.remove('dragged');
-            originalEvent.stopPropagation();
-        }
-        /**** updateDraggableOptions ****/
-        function updateDraggableOptions(Options) {
-            Options = parsedDraggableOptions(Options);
-            if ((currentDraggableOptions.Extras == null) && (Options.Extras != null)) {
-                currentDraggableOptions.Extras = Options.Extras;
-            } // Extras may be set with delay, but remain constant afterwards
-            currentDraggableOptions.Dummy = (Options.Dummy || currentDraggableOptions.Dummy);
-            currentDraggableOptions.minX = Options.minX;
-            currentDraggableOptions.minY = Options.minY;
-            currentDraggableOptions.maxX = Options.maxX;
-            currentDraggableOptions.maxY = Options.maxY;
-            currentDraggableOptions.Pannable = Options.Pannable;
-            currentDraggableOptions.PanSensorWidth = Options.PanSensorWidth;
-            currentDraggableOptions.PanSensorHeight = Options.PanSensorHeight;
-            currentDraggableOptions.PanSpeed = Options.PanSpeed;
-            currentDraggableOptions.onDragStart = (Options.onDragStart || currentDraggableOptions.onDragStart); // may be used to update initial position for subsequent drags
-        }
-        Element.setAttribute('draggable', 'true');
-        // @ts-ignore we know that the passed event is a DragEvent
-        Element.addEventListener('dragstart', startDragging);
-        // @ts-ignore we know that the passed event is a DragEvent
-        Element.addEventListener('drag', continueDragging);
-        // @ts-ignore we know that the passed event is a DragEvent
-        Element.addEventListener('dragend', finishDragging);
-        return { update: updateDraggableOptions };
-    }
     /**** fromForbiddenElement ****/
-    function fromForbiddenElement(Element, Options, originalEvent) {
+    function fromForbiddenElement$1(Element, Options, originalEvent) {
         if ((Options.onlyFrom != null) || (Options.neverFrom != null)) {
             var x = originalEvent.clientX;
             var y = originalEvent.clientY;
             var touchedElement = document.elementFromPoint(x, y);
             //    elementFromPoint considers elements with "pointer-events" <> "none" only
             //    but sometimes, "pointer-events:none" is needed for proper operation
-            touchedElement = innerElementOf(touchedElement, x, y);
+            touchedElement = innerElementOf$1(touchedElement, x, y);
             if (Options.onlyFrom != null) {
                 var fromElement = touchedElement.closest(Options.onlyFrom);
                 if ((Element !== fromElement) && !Element.contains(fromElement)) {
@@ -2370,11 +2215,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return false;
     }
     /**** innerElementOf ****/
-    function innerElementOf(Candidate, x, y) {
+    function innerElementOf$1(Candidate, x, y) {
         var innerElements = Candidate.children;
         for (var i = 0, l = innerElements.length; i < l; i++) {
             var innerElement = innerElements[i];
-            var Position = svelteCoordinateConversion.fromLocalTo('viewport', { left: 0, top: 0 }, innerElement);
+            var Position = svelteCoordinateConversion$1.fromLocalTo('viewport', { left: 0, top: 0 }, innerElement);
             if ((x < Position.left) || (y < Position.top)) {
                 continue;
             }
@@ -2384,7 +2229,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
             if (y > Position.top + innerElement.offsetHeight - 1) {
                 continue;
             }
-            return innerElementOf(innerElement, x, y);
+            return innerElementOf$1(innerElement, x, y);
         }
         return Candidate; // this is the innermost element at (x,y)
     }
@@ -2430,18 +2275,18 @@ var WAD = (function (exports, webappTinkererRuntime) {
         var lastDropZoneElement;
         var lastDropZoneExtras;
         isDragged = false;
-        currentDraggableOptions = parsedDraggableOptions(Options);
+        currentDraggableOptions = parsedDraggableOptions$1(Options);
         currentDroppableOptions = parsedDroppableOptions(Options);
         /**** startDragging ****/
         function startDragging(originalEvent) {
             var Options = Object.assign({}, currentDraggableOptions, currentDroppableOptions);
-            if (fromForbiddenElement(Element, Options, originalEvent)) {
+            if (fromForbiddenElement$1(Element, Options, originalEvent)) {
                 originalEvent.stopPropagation();
                 originalEvent.preventDefault();
                 return false;
             }
-            PositionReference = PositionReferenceFor(Element, Options);
-            var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+            PositionReference = PositionReferenceFor$1(Element, Options);
+            var relativePosition = svelteCoordinateConversion$1.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
             ReferenceDeltaX = ReferenceDeltaY = 0;
             initialPosition = { x: 0, y: 0 };
             if (Options.onDragStart == null) {
@@ -2471,12 +2316,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
             if (Options.Dummy == null) {
                 Options.Dummy = 'standard'; // this is the default for "use.asDroppable"
             }
-            DragImage = DragImageFor(Element, Options);
+            DragImage = DragImageFor$1(Element, Options);
             if ((DragImage != null) && (originalEvent.dataTransfer != null)) {
                 var OffsetX = Options.DummyOffsetX;
                 var OffsetY = Options.DummyOffsetY;
                 if ((OffsetX == null) || (OffsetY == null)) {
-                    var PositionInDraggable = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element);
+                    var PositionInDraggable = svelteCoordinateConversion$1.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element);
                     if (OffsetX == null) {
                         OffsetX = PositionInDraggable.left;
                     }
@@ -2512,14 +2357,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
                     }
                 }
             }
-            Context.currentDroppableExtras = Options.Extras;
-            Context.currentDropZoneExtras = undefined;
-            Context.currentDropZonePosition = undefined;
-            Context.currentDropZoneElement = undefined;
-            Context.DroppableWasDropped = false;
-            Context.currentDropOperation = undefined;
-            Context.currentTypeTransferred = undefined;
-            Context.currentDataTransferred = undefined;
+            Context$1.currentDroppableExtras = Options.Extras;
+            Context$1.currentDropZoneExtras = undefined;
+            Context$1.currentDropZonePosition = undefined;
+            Context$1.currentDropZoneElement = undefined;
+            Context$1.DroppableWasDropped = false;
+            Context$1.currentDropOperation = undefined;
+            Context$1.currentTypeTransferred = undefined;
+            Context$1.currentDataTransferred = undefined;
             isDragged = true;
             setTimeout(function () { return Element.classList.add('dragged'); }, 0);
             originalEvent.stopPropagation();
@@ -2536,8 +2381,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
             else {
                 PositioningWasDelayed = false;
-                performPanningFor('draggable', Element, Options, originalEvent.pageX, originalEvent.pageY);
-                var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+                performPanningFor$1('draggable', Element, Options, originalEvent.pageX, originalEvent.pageY);
+                var relativePosition = svelteCoordinateConversion$1.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
                 var x = relativePosition.left + ReferenceDeltaX; // in user coordinates
                 var y = relativePosition.top + ReferenceDeltaY;
                 x = constrained(x, Options.minX, Options.maxX);
@@ -2545,24 +2390,24 @@ var WAD = (function (exports, webappTinkererRuntime) {
                 var dx = x - lastPosition.x; // calculated AFTER constraining x,y
                 var dy = y - lastPosition.y; // dto.
                 lastPosition = { x: x, y: y };
-                invokeHandler('onDragMove', Options, x, y, dx, dy, Options.Extras);
+                invokeHandler$1('onDragMove', Options, x, y, dx, dy, Options.Extras);
             }
-            if (Context.currentDropZoneElement === lastDropZoneElement) {
-                if (Context.currentDropZoneElement != null) {
-                    invokeHandler('onDropZoneHover', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, Context.currentDropZoneExtras, Options.Extras);
+            if (Context$1.currentDropZoneElement === lastDropZoneElement) {
+                if (Context$1.currentDropZoneElement != null) {
+                    invokeHandler$1('onDropZoneHover', Options, Context$1.currentDropZonePosition.x, Context$1.currentDropZonePosition.y, Context$1.currentDropZoneExtras, Options.Extras);
                 }
             }
             else {
-                if (Context.currentDropZoneElement == null) {
+                if (Context$1.currentDropZoneElement == null) {
                     Element.classList.remove('droppable');
-                    invokeHandler('onDropZoneLeave', Options, lastDropZoneExtras, Options.Extras);
+                    invokeHandler$1('onDropZoneLeave', Options, lastDropZoneExtras, Options.Extras);
                 }
                 else {
                     Element.classList.add('droppable');
-                    invokeHandler('onDropZoneEnter', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, lastDropZoneExtras, Options.Extras);
+                    invokeHandler$1('onDropZoneEnter', Options, Context$1.currentDropZonePosition.x, Context$1.currentDropZonePosition.y, lastDropZoneExtras, Options.Extras);
                 }
-                lastDropZoneElement = Context.currentDropZoneElement;
-                lastDropZoneExtras = Context.currentDropZoneExtras;
+                lastDropZoneElement = Context$1.currentDropZoneElement;
+                lastDropZoneExtras = Context$1.currentDropZoneExtras;
             }
             originalEvent.stopPropagation();
         }
@@ -2573,31 +2418,31 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
             //    continueDragging(originalEvent)           // NO! positions might be wrong!
             var Options = Object.assign({}, currentDraggableOptions, currentDroppableOptions);
-            if (Context.DroppableWasDropped) {
-                invokeHandler('onDropped', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, Context.currentDropOperation, Context.currentTypeTransferred, Context.currentDataTransferred, Context.currentDropZoneExtras, Options.Extras);
-                Context.currentDropZoneExtras = undefined;
-                Context.currentDropZonePosition = undefined;
-                Context.currentDropZoneElement = undefined;
-                Context.DroppableWasDropped = false;
-                Context.currentDropOperation = undefined;
-                Context.currentTypeTransferred = undefined;
-                Context.currentDataTransferred = undefined;
+            if (Context$1.DroppableWasDropped) {
+                invokeHandler$1('onDropped', Options, Context$1.currentDropZonePosition.x, Context$1.currentDropZonePosition.y, Context$1.currentDropOperation, Context$1.currentTypeTransferred, Context$1.currentDataTransferred, Context$1.currentDropZoneExtras, Options.Extras);
+                Context$1.currentDropZoneExtras = undefined;
+                Context$1.currentDropZonePosition = undefined;
+                Context$1.currentDropZoneElement = undefined;
+                Context$1.DroppableWasDropped = false;
+                Context$1.currentDropOperation = undefined;
+                Context$1.currentTypeTransferred = undefined;
+                Context$1.currentDataTransferred = undefined;
             }
             if (Options.onDragEnd != null) {
                 var x = constrained(lastPosition.x, Options.minX, Options.maxX);
                 var y = constrained(lastPosition.y, Options.minY, Options.maxY);
                 var dx = x - lastPosition.x;
                 var dy = y - lastPosition.y;
-                invokeHandler('onDragEnd', Options, x, y, dx, dy, Options.Extras);
+                invokeHandler$1('onDragEnd', Options, x, y, dx, dy, Options.Extras);
             }
-            Context.currentDroppableExtras = undefined;
+            Context$1.currentDroppableExtras = undefined;
             isDragged = false;
             Element.classList.remove('dragged', 'droppable');
             originalEvent.stopPropagation();
         }
         /**** updateDraggableOptions ****/
         function updateDraggableOptions(Options) {
-            Options = parsedDraggableOptions(Options);
+            Options = parsedDraggableOptions$1(Options);
             if ((currentDraggableOptions.Extras == null) && (Options.Extras != null)) {
                 currentDraggableOptions.Extras = Options.Extras;
             } // Extras may be set with delay, but remain constant afterwards
@@ -2707,10 +2552,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
         /**** enteredByDroppable ****/
         function enteredByDroppable(originalEvent) {
             var Options = currentDropZoneOptions;
-            performPanningFor('dropzone', Element, Options, originalEvent.pageX, originalEvent.pageY);
-            var DropZonePosition = asPosition(svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
+            performPanningFor$1('dropzone', Element, Options, originalEvent.pageX, originalEvent.pageY);
+            var DropZonePosition = asPosition(svelteCoordinateConversion$1.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
             if (ValueIsNumber(Options.HoldDelay) && (Options.HoldDelay > 0) &&
-                (Context.HoldWasTriggeredForElement !== Element)) {
+                (Context$1.HoldWasTriggeredForElement !== Element)) {
                 startHoldTimer(DropZonePosition);
             }
             if ((originalEvent.dataTransfer == null) ||
@@ -2738,14 +2583,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
             if (offeredTypeList.length === 0) {
                 return;
             }
-            var accepted = ResultOfHandler('onDroppableEnter', Options, DropZonePosition.x, DropZonePosition.y, wantedOperation, offeredTypeList, Context.currentDroppableExtras, Options.Extras);
+            var accepted = ResultOfHandler('onDroppableEnter', Options, DropZonePosition.x, DropZonePosition.y, wantedOperation, offeredTypeList, Context$1.currentDroppableExtras, Options.Extras);
             if (accepted === false) { // i.e. explicit "false" result required
                 return;
             }
             else {
-                Context.currentDropZoneExtras = Options.Extras;
-                Context.currentDropZoneElement = Element;
-                Context.currentDropZonePosition = DropZonePosition;
+                Context$1.currentDropZoneExtras = Options.Extras;
+                Context$1.currentDropZoneElement = Element;
+                Context$1.currentDropZonePosition = DropZonePosition;
                 Element.classList.add('hovered');
                 originalEvent.preventDefault();
                 originalEvent.stopPropagation();
@@ -2755,11 +2600,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
         // warning: I've already seen leftByDroppable followed by hoveredByDropable!
         function hoveredByDroppable(originalEvent) {
             var Options = currentDropZoneOptions;
-            performPanningFor('dropzone', Element, Options, originalEvent.pageX, originalEvent.pageY);
-            var DropZonePosition = asPosition(svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
+            performPanningFor$1('dropzone', Element, Options, originalEvent.pageX, originalEvent.pageY);
+            var DropZonePosition = asPosition(svelteCoordinateConversion$1.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
             if (ValueIsNumber(Options.HoldDelay) && (Options.HoldDelay > 0) &&
-                (Context.HoldWasTriggeredForElement !== Element)) {
-                if (Context.HoldPosition == null) { // see above for reasoning
+                (Context$1.HoldWasTriggeredForElement !== Element)) {
+                if (Context$1.HoldPosition == null) { // see above for reasoning
                     startHoldTimer(DropZonePosition);
                 }
                 else {
@@ -2768,7 +2613,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
             if ((originalEvent.dataTransfer == null) ||
                 (originalEvent.dataTransfer.effectAllowed === 'none') ||
-                (Context.currentDropZoneElement != null) && (Context.currentDropZoneElement !== Element)) {
+                (Context$1.currentDropZoneElement != null) && (Context$1.currentDropZoneElement !== Element)) {
                 Element.classList.remove('hovered');
                 return;
             }
@@ -2792,25 +2637,25 @@ var WAD = (function (exports, webappTinkererRuntime) {
             } // "getData" is not available here
             ); // cannot use "originalEvent.dataTransfer.dropEffect" due to browser bug
             if (offeredTypeList.length === 0) {
-                if (Context.currentDropZoneElement === Element) {
-                    Context.currentDropZoneExtras = undefined;
-                    Context.currentDropZoneElement = undefined;
-                    Context.currentDropZonePosition = undefined;
+                if (Context$1.currentDropZoneElement === Element) {
+                    Context$1.currentDropZoneExtras = undefined;
+                    Context$1.currentDropZoneElement = undefined;
+                    Context$1.currentDropZonePosition = undefined;
                 }
                 Element.classList.remove('hovered');
                 return;
             }
-            Context.currentDropZonePosition = DropZonePosition;
-            var accepted = ResultOfHandler('onDroppableMove', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, wantedOperation, offeredTypeList, Context.currentDroppableExtras, Options.Extras);
+            Context$1.currentDropZonePosition = DropZonePosition;
+            var accepted = ResultOfHandler('onDroppableMove', Options, Context$1.currentDropZonePosition.x, Context$1.currentDropZonePosition.y, wantedOperation, offeredTypeList, Context$1.currentDroppableExtras, Options.Extras);
             if (accepted === false) { // i.e. explicit "false" result required
-                Context.currentDropZoneExtras = undefined;
-                Context.currentDropZoneElement = undefined;
-                Context.currentDropZonePosition = undefined;
+                Context$1.currentDropZoneExtras = undefined;
+                Context$1.currentDropZoneElement = undefined;
+                Context$1.currentDropZonePosition = undefined;
                 Element.classList.remove('hovered');
             }
             else { // warning: sometimes (currentDropZone !== Element)!
-                Context.currentDropZoneExtras = Options.Extras;
-                Context.currentDropZoneElement = Element;
+                Context$1.currentDropZoneExtras = Options.Extras;
+                Context$1.currentDropZoneElement = Element;
                 //      Context.currentDropZonePosition has already been set before
                 Element.classList.add('hovered');
                 originalEvent.preventDefault(); // never allow default action!
@@ -2821,18 +2666,18 @@ var WAD = (function (exports, webappTinkererRuntime) {
         /**** leftByDroppable ****/
         function leftByDroppable(originalEvent) {
             Element.classList.remove('hovered');
-            Context.DropZonePanning = false;
+            Context$1.DropZonePanning = false;
             stopHoldTimer();
             var Options = currentDropZoneOptions;
-            if (Context.currentDropZoneElement === Element) {
-                if (Context.currentTypeTransferred == null) { // see explanation below
-                    Context.currentDropZoneExtras = undefined;
-                    Context.currentDropZoneElement = undefined;
-                    Context.DroppableWasDropped = false;
-                    Context.currentDropZonePosition = undefined;
-                    Context.currentTypeTransferred = undefined;
-                    Context.currentDataTransferred = undefined;
-                    invokeHandler('onDroppableLeave', Options, Context.currentDroppableExtras, Options.Extras);
+            if (Context$1.currentDropZoneElement === Element) {
+                if (Context$1.currentTypeTransferred == null) { // see explanation below
+                    Context$1.currentDropZoneExtras = undefined;
+                    Context$1.currentDropZoneElement = undefined;
+                    Context$1.DroppableWasDropped = false;
+                    Context$1.currentDropZonePosition = undefined;
+                    Context$1.currentTypeTransferred = undefined;
+                    Context$1.currentDataTransferred = undefined;
+                    invokeHandler$1('onDroppableLeave', Options, Context$1.currentDroppableExtras, Options.Extras);
                 } // swallow "dragleave" right after successful "drop"
                 originalEvent.preventDefault();
                 originalEvent.stopPropagation();
@@ -2841,11 +2686,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
         /**** droppedByDroppable ****/
         function droppedByDroppable(originalEvent) {
             Element.classList.remove('hovered');
-            Context.DropZonePanning = false;
+            Context$1.DropZonePanning = false;
             stopHoldTimer();
             if ((originalEvent.dataTransfer == null) ||
                 (originalEvent.dataTransfer.effectAllowed === 'none') ||
-                (Context.currentDropZoneElement !== Element)) {
+                (Context$1.currentDropZoneElement !== Element)) {
                 return;
             }
             //    originalEvent.preventDefault()
@@ -2869,80 +2714,80 @@ var WAD = (function (exports, webappTinkererRuntime) {
                     (TypesToAccept[Type].indexOf(wantedOperation) >= 0));
             }); // cannot use "originalEvent.dataTransfer.dropEffect" due to browser bug
             if (offeredTypeList.length === 0) {
-                Context.currentDropZoneExtras = undefined;
-                Context.currentDropZonePosition = undefined;
-                Context.DroppableWasDropped = false;
-                Context.currentDropOperation = undefined;
-                Context.currentTypeTransferred = undefined;
-                Context.currentDataTransferred = undefined;
-                invokeHandler('onDroppableLeave', Options, Context.currentDroppableExtras, Options.Extras);
+                Context$1.currentDropZoneExtras = undefined;
+                Context$1.currentDropZonePosition = undefined;
+                Context$1.DroppableWasDropped = false;
+                Context$1.currentDropOperation = undefined;
+                Context$1.currentTypeTransferred = undefined;
+                Context$1.currentDataTransferred = undefined;
+                invokeHandler$1('onDroppableLeave', Options, Context$1.currentDroppableExtras, Options.Extras);
                 return;
             }
-            Context.currentDropZonePosition = asPosition(svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
+            Context$1.currentDropZonePosition = asPosition(svelteCoordinateConversion$1.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element)); // relative to DropZone element
             var offeredData = {};
             offeredTypeList.forEach(
             // @ts-ignore originalEvent.dataTransfer definitely exists
             function (Type) { return offeredData[Type] = originalEvent.dataTransfer.getData(Type); });
-            var acceptedType = ResultOfHandler('onDrop', Options, Context.currentDropZonePosition.x, Context.currentDropZonePosition.y, wantedOperation, offeredData, Context.currentDroppableExtras, Options.Extras);
+            var acceptedType = ResultOfHandler('onDrop', Options, Context$1.currentDropZonePosition.x, Context$1.currentDropZonePosition.y, wantedOperation, offeredData, Context$1.currentDroppableExtras, Options.Extras);
             switch (true) {
                 case (acceptedType == null):
-                    Context.DroppableWasDropped = true;
-                    Context.currentDropOperation = wantedOperation;
-                    Context.currentTypeTransferred = undefined;
-                    Context.currentDataTransferred = undefined;
+                    Context$1.DroppableWasDropped = true;
+                    Context$1.currentDropOperation = wantedOperation;
+                    Context$1.currentTypeTransferred = undefined;
+                    Context$1.currentDataTransferred = undefined;
                     break;
                 case ValueIsOneOf(acceptedType, offeredTypeList):
-                    Context.DroppableWasDropped = true;
-                    Context.currentDropOperation = wantedOperation;
-                    Context.currentTypeTransferred = acceptedType;
-                    Context.currentDataTransferred = offeredData[acceptedType];
+                    Context$1.DroppableWasDropped = true;
+                    Context$1.currentDropOperation = wantedOperation;
+                    Context$1.currentTypeTransferred = acceptedType;
+                    Context$1.currentDataTransferred = offeredData[acceptedType];
                     break;
                 default: // handler should return false in case of failure
-                    Context.DroppableWasDropped = false;
-                    Context.currentDropZoneExtras = undefined;
-                    Context.currentDropZonePosition = undefined;
-                    Context.currentDropOperation = undefined;
-                    Context.currentTypeTransferred = undefined;
-                    Context.currentDataTransferred = undefined;
+                    Context$1.DroppableWasDropped = false;
+                    Context$1.currentDropZoneExtras = undefined;
+                    Context$1.currentDropZonePosition = undefined;
+                    Context$1.currentDropOperation = undefined;
+                    Context$1.currentTypeTransferred = undefined;
+                    Context$1.currentDataTransferred = undefined;
                 //        invokeHandler('onDroppableLeave', Options, currentDroppableExtras, Options.Extras)
             }
-            Context.currentDropZoneElement = undefined;
+            Context$1.currentDropZoneElement = undefined;
         }
         /**** startHoldTimer ****/
         function startHoldTimer(DropZonePosition) {
-            Context.HoldPosition = DropZonePosition;
-            if (Context.HoldTimer != null) {
-                clearTimeout(Context.HoldTimer);
+            Context$1.HoldPosition = DropZonePosition;
+            if (Context$1.HoldTimer != null) {
+                clearTimeout(Context$1.HoldTimer);
             }
-            Context.HoldTimer = setTimeout(triggerHold, Options.HoldDelay);
+            Context$1.HoldTimer = setTimeout(triggerHold, Options.HoldDelay);
         }
         /**** continueHoldTimer ****/
         function continueHoldTimer(DropZonePosition) {
-            var Offset = (Math.pow((Context.HoldPosition.x - DropZonePosition.x), 2) +
-                Math.pow((Context.HoldPosition.y - DropZonePosition.y), 2));
+            var Offset = (Math.pow((Context$1.HoldPosition.x - DropZonePosition.x), 2) +
+                Math.pow((Context$1.HoldPosition.y - DropZonePosition.y), 2));
             if (Offset > 25) {
-                Context.HoldPosition = DropZonePosition;
-                clearTimeout(Context.HoldTimer);
-                Context.HoldTimer = setTimeout(triggerHold, Options.HoldDelay);
+                Context$1.HoldPosition = DropZonePosition;
+                clearTimeout(Context$1.HoldTimer);
+                Context$1.HoldTimer = setTimeout(triggerHold, Options.HoldDelay);
             }
         }
         /**** stopHoldTimer ****/
         function stopHoldTimer() {
-            delete Context.HoldPosition;
-            if (Context.HoldTimer != null) {
-                clearTimeout(Context.HoldTimer);
-                delete Context.HoldTimer;
+            delete Context$1.HoldPosition;
+            if (Context$1.HoldTimer != null) {
+                clearTimeout(Context$1.HoldTimer);
+                delete Context$1.HoldTimer;
             }
-            delete Context.HoldWasTriggeredForElement;
+            delete Context$1.HoldWasTriggeredForElement;
         }
         /**** triggerHold ****/
         function triggerHold() {
             var DropZonePosition = ( // sometimes, there is no "enteredByDroppable"
-            Context.currentDropZonePosition || Context.HoldPosition);
-            delete Context.HoldPosition;
-            delete Context.HoldTimer;
-            Context.HoldWasTriggeredForElement = Element;
-            invokeHandler('onDroppableHold', Options, DropZonePosition.x, DropZonePosition.y, Context.currentDroppableExtras, Options.Extras);
+            Context$1.currentDropZonePosition || Context$1.HoldPosition);
+            delete Context$1.HoldPosition;
+            delete Context$1.HoldTimer;
+            Context$1.HoldWasTriggeredForElement = Element;
+            invokeHandler$1('onDroppableHold', Options, DropZonePosition.x, DropZonePosition.y, Context$1.currentDroppableExtras, Options.Extras);
         }
         /**** updateDropZoneOptions ****/
         function updateDropZoneOptions(Options) {
@@ -2969,7 +2814,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return { update: updateDropZoneOptions };
     }
     /**** ValueIsPosition ****/
-    function ValueIsPosition(Candidate) {
+    function ValueIsPosition$1(Candidate) {
         return (ValueIsPlainObject(Candidate) &&
             ValueIsFiniteNumber(Candidate.x) && ValueIsFiniteNumber(Candidate.y));
     }
@@ -2978,7 +2823,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return { x: Value.left, y: Value.top };
     }
     /**** PositionReferenceFor ****/
-    function PositionReferenceFor(Element, Options) {
+    function PositionReferenceFor$1(Element, Options) {
         var PositionReference;
         switch (true) {
             case (Options.relativeTo === 'parent'):
@@ -3002,7 +2847,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         return (PositionReference == null ? document.body : PositionReference);
     }
     /**** DragImageFor ****/
-    function DragImageFor(Element, Options) {
+    function DragImageFor$1(Element, Options) {
         switch (true) {
             case (Options.Dummy === 'standard'):
                 return undefined;
@@ -3045,14 +2890,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
     }
     /**** performPanningFor ****/
-    function performPanningFor(Type, Element, Options, xOnPage, yOnPage) {
-        if ((Type === 'draggable') && Context.DropZonePanning) {
+    function performPanningFor$1(Type, Element, Options, xOnPage, yOnPage) {
+        if ((Type === 'draggable') && Context$1.DropZonePanning) {
             return;
         }
         if ((Options.Pannable == null) ||
             ((Options.PanSensorWidth === 0) && (Options.PanSensorHeight === 0)) ||
             (Options.PanSpeed === 0)) {
-            Context.DropZonePanning = false;
+            Context$1.DropZonePanning = false;
             return;
         }
         var pannableElement;
@@ -3072,10 +2917,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
                 pannableElement = Options.Pannable;
         }
         if (pannableElement == null) {
-            Context.DropZonePanning = false;
+            Context$1.DropZonePanning = false;
             return;
         }
-        var _a = svelteCoordinateConversion.fromDocumentTo('local', { left: xOnPage, top: yOnPage }, pannableElement), xInPannable = _a.left, yInPannable = _a.top;
+        var _a = svelteCoordinateConversion$1.fromDocumentTo('local', { left: xOnPage, top: yOnPage }, pannableElement), xInPannable = _a.left, yInPannable = _a.top;
         if ((xInPannable >= 0) && (xInPannable < Options.PanSensorWidth)) {
             pannableElement.scrollLeft = Math.max(0, pannableElement.scrollLeft - Options.PanSpeed);
         }
@@ -3092,7 +2937,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
             (yInPannable < PannableHeight)) {
             pannableElement.scrollTop = Math.min(pannableElement.scrollTop + Options.PanSpeed, pannableElement.scrollHeight - PannableHeight);
         }
-        Context.DropZonePanning = (Type === 'dropzone');
+        Context$1.DropZonePanning = (Type === 'dropzone');
     }
     /**** parsedOperations ****/
     function parsedOperations(Description, Argument, Default) {
@@ -3116,7 +2961,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         ][EffectIndex];
     }
     /**** invokeHandler ****/
-    function invokeHandler(Name, Options) {
+    function invokeHandler$1(Name, Options) {
         var Arguments = [];
         for (var _i = 2; _i < arguments.length; _i++) {
             Arguments[_i - 2] = arguments[_i];
@@ -3130,7 +2975,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
             }
         }
     }
-    var ResultOfHandler = invokeHandler;
+    var ResultOfHandler = invokeHandler$1;
 
     //----------------------------------------------------------------------------//
     //                             Svelte Device Info                             //
@@ -3386,7 +3231,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     var css_248z$5 = ".defaultListView.svelte-1tfuj23{display:inline-flex;flex-flow:column nowrap;position:relative;justify-content:flex-start;align-items:stretch;margin:0px;padding:0px;list-style:none}.withoutTextSelection.svelte-1tfuj23{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.defaultListView.svelte-1tfuj23>.ListItemView{display:block;position:relative;flex:0 0 auto;height:30px;line-height:30px;border:solid 1px transparent;margin:0px 2px 0px 2px;padding:0px 4px 0px 4px;list-style:none}.defaultListView.svelte-1tfuj23>.ListItemView > *{pointer-events:none}.defaultListView.svelte-1tfuj23:not(.transitioning)>.ListItemView:hover:not(.dragged){border:solid 1px }.defaultListView.svelte-1tfuj23:not(.transitioning)>.ListItemView.selected:not(.dragged){background:dodgerblue }.defaultListView.svelte-1tfuj23>.ListItemView.dragged{opacity:0.3 }.defaultListView.svelte-1tfuj23>.ListItemView.hovered:not(.dragged){border-top:solid 10px transparent }.defaultListView.svelte-1tfuj23>.AttachmentRegion{display:block;position:relative;flex:1 1 auto;min-height:20px;background:transparent;border:solid 1px transparent;margin:0px 2px 2px 2px;padding:0px;list-style:none}.defaultListView.svelte-1tfuj23>.AttachmentRegion.hovered{border:solid 1px }.defaultListView.svelte-1tfuj23>.Placeholder{display:flex;position:absolute;left:0px;top:0px;right:0px;height:100%;flex-flow:column nowrap;justify-content:center;align-items:center}";
     styleInject(css_248z$5,{"insertAt":"top"});
 
-    /* node_modules/svelte-sortable-flat-list-view/dist/svelte-sortable-flat-list-view.svelte generated by Svelte v3.38.3 */
+    /* ../svelte-sortable-flat-list-view/dist/svelte-sortable-flat-list-view.svelte generated by Svelte v3.38.3 */
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -3422,7 +3267,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	Index: /*Index*/ ctx[74]
     });
 
-    // (71:4) {:else}
+    // (75:4) {:else}
     function create_else_block_1(ctx) {
     	let li;
     	let raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "";
@@ -3446,7 +3291,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (63:4) {#if extendable}
+    // (67:4) {#if extendable}
     function create_if_block_3$2(ctx) {
     	let li;
     	let raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "";
@@ -3565,7 +3410,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (50:4) {:else}
+    // (52:4) {:else}
     function create_else_block(ctx) {
     	let each_blocks = [];
     	let each_1_lookup = new Map();
@@ -3719,7 +3564,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (58:31)  
+    // (62:31)  
     function fallback_block_1(ctx) {
     	let t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "";
     	let t;
@@ -3740,7 +3585,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (51:6) {#each List as Item,Index (KeyOf(Item,Index))}
+    // (53:6) {#each List as Item,Index (KeyOf(Item,Index))}
     function create_each_block_1(key_1, ctx) {
     	let li;
     	let t;
@@ -3780,6 +3625,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!mounted) {
     				dispose = [
     					listen(li, "click", click_handler_1),
+    					listen(li, "introstart", /*TransitionStarted*/ ctx[30]),
+    					listen(li, "introend", /*TransitionEnded*/ ctx[31]),
     					listen(li, "outrostart", /*TransitionStarted*/ ctx[30]),
     					listen(li, "outroend", /*TransitionEnded*/ ctx[31])
     				];
@@ -3831,7 +3678,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (36:31)  
+    // (38:31)  
     function fallback_block(ctx) {
     	let t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "";
     	let t;
@@ -3924,6 +3771,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						PanSensorHeight: /*PanSensorHeight*/ ctx[10],
     						PanSpeed: /*PanSpeed*/ ctx[11]
     					})),
+    					listen(li, "introstart", /*TransitionStarted*/ ctx[30]),
+    					listen(li, "introend", /*TransitionEnded*/ ctx[31]),
     					listen(li, "outrostart", /*TransitionStarted*/ ctx[30]),
     					listen(li, "outroend", /*TransitionEnded*/ ctx[31])
     				];
@@ -4023,7 +3872,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (40:6) {#if sortable || extendable}
+    // (42:6) {#if sortable || extendable}
     function create_if_block_2$2(ctx) {
     	let li;
     	let raw_value = (/*AttachmentRegion*/ ctx[4] || "") + "";
@@ -5420,10 +5269,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (55:2) <ListView style="flex:1 1 auto; border:solid 1px #969696; padding:2px"     List={$AppletList} Key={(Applet,Index) => Applet.Id}     SelectionLimit={1}     on:selected-item={selectApplet} on:deselected-item={deselectApplet}     let:Item={Applet} let:Index={Index}   >
+    // (57:2) <ListView bind:this={AppletListView}     style="flex:1 1 auto; border:solid 1px {normalColor}; padding:2px"     List={$AppletList} Key={(Applet,Index) => Applet.Id}     SelectionLimit={1}     on:selected-item={selectApplet} on:deselected-item={deselectApplet}     let:Item={Applet} let:Index={Index}   >
     function create_default_slot$3(ctx) {
     	let div;
-    	let t_value = (/*Applet*/ ctx[5].Id || "Applet #" + /*Index*/ ctx[6]) + "";
+    	let t_value = (/*Applet*/ ctx[7].Id || "Applet #" + /*Index*/ ctx[8]) + "";
     	let t;
 
     	return {
@@ -5431,8 +5280,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			div = element("div");
     			t = text(t_value);
 
-    			set_style(div, "color", /*$selectedAppletList*/ ctx[0].indexOf(/*Applet*/ ctx[5]) < 0
-    			? /*Applet*/ ctx[5] === /*$chosenApplet*/ ctx[1]
+    			set_style(div, "color", /*$selectedAppletList*/ ctx[1].indexOf(/*Applet*/ ctx[7]) < 0
+    			? /*Applet*/ ctx[7] === /*$chosenApplet*/ ctx[2]
     				? activeColor$1
     				: normalColor$1
     			: "#454545");
@@ -5442,11 +5291,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			append(div, t);
     		},
     		p(ctx, dirty) {
-    			if (dirty & /*Applet, Index*/ 96 && t_value !== (t_value = (/*Applet*/ ctx[5].Id || "Applet #" + /*Index*/ ctx[6]) + "")) set_data(t, t_value);
+    			if (dirty & /*Applet, Index*/ 384 && t_value !== (t_value = (/*Applet*/ ctx[7].Id || "Applet #" + /*Index*/ ctx[8]) + "")) set_data(t, t_value);
 
-    			if (dirty & /*$selectedAppletList, Applet, $chosenApplet*/ 35) {
-    				set_style(div, "color", /*$selectedAppletList*/ ctx[0].indexOf(/*Applet*/ ctx[5]) < 0
-    				? /*Applet*/ ctx[5] === /*$chosenApplet*/ ctx[1]
+    			if (dirty & /*$selectedAppletList, Applet, $chosenApplet*/ 134) {
+    				set_style(div, "color", /*$selectedAppletList*/ ctx[1].indexOf(/*Applet*/ ctx[7]) < 0
+    				? /*Applet*/ ctx[7] === /*$chosenApplet*/ ctx[2]
     					? activeColor$1
     					: normalColor$1
     				: "#454545");
@@ -5472,31 +5321,31 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	button = new Button({
     			props: {
-    				disabled: /*$selectedAppletList*/ ctx[0].length === 0 || /*$chosenApplet*/ ctx[1] === /*$selectedAppletList*/ ctx[0][0],
+    				disabled: /*$selectedAppletList*/ ctx[1].length === 0 || /*$chosenApplet*/ ctx[2] === /*$selectedAppletList*/ ctx[1][0],
     				$$slots: { default: [create_default_slot_1] },
     				$$scope: { ctx }
     			}
     		});
 
-    	button.$on("click", /*editSelection*/ ctx[4]);
+    	button.$on("click", /*editSelection*/ ctx[5]);
 
-    	listview = new Svelte_sortable_flat_list_view({
-    			props: {
-    				style: "flex:1 1 auto; border:solid 1px #969696; padding:2px",
-    				List: /*$AppletList*/ ctx[2],
-    				Key: func,
-    				SelectionLimit: 1,
-    				$$slots: {
-    					default: [
-    						create_default_slot$3,
-    						({ Item: Applet, Index }) => ({ 5: Applet, 6: Index }),
-    						({ Item: Applet, Index }) => (Applet ? 32 : 0) | (Index ? 64 : 0)
-    					]
-    				},
-    				$$scope: { ctx }
-    			}
-    		});
+    	let listview_props = {
+    		style: "flex:1 1 auto; border:solid 1px " + normalColor$1 + "; padding:2px",
+    		List: /*$AppletList*/ ctx[3],
+    		Key: func,
+    		SelectionLimit: 1,
+    		$$slots: {
+    			default: [
+    				create_default_slot$3,
+    				({ Item: Applet, Index }) => ({ 7: Applet, 8: Index }),
+    				({ Item: Applet, Index }) => (Applet ? 128 : 0) | (Index ? 256 : 0)
+    			]
+    		},
+    		$$scope: { ctx }
+    	};
 
+    	listview = new Svelte_sortable_flat_list_view({ props: listview_props });
+    	/*listview_binding*/ ctx[6](listview);
     	listview.$on("selected-item", selectApplet);
     	listview.$on("deselected-item", deselectApplet);
 
@@ -5531,23 +5380,23 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			current = true;
 
     			if (!mounted) {
-    				dispose = listen(div1, "dblclick", /*onDoubleClick*/ ctx[3]);
+    				dispose = listen(div1, "dblclick", /*onDoubleClick*/ ctx[4]);
     				mounted = true;
     			}
     		},
     		p(ctx, [dirty]) {
     			const button_changes = {};
-    			if (dirty & /*$selectedAppletList, $chosenApplet*/ 3) button_changes.disabled = /*$selectedAppletList*/ ctx[0].length === 0 || /*$chosenApplet*/ ctx[1] === /*$selectedAppletList*/ ctx[0][0];
+    			if (dirty & /*$selectedAppletList, $chosenApplet*/ 6) button_changes.disabled = /*$selectedAppletList*/ ctx[1].length === 0 || /*$chosenApplet*/ ctx[2] === /*$selectedAppletList*/ ctx[1][0];
 
-    			if (dirty & /*$$scope*/ 128) {
+    			if (dirty & /*$$scope*/ 512) {
     				button_changes.$$scope = { dirty, ctx };
     			}
 
     			button.$set(button_changes);
     			const listview_changes = {};
-    			if (dirty & /*$AppletList*/ 4) listview_changes.List = /*$AppletList*/ ctx[2];
+    			if (dirty & /*$AppletList*/ 8) listview_changes.List = /*$AppletList*/ ctx[3];
 
-    			if (dirty & /*$$scope, $selectedAppletList, Applet, $chosenApplet, Index*/ 227) {
+    			if (dirty & /*$$scope, $selectedAppletList, Applet, $chosenApplet, Index*/ 902) {
     				listview_changes.$$scope = { dirty, ctx };
     			}
 
@@ -5567,6 +5416,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		d(detaching) {
     			if (detaching) detach(div1);
     			destroy_component(button);
+    			/*listview_binding*/ ctx[6](null);
     			destroy_component(listview);
     			mounted = false;
     			dispose();
@@ -5594,15 +5444,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let $selectedAppletList;
     	let $chosenApplet;
     	let $AppletList;
-    	component_subscribe($$self, selectedAppletList, $$value => $$invalidate(0, $selectedAppletList = $$value));
-    	component_subscribe($$self, chosenApplet, $$value => $$invalidate(1, $chosenApplet = $$value));
-    	component_subscribe($$self, AppletList, $$value => $$invalidate(2, $AppletList = $$value));
+    	component_subscribe($$self, selectedAppletList, $$value => $$invalidate(1, $selectedAppletList = $$value));
+    	component_subscribe($$self, chosenApplet, $$value => $$invalidate(2, $chosenApplet = $$value));
+    	component_subscribe($$self, AppletList, $$value => $$invalidate(3, $AppletList = $$value));
+    	let AppletListView;
 
     	function onDoubleClick() {
     		let Applet = $selectedAppletList[0];
     		selectedAppletList.clear();
     		selectedAppletList.select(Applet);
     		chosenApplet.set(Applet);
+    		AppletListView.select(Applet);
     	}
 
     	function editSelection() {
@@ -5613,7 +5465,22 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		}
     	}
 
-    	return [$selectedAppletList, $chosenApplet, $AppletList, onDoubleClick, editSelection];
+    	function listview_binding($$value) {
+    		binding_callbacks[$$value ? "unshift" : "push"](() => {
+    			AppletListView = $$value;
+    			$$invalidate(0, AppletListView);
+    		});
+    	}
+
+    	return [
+    		AppletListView,
+    		$selectedAppletList,
+    		$chosenApplet,
+    		$AppletList,
+    		onDoubleClick,
+    		editSelection,
+    		listview_binding
+    	];
     }
 
     class AppletOverviewPane extends SvelteComponent {
@@ -5811,6 +5678,596 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			style: 1
     		});
     	}
+    }
+
+    //----------------------------------------------------------------------------//
+    //                        Svelte Coordinate Conversion                        //
+    //----------------------------------------------------------------------------//
+    function fromViewportTo(System, originalPosition, Target) {
+        switch (true) {
+            case (originalPosition == null):
+                throw new Error('no "Position" given');
+            case (typeof originalPosition.left !== 'number') && !(originalPosition.left instanceof Number):
+            case (typeof originalPosition.top !== 'number') && !(originalPosition.top instanceof Number):
+                throw new Error('invalid "Position" given');
+        }
+        switch (System) {
+            case null:
+            case undefined:
+                throw new Error('no coordinate system given');
+            // @ts-ignore the following check is for non-TypeScript applications only
+            case 'viewport':
+                return { left: originalPosition.left, top: originalPosition.top };
+            case 'document':
+                return {
+                    left: originalPosition.left + window.scrollX,
+                    top: originalPosition.top + window.scrollY
+                };
+            case 'local':
+                switch (true) {
+                    case (Target == null):
+                        throw new Error('no target element given');
+                    case (Target instanceof Element):
+                        var computedStyle = window.getComputedStyle(Target);
+                        var leftOffset = parseFloat(computedStyle.borderLeftWidth);
+                        var topOffset = parseFloat(computedStyle.borderTopWidth);
+                        var TargetPositionInViewport = Target.getBoundingClientRect();
+                        return {
+                            left: originalPosition.left - TargetPositionInViewport.left - leftOffset,
+                            top: originalPosition.top - TargetPositionInViewport.top - topOffset
+                        };
+                    default:
+                        throw new Error('invalid target element given');
+                }
+            default:
+                throw new Error('invalid coordinate system given');
+        }
+    }
+    function fromDocumentTo(System, originalPosition, Target) {
+        switch (true) {
+            case (originalPosition == null):
+                throw new Error('no "Position" given');
+            case (typeof originalPosition.left !== 'number') && !(originalPosition.left instanceof Number):
+            case (typeof originalPosition.top !== 'number') && !(originalPosition.top instanceof Number):
+                throw new Error('invalid "Position" given');
+        }
+        switch (System) {
+            case null:
+            case undefined:
+                throw new Error('no coordinate system given');
+            case 'viewport':
+                return {
+                    left: originalPosition.left - window.scrollX,
+                    top: originalPosition.top - window.scrollY
+                };
+            // @ts-ignore the following check is for non-TypeScript applications only
+            case 'document':
+                return { left: originalPosition.left, top: originalPosition.top };
+            case 'local':
+                switch (true) {
+                    case (Target == null):
+                        throw new Error('no target element given');
+                    case (Target instanceof Element):
+                        var computedStyle = window.getComputedStyle(Target);
+                        var leftOffset = parseFloat(computedStyle.borderLeftWidth);
+                        var topOffset = parseFloat(computedStyle.borderTopWidth);
+                        var TargetPositionInViewport = Target.getBoundingClientRect();
+                        return {
+                            left: originalPosition.left + window.scrollX - TargetPositionInViewport.left - leftOffset,
+                            top: originalPosition.top + window.scrollY - TargetPositionInViewport.top - topOffset
+                        };
+                    default:
+                        throw new Error('invalid target element given');
+                }
+            default:
+                throw new Error('invalid coordinate system given');
+        }
+    }
+    function fromLocalTo(System, originalPosition, Source) {
+        switch (true) {
+            case (originalPosition == null):
+                throw new Error('no "Position" given');
+            case (typeof originalPosition.left !== 'number') && !(originalPosition.left instanceof Number):
+            case (typeof originalPosition.top !== 'number') && !(originalPosition.top instanceof Number):
+                throw new Error('invalid "Position" given');
+        }
+        var SourcePositionInViewport, leftPosition, topPosition;
+        switch (true) {
+            case (Source == null):
+                throw new Error('no source element given');
+            case (Source instanceof Element):
+                var computedStyle = window.getComputedStyle(Source);
+                var leftOffset = parseFloat(computedStyle.borderLeftWidth);
+                var topOffset = parseFloat(computedStyle.borderTopWidth);
+                SourcePositionInViewport = Source.getBoundingClientRect();
+                leftPosition = SourcePositionInViewport.left + leftOffset;
+                topPosition = SourcePositionInViewport.top + topOffset;
+                break;
+            default:
+                throw new Error('invalid source element given');
+        }
+        switch (System) {
+            case null:
+            case undefined:
+                throw new Error('no coordinate system given');
+            case 'viewport':
+                return {
+                    left: originalPosition.left + leftPosition,
+                    top: originalPosition.top + topPosition
+                };
+            case 'document':
+                return {
+                    left: originalPosition.left + leftPosition + window.scrollX,
+                    top: originalPosition.top + topPosition + window.scrollY
+                };
+            // @ts-ignore the following check is for non-TypeScript applications only
+            case 'local':
+                return { left: originalPosition.left, top: originalPosition.top };
+            default:
+                throw new Error('invalid coordinate system given');
+        }
+    }
+    var svelteCoordinateConversion = {
+        fromViewportTo: fromViewportTo,
+        fromDocumentTo: fromDocumentTo,
+        fromLocalTo: fromLocalTo
+    };
+
+    //----------------------------------------------------------------------------//
+    var Context = ( // make this package a REAL singleton
+    '__DragAndDropActions' in global$2
+        ? global$2.__DragAndDropActions
+        : global$2.__DragAndDropActions = {});
+    /**** parsedDraggableOptions ****/
+    function parsedDraggableOptions(Options) {
+        Options = allowedPlainObject('drag options', Options) || {};
+        var Extras, relativeTo;
+        var onlyFrom, neverFrom;
+        var Dummy, DummyOffsetX, DummyOffsetY;
+        var minX, minY, maxX, maxY;
+        var Pannable;
+        var PanSensorWidth, PanSensorHeight, PanSpeed;
+        var onDragStart, onDragMove, onDragEnd, onDragCancel;
+        Extras = Options.Extras;
+        switch (true) {
+            case (Options.relativeTo == null):
+                relativeTo = 'parent';
+                break;
+            case (Options.relativeTo === 'parent'):
+            case (Options.relativeTo === 'body'):
+            case ValueIsNonEmptyString(Options.relativeTo):
+            case (Options.relativeTo instanceof HTMLElement):
+            case (Options.relativeTo instanceof SVGElement):
+                //    case (Options.relativeTo instanceof MathMLElement):
+                relativeTo = Options.relativeTo;
+                break;
+            default: throwError('InvalidArgument: invalid position reference given');
+        }
+        onlyFrom = allowedNonEmptyString('"onlyFrom" CSS selector', Options.onlyFrom);
+        neverFrom = allowedNonEmptyString('"neverFrom" CSS selector', Options.neverFrom);
+        switch (true) {
+            case (Options.Dummy == null):
+                Dummy = undefined;
+                break;
+            case (Options.Dummy === 'standard'):
+            case (Options.Dummy === 'none'):
+            case ValueIsNonEmptyString(Options.Dummy):
+            case (Options.Dummy instanceof HTMLElement):
+            case (Options.Dummy instanceof SVGElement):
+            //    case (Options.Dummy instanceof MathMLElement):
+            case ValueIsFunction(Options.Dummy):
+                Dummy = Options.Dummy;
+                break;
+            default: throwError('InvalidArgument: invalid drag dummy specification given');
+        }
+        DummyOffsetX = allowedFiniteNumber('dummy x offset', Options.DummyOffsetX);
+        DummyOffsetY = allowedFiniteNumber('dummy y offset', Options.DummyOffsetY);
+        minX = allowedFiniteNumber('min. x position', Options.minX);
+        if (minX == null) {
+            minX = -Infinity;
+        }
+        minY = allowedFiniteNumber('min. y position', Options.minY);
+        if (minY == null) {
+            minY = -Infinity;
+        }
+        maxX = allowedFiniteNumber('max. x position', Options.maxX);
+        if (maxX == null) {
+            maxX = Infinity;
+        }
+        maxY = allowedFiniteNumber('max. y position', Options.maxY);
+        if (maxY == null) {
+            maxY = Infinity;
+        }
+        switch (true) {
+            case (Options.Pannable == null):
+                Pannable = undefined;
+                break;
+            case ValueIsNonEmptyString(Options.Pannable):
+            case (Options.Pannable instanceof HTMLElement):
+            case (Options.Pannable instanceof SVGElement):
+                //    case (Options.Pannable instanceof MathMLElement):
+                Pannable = Options.Pannable;
+                break;
+            default: throwError('InvalidArgument: invalid "Pannable" specification given');
+        }
+        PanSensorWidth = allowedOrdinal('panning sensor width', Options.PanSensorWidth);
+        if (PanSensorWidth == null) {
+            PanSensorWidth = 20;
+        }
+        PanSensorHeight = allowedOrdinal('panning sensor height', Options.PanSensorHeight);
+        if (PanSensorHeight == null) {
+            PanSensorHeight = 20;
+        }
+        PanSpeed = allowedOrdinal('panning speed', Options.PanSpeed);
+        if (PanSpeed == null) {
+            PanSpeed = 10;
+        }
+        if (ValueIsPosition(Options.onDragStart)) {
+            var _a = Options.onDragStart, x_1 = _a.x, y_1 = _a.y;
+            onDragStart = function () { return ({ x: x_1, y: y_1 }); };
+        }
+        else {
+            onDragStart = allowedFunction('"onDragStart" handler', Options.onDragStart);
+        }
+        onDragMove = allowedFunction('"onDragMove" handler', Options.onDragMove);
+        onDragEnd = allowedFunction('"onDragEnd" handler', Options.onDragEnd);
+        return {
+            Extras: Extras,
+            relativeTo: relativeTo,
+            onlyFrom: onlyFrom,
+            neverFrom: neverFrom,
+            Dummy: Dummy,
+            DummyOffsetX: DummyOffsetX,
+            DummyOffsetY: DummyOffsetY,
+            minX: minX,
+            minY: minY,
+            maxX: maxX,
+            maxY: maxY,
+            Pannable: Pannable,
+            PanSensorWidth: PanSensorWidth,
+            PanSensorHeight: PanSensorHeight,
+            PanSpeed: PanSpeed,
+            // @ts-ignore we cannot validate given functions any further
+            onDragStart: onDragStart,
+            onDragMove: onDragMove,
+            onDragEnd: onDragEnd,
+            onDragCancel: onDragCancel
+        };
+    }
+    /**** use:asDraggable={options} ****/
+    function asDraggable(Element, Options) {
+        var isDragged;
+        var currentDraggableOptions;
+        var PositionReference; // element with user coordinate system
+        var ReferenceDeltaX, ReferenceDeltaY; // mouse -> user coord.s
+        var PositioningWasDelayed; // workaround for prob. with "drag" events
+        var DragImage;
+        var initialPosition; // given in user coordinates
+        var lastPosition; // dto.
+        isDragged = false;
+        currentDraggableOptions = parsedDraggableOptions(Options);
+        /**** startDragging ****/
+        function startDragging(originalEvent) {
+            var Options = currentDraggableOptions;
+            if (fromForbiddenElement(Element, Options, originalEvent)) {
+                originalEvent.stopPropagation();
+                originalEvent.preventDefault();
+                return false;
+            }
+            PositionReference = PositionReferenceFor(Element, Options);
+            var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+            ReferenceDeltaX = ReferenceDeltaY = 0;
+            initialPosition = { x: 0, y: 0 };
+            if (Options.onDragStart == null) {
+                initialPosition = { x: 0, y: 0 }; // given in user coordinates
+            }
+            else {
+                try {
+                    var StartPosition = Options.onDragStart(Options.Extras);
+                    if (ValueIsPlainObject(StartPosition)) {
+                        var x = allowedFiniteNumber('x start position', StartPosition.x);
+                        var y = allowedFiniteNumber('y start position', StartPosition.y);
+                        ReferenceDeltaX = x - relativePosition.left;
+                        ReferenceDeltaY = y - relativePosition.top;
+                        x = constrained(x, Options.minX, Options.maxX);
+                        y = constrained(y, Options.minY, Options.maxY);
+                        initialPosition = { x: x, y: y }; // given in user coordinates
+                    }
+                }
+                catch (Signal) {
+                    console.error('"onDragStart" handler failed', Signal);
+                }
+            }
+            lastPosition = initialPosition;
+            PositioningWasDelayed = false; // initializes workaround
+            if (Options.Dummy == null) {
+                Options.Dummy = 'none'; // this is the default for "use.asDraggable"
+            }
+            DragImage = DragImageFor(Element, Options);
+            if ((DragImage != null) && (originalEvent.dataTransfer != null)) {
+                var OffsetX = Options.DummyOffsetX;
+                var OffsetY = Options.DummyOffsetY;
+                if ((OffsetX == null) || (OffsetY == null)) {
+                    var PositionInDraggable = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, Element);
+                    if (OffsetX == null) {
+                        OffsetX = PositionInDraggable.left;
+                    }
+                    if (OffsetY == null) {
+                        OffsetY = PositionInDraggable.top;
+                    }
+                }
+                switch (true) {
+                    case (Options.Dummy === 'none'):
+                        originalEvent.dataTransfer.setDragImage(DragImage, 0, 0);
+                        setTimeout(function () {
+                            document.body.removeChild(DragImage);
+                        }, 0);
+                        break;
+                    case ValueIsString(Options.Dummy):
+                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
+                        setTimeout(function () {
+                            document.body.removeChild(DragImage.parentElement);
+                        }, 0);
+                        break;
+                    default:
+                        originalEvent.dataTransfer.setDragImage(DragImage, OffsetX, OffsetY);
+                }
+            }
+            if (originalEvent.dataTransfer != null) {
+                originalEvent.dataTransfer.effectAllowed = 'none';
+            }
+            isDragged = true;
+            setTimeout(function () { return Element.classList.add('dragged'); }, 0);
+            originalEvent.stopPropagation();
+        }
+        /**** continueDragging ****/
+        function continueDragging(originalEvent) {
+            if (!isDragged) {
+                return false;
+            }
+            var Options = currentDraggableOptions;
+            if ((originalEvent.screenX === 0) && (originalEvent.screenY === 0) &&
+                !PositioningWasDelayed) {
+                PositioningWasDelayed = true; // last "drag" event contains wrong coord.s
+            }
+            else {
+                PositioningWasDelayed = false;
+                performPanningFor('draggable', Element, Options, originalEvent.pageX, originalEvent.pageY);
+                var relativePosition = svelteCoordinateConversion.fromDocumentTo('local', { left: originalEvent.pageX, top: originalEvent.pageY }, PositionReference); // relative to reference element
+                var x = relativePosition.left + ReferenceDeltaX; // in user coordinates
+                var y = relativePosition.top + ReferenceDeltaY;
+                x = constrained(x, Options.minX, Options.maxX);
+                y = constrained(y, Options.minY, Options.maxY);
+                var dx = x - lastPosition.x; // calculated AFTER constraining x,y
+                var dy = y - lastPosition.y; // dto.
+                lastPosition = { x: x, y: y };
+                invokeHandler('onDragMove', Options, x, y, dx, dy, Options.Extras);
+            }
+            originalEvent.stopPropagation();
+        }
+        /**** finishDragging ****/
+        function finishDragging(originalEvent) {
+            if (!isDragged) {
+                return false;
+            }
+            //    continueDragging(originalEvent)           // NO! positions might be wrong!
+            var Options = currentDraggableOptions;
+            if (Options.onDragEnd != null) {
+                var x = constrained(lastPosition.x, Options.minX, Options.maxX);
+                var y = constrained(lastPosition.y, Options.minY, Options.maxY);
+                var dx = x - lastPosition.x;
+                var dy = y - lastPosition.y;
+                invokeHandler('onDragEnd', Options, x, y, dx, dy, Options.Extras);
+            }
+            isDragged = false;
+            Element.classList.remove('dragged');
+            originalEvent.stopPropagation();
+        }
+        /**** updateDraggableOptions ****/
+        function updateDraggableOptions(Options) {
+            Options = parsedDraggableOptions(Options);
+            if ((currentDraggableOptions.Extras == null) && (Options.Extras != null)) {
+                currentDraggableOptions.Extras = Options.Extras;
+            } // Extras may be set with delay, but remain constant afterwards
+            currentDraggableOptions.Dummy = (Options.Dummy || currentDraggableOptions.Dummy);
+            currentDraggableOptions.minX = Options.minX;
+            currentDraggableOptions.minY = Options.minY;
+            currentDraggableOptions.maxX = Options.maxX;
+            currentDraggableOptions.maxY = Options.maxY;
+            currentDraggableOptions.Pannable = Options.Pannable;
+            currentDraggableOptions.PanSensorWidth = Options.PanSensorWidth;
+            currentDraggableOptions.PanSensorHeight = Options.PanSensorHeight;
+            currentDraggableOptions.PanSpeed = Options.PanSpeed;
+            currentDraggableOptions.onDragStart = (Options.onDragStart || currentDraggableOptions.onDragStart); // may be used to update initial position for subsequent drags
+        }
+        Element.setAttribute('draggable', 'true');
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragstart', startDragging);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('drag', continueDragging);
+        // @ts-ignore we know that the passed event is a DragEvent
+        Element.addEventListener('dragend', finishDragging);
+        return { update: updateDraggableOptions };
+    }
+    /**** fromForbiddenElement ****/
+    function fromForbiddenElement(Element, Options, originalEvent) {
+        if ((Options.onlyFrom != null) || (Options.neverFrom != null)) {
+            var x = originalEvent.clientX;
+            var y = originalEvent.clientY;
+            var touchedElement = document.elementFromPoint(x, y);
+            //    elementFromPoint considers elements with "pointer-events" <> "none" only
+            //    but sometimes, "pointer-events:none" is needed for proper operation
+            touchedElement = innerElementOf(touchedElement, x, y);
+            if (Options.onlyFrom != null) {
+                var fromElement = touchedElement.closest(Options.onlyFrom);
+                if ((Element !== fromElement) && !Element.contains(fromElement)) {
+                    return true;
+                }
+            }
+            if (Options.neverFrom != null) {
+                var fromElement = touchedElement.closest(Options.neverFrom);
+                if ((Element === fromElement) || Element.contains(fromElement)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /**** innerElementOf ****/
+    function innerElementOf(Candidate, x, y) {
+        var innerElements = Candidate.children;
+        for (var i = 0, l = innerElements.length; i < l; i++) {
+            var innerElement = innerElements[i];
+            var Position = svelteCoordinateConversion.fromLocalTo('viewport', { left: 0, top: 0 }, innerElement);
+            if ((x < Position.left) || (y < Position.top)) {
+                continue;
+            }
+            if (x > Position.left + innerElement.offsetWidth - 1) {
+                continue;
+            }
+            if (y > Position.top + innerElement.offsetHeight - 1) {
+                continue;
+            }
+            return innerElementOf(innerElement, x, y);
+        }
+        return Candidate; // this is the innermost element at (x,y)
+    }
+    /**** ValueIsPosition ****/
+    function ValueIsPosition(Candidate) {
+        return (ValueIsPlainObject(Candidate) &&
+            ValueIsFiniteNumber(Candidate.x) && ValueIsFiniteNumber(Candidate.y));
+    }
+    /**** PositionReferenceFor ****/
+    function PositionReferenceFor(Element, Options) {
+        var PositionReference;
+        switch (true) {
+            case (Options.relativeTo === 'parent'):
+                PositionReference = Element.parentElement;
+                break;
+            case (Options.relativeTo === 'body'):
+                PositionReference = document.body;
+                break;
+            case (Options.relativeTo instanceof HTMLElement):
+            case (Options.relativeTo instanceof SVGElement):
+                //    case (Options.relativeTo instanceof MathMLElement):
+                PositionReference = Options.relativeTo;
+                if ((PositionReference != document.body) &&
+                    !document.body.contains(PositionReference))
+                    throwError('InvalidArgument: the HTML element given as "relativeTo" option ' +
+                        'is not part of this HTML document');
+                break;
+            default: // CSS selector
+                PositionReference = Element.closest(Options.relativeTo);
+        }
+        return (PositionReference == null ? document.body : PositionReference);
+    }
+    /**** DragImageFor ****/
+    function DragImageFor(Element, Options) {
+        switch (true) {
+            case (Options.Dummy === 'standard'):
+                return undefined;
+            case (Options.Dummy === 'none'):
+                var invisibleDragImage = document.createElement('div');
+                invisibleDragImage.setAttribute('style', 'display:block; position:absolute; width:1px; height:1px; ' +
+                    'background:transparent; border:none; margin:0px; padding:0px; ' +
+                    'cursor:auto');
+                document.body.appendChild(invisibleDragImage);
+                return invisibleDragImage;
+            case ValueIsNonEmptyString(Options.Dummy): // may flicker shortly
+                var auxiliaryElement = document.createElement('div');
+                auxiliaryElement.style.display = 'block';
+                auxiliaryElement.style.position = 'absolute';
+                auxiliaryElement.style.left = (document.body.scrollWidth + 100) + 'px';
+                document.body.appendChild(auxiliaryElement);
+                auxiliaryElement.innerHTML = Options.Dummy;
+                return auxiliaryElement.children[0];
+            case (Options.Dummy instanceof HTMLElement):
+            case (Options.Dummy instanceof SVGElement):
+                //    case (Options.Dummy instanceof MathMLElement):
+                return Options.Dummy;
+            case ValueIsFunction(Options.Dummy):
+                var Candidate = undefined;
+                try {
+                    Candidate = Options.Dummy(Options.Extras, Element);
+                }
+                catch (Signal) {
+                    console.error('RuntimeError: creating draggable dummy failed', Signal);
+                }
+                if (Candidate != null) {
+                    if ((Candidate instanceof HTMLElement) || (Candidate instanceof SVGElement)) {
+                        return Candidate;
+                    }
+                    else {
+                        console.error('InvalidArgument: the newly created draggable dummy is ' +
+                            'neither an HTML nor an SVG element');
+                    }
+                }
+        }
+    }
+    /**** performPanningFor ****/
+    function performPanningFor(Type, Element, Options, xOnPage, yOnPage) {
+        if ((Type === 'draggable') && Context.DropZonePanning) {
+            return;
+        }
+        if ((Options.Pannable == null) ||
+            ((Options.PanSensorWidth === 0) && (Options.PanSensorHeight === 0)) ||
+            (Options.PanSpeed === 0)) {
+            Context.DropZonePanning = false;
+            return;
+        }
+        var pannableElement;
+        switch (true) {
+            case ValueIsNonEmptyString(Options.Pannable):
+                pannableElement = Element.parentElement;
+                if (pannableElement != null) {
+                    pannableElement = pannableElement.closest(Options.Pannable);
+                }
+                break;
+            case (Options.Pannable === 'this') && (Type === 'dropzone'):
+                pannableElement = Element;
+                break;
+            case (Options.Pannable instanceof HTMLElement):
+            case (Options.Pannable instanceof SVGElement):
+                //        case (Options.Pannable instanceof MathMLElement):
+                pannableElement = Options.Pannable;
+        }
+        if (pannableElement == null) {
+            Context.DropZonePanning = false;
+            return;
+        }
+        var _a = svelteCoordinateConversion.fromDocumentTo('local', { left: xOnPage, top: yOnPage }, pannableElement), xInPannable = _a.left, yInPannable = _a.top;
+        if ((xInPannable >= 0) && (xInPannable < Options.PanSensorWidth)) {
+            pannableElement.scrollLeft = Math.max(0, pannableElement.scrollLeft - Options.PanSpeed);
+        }
+        var PannableWidth = pannableElement.clientWidth; // w/o scrollbar
+        if ((xInPannable >= PannableWidth - Options.PanSensorWidth) &&
+            (xInPannable < PannableWidth)) {
+            pannableElement.scrollLeft = Math.min(pannableElement.scrollLeft + Options.PanSpeed, pannableElement.scrollWidth - PannableWidth);
+        }
+        if ((yInPannable >= 0) && (yInPannable < Options.PanSensorHeight)) {
+            pannableElement.scrollTop = Math.max(0, pannableElement.scrollTop - Options.PanSpeed);
+        }
+        var PannableHeight = pannableElement.clientHeight; // w/o scrollbar
+        if ((yInPannable >= PannableHeight - Options.PanSensorHeight) &&
+            (yInPannable < PannableHeight)) {
+            pannableElement.scrollTop = Math.min(pannableElement.scrollTop + Options.PanSpeed, pannableElement.scrollHeight - PannableHeight);
+        }
+        Context.DropZonePanning = (Type === 'dropzone');
+    }
+    /**** invokeHandler ****/
+    function invokeHandler(Name, Options) {
+        var Arguments = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            Arguments[_i - 2] = arguments[_i];
+        }
+        if (Options[Name] != null) {
+            try {
+                return Options[Name].apply(null, Arguments);
+            }
+            catch (Signal) {
+                console.error(quoted(Name) + ' handler failed', Signal);
+            }
+        }
     }
 
     const initialDialogOrder = { Dialogs:[], zIndexOf };
