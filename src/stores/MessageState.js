@@ -34,8 +34,8 @@
           currentMessageState = Object.assign({}, initialMessageState)
           MessageStateSet.set(currentlyChosenApplet,currentMessageState)
         }
-        MessageStateStore.set(currentMessageState)
       }
+      MessageStateStore.set(currentMessageState)
     }
   })
 
