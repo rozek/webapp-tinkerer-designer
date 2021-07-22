@@ -46,11 +46,11 @@
   },
   "dependencies": {
     "downloadjs-patch": "^1.4.8",
-    "javascript-interface-library": "file:../javascript-interface-library",
+    "javascript-interface-library": "^0.1.14",
     "localforage": "^1.9.0",
     "svelte-drag-and-drop-actions": "^0.1.35",
     "svelte-drag-drop-touch": "^0.1.9",
-    "svelte-sortable-flat-list-view": "^0.1.23",
+    "svelte-sortable-flat-list-view": "^0.1.25",
     "svelte-touch-to-mouse": "^0.1.12",
     "tinted-bitmap": "^0.1.3",
     "webapp-tinkerer-runtime": "file:../webapp-tinkerer-runtime"
