@@ -5522,9 +5522,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let div_levels = [
     		/*$$restProps*/ ctx[6],
     		{
-    			style: div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
-			? /*activeHoveredImageURL*/ ctx[5]
-			: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]
+    			style: div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[2] + ");\n  --hovered-image-url:url(" + (/*active*/ ctx[0]
+    			? /*activeHoveredImageURL*/ ctx[5]
+    			: /*hoveredImageURL*/ ctx[3]) + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[4] + "); " + /*style*/ ctx[1] + "\n"
     		}
     	];
 
@@ -5553,9 +5553,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		p(ctx, [dirty]) {
     			set_attributes(div, div_data = get_spread_update(div_levels, [
     				dirty & /*$$restProps*/ 64 && /*$$restProps*/ ctx[6],
-    				dirty & /*normalImageURL, active, activeHoveredImageURL, hoveredImageURL, activeImageURL, style*/ 63 && div_style_value !== (div_style_value = `--normal-image-url:url(${/*normalImageURL*/ ctx[2]});` + `--hovered-image-url:url(${/*active*/ ctx[0]
-				? /*activeHoveredImageURL*/ ctx[5]
-				: /*hoveredImageURL*/ ctx[3]});` + `--active-image-url:url(${/*activeImageURL*/ ctx[4]});` + /*style*/ ctx[1]) && { style: div_style_value }
+    				dirty & /*normalImageURL, active, activeHoveredImageURL, hoveredImageURL, activeImageURL, style*/ 63 && div_style_value !== (div_style_value = "\n  --normal-image-url:url(" + /*normalImageURL*/ ctx[2] + ");\n  --hovered-image-url:url(" + (/*active*/ ctx[0]
+    				? /*activeHoveredImageURL*/ ctx[5]
+    				: /*hoveredImageURL*/ ctx[3]) + ");\n  --active-image-url:url(" + /*activeImageURL*/ ctx[4] + "); " + /*style*/ ctx[1] + "\n") && { style: div_style_value }
     			]));
 
     			toggle_class(div, "WAD-IconButton", true);
