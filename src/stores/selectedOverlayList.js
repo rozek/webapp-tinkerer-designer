@@ -18,7 +18,8 @@
       currentlyChosenApplet = newChosenApplet
 
       if (currentlyChosenApplet == null) {
-        currentSelectionList = []
+        currentlyChosenOverlayList = []
+        currentSelectionList       = []
       } else {
         if (SelectionListSet.has(currentlyChosenApplet)) {
           currentSelectionList       = SelectionListSet.get(currentlyChosenApplet)
