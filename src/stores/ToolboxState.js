@@ -28,8 +28,8 @@
           currentToolboxState = Object.assign({}, initialToolboxState)
           ToolboxStateSet.set(currentlyChosenApplet,currentToolboxState)
         }
-        ToolboxStateStore.set(currentToolboxState)
       }
+      ToolboxStateStore.set(currentToolboxState)
     }
   })
 
