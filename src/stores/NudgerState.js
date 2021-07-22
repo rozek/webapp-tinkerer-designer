@@ -28,8 +28,8 @@
           currentNudgerState = Object.assign({}, initialNudgerState)
           NudgerStateSet.set(currentlyChosenApplet,currentNudgerState)
         }
-        NudgerStateStore.set(currentNudgerState)
       }
+      NudgerStateStore.set(currentNudgerState)
     }
   })
 
