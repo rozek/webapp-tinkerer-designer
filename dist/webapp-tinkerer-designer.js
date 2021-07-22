@@ -1112,8 +1112,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
               currentMessageState = Object.assign({}, initialMessageState);
               MessageStateSet.set(currentlyChosenApplet$4,currentMessageState);
             }
-            MessageStateStore.set(currentMessageState);
           }
+          MessageStateStore.set(currentMessageState);
         }
       });
 
@@ -7643,8 +7643,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
               currentInspectorState = Object.assign({}, initialInspectorState);
               InspectorStateSet.set(currentlyChosenApplet$2,currentInspectorState);
             }
-            InspectorStateStore.set(currentInspectorState);
           }
+          InspectorStateStore.set(currentInspectorState);
         }
       });
 
@@ -9064,8 +9064,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
               currentNudgerState = Object.assign({}, initialNudgerState);
               NudgerStateSet.set(currentlyChosenApplet$1,currentNudgerState);
             }
-            NudgerStateStore.set(currentNudgerState);
           }
+          NudgerStateStore.set(currentNudgerState);
         }
       });
 
@@ -9453,8 +9453,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
               currentToolboxState = Object.assign({}, initialToolboxState);
               ToolboxStateSet.set(currentlyChosenApplet,currentToolboxState);
             }
-            ToolboxStateStore.set(currentToolboxState);
           }
+          ToolboxStateStore.set(currentToolboxState);
         }
       });
 
