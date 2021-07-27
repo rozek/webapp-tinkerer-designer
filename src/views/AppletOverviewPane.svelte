@@ -12,8 +12,11 @@
   import {     AppletList     } from '../stores/AppletList.js'
   import {    chosenApplet    } from '../stores/chosenApplet.js'
   import { selectedAppletList } from '../stores/selectedAppletList.js'
-  import        ListView        from 'svelte-sortable-flat-list-view'
   import         Button         from '../components/Button.svelte'
+  import        IconImage       from '../components/IconImage.svelte'
+  import        ListView        from 'svelte-sortable-flat-list-view'
+
+  let smallChooseSelectionImageURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAG5JREFUOE/t1EEOABAMBEC+2wf1u8RBUkJ3JeXEWaZLlpyCVw720l1QVcucWESOhg6bV2AfwMJwuh3CoBBsCTsaBp6gVMIPutf07g69ktvXNFfJTYjQVS/hkXforuQQtB1k3jUFXik2+xHTCVmwAr8+PBWXrjCNAAAAAElFTkSuQmCC'
 
 /**** Colors ****/
 
@@ -44,7 +47,11 @@
     AppletListView.select(Applet)
   }
 
-  function editSelection () {
+$:chosable = (
+    ($selectedAppletList.length === 1) && ($chosenApplet !== $selectedAppletList[0])
+  )
+
+  function chooseSelection () {
     let Applet = $selectedAppletList[0]
     if (Applet != null) {  chosenApplet.set(Applet) }
   }
@@ -57,10 +64,10 @@
     height:30px
   ">
     <span style="flex:1 1 auto; line-height:24px">designable Applets:</span>
-    <Button disabled={
-      ($selectedAppletList.length === 0) || ($chosenApplet === $selectedAppletList[0])
-    } on:click={editSelection}
-    >design</Button>
+    <Button disabled={! chosable} style="padding:2px" on:click={chooseSelection}>
+      <IconImage ImageURL={smallChooseSelectionImageURL} disabled={! chosable}
+        style="width:20px; height:20px"/>
+    </Button>
   </div>
 
   <ListView bind:this={AppletListView}
