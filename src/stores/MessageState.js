@@ -42,7 +42,7 @@
 /**** validate changes to "MessageState" ****/
 
   function setMessageState (newMessageState) {
-    if (currentlyChosenApplet !== null) {
+    if (currentlyChosenApplet != null) {
       if (ValuesDiffer(currentMessageState,newMessageState)) {
         currentMessageState = Object.assign({}, newMessageState)
         MessageStateSet.set(currentlyChosenApplet,newMessageState)
