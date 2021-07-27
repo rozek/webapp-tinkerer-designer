@@ -26,6 +26,7 @@
   import  SelectionPropertiesPane   from '../views/SelectionPropertiesPane.svelte'
   import SelectionConfigurationPane from '../views/SelectionConfigurationPane.svelte'
   import    SelectionScriptPane     from '../views/SelectionScriptPane.svelte'
+  import        SettingsPane        from '../views/SettingsPane.svelte'
   import      { MessageState }      from '../stores/MessageState.js'
   import        MessageView         from '../views/MessageView.svelte'
 
@@ -45,7 +46,7 @@
   let SelectionPropertiesImageURL    = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABM0lEQVRYR+1XQQ7DMAhrv9sH5bubcqDykMEQReoO3WWHJsUY20nP4+Hf+XD94wYwxvgYmOu6JLBd60MAs8AEkv0j4O562/s/DHS1YB2zfTaeyih/Zp29FAtFBVAXuN6AsPdLsfkOI/FFxZWw2wxUAGDHTKjYVJkBT7unkwGrWLXEgKfX7Dk7Yd0yYaKlWwyw2bJ8mC9VImTASgxEQmRMIBBvwy0uMDBR8nXzZDkJfacqfCJBlgBkaq4y0QaAHfnNzJLmiEpKojbCHFDJhha0cUSizHSRuoB1k826ogPvDMqASjD1HBlRrqAMqAJKlL5o+zRcBRCJ1esljOLogMG5dTXg3VTSQJbr7KKB6eiP3+X7QCcH2G1p641IaYIpnR086WnYLbJr/ftdUL4TqkRbff4C+AI8xegwDnQdAwAAAABJRU5ErkJggg=='
   let SelectionConfigurationImageURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABGUlEQVRYR82WXQ4DIQiEd6/rgbxuGx9oKOFnQBLdl+42qJ/jAL7P4ec9vP7zA5hzfghmjBGCdcWbAGuBBeL9cuBsPI29R4FTXvg7a5KRYOQ3Ckn+kF7S5jPNljUZh17viJFXXKhAJjNWrKdiSoHqjrj81lHwo3QV4IGIH/ixacqVFEAhqp6BFfAyA118WwENAl3cSuGWSoiknQXaBhBBtALIyWQj0uQOAbJllsdrXROdL5UF2s659JESW1lgSSirXQQhlYF7gdcTUIiUAtmajkLAClTuBhqE5hGzGVnORbqa7J4yS8JKqPVy+i8qMnJyz7DyohJev9F8rsa1lGLk+hVWwqi8yvzejSfF7lGgeoa74+4x4e5OquO/i3SsMOeJ2OQAAAAASUVORK5CYII='
   let SelectionScriptImageURL        = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABFElEQVRYR+1XUQ5CMQh777o70K6r4QODCKPAkmmiPyaGja4t3byvw5/7cP/rBWDO+WAwY4wQ2K56FwA1ICCrbwk4W89rv4eBU15405pptMBIzbNg2VPW/qHZqFmneWTskIGs27mhBi0NLRkMGeCNkNH0mtPv3nqYAamjHj95Ij6p1bTkAc2AlsSjenVqVwILYUcCTfsWBpARzIAOk9CTQGqt6bYAeNP0ewCqEoQMeBtn9NQ5gGRHKwdY+5VP5MG2TAEy9xnW0gxUPcCXmpbFvAt23H6tJESeV8hzrZyEUsMKGPT0VOd6oCODN36lKUBM16kJozgKKJTuMAmtex4xmgyjTP3/f8EHAx0jddaGr+LO5sjaJ0cgzDAHqlx2AAAAAElFTkSuQmCC'
-//let SelectionContentsImageURL      = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAqklEQVRYR+2X3QqAIAxG9XV9oL1u4YVh5JyOb2yQ3QSx9HD2I+bk/GTn/dMDQERXgymliGCoeBagblBBZu8eeDe+/RvHgFctvHLdNFrBjNYXi80K5lMD9UNIA3277dpYaWexBpAAqhpAAowMigZ2tc/iVQaQAFMD3GxHpYBbXxzF/wGwzjW3fvwuQNWA2gASQDUHkABnEh4DqrOAa59zL4AbCHEWeEC43wtuK9YEMALX8OsAAAAASUVORK5CYII='
+  let SettingsImageURL               = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAApklEQVRYR+1WQQ6AIAyD7/IgvqvhQLJMsNsk4KHejKOt7ZzL6fCVD/MnCgg7UGu9enyllDCO+aAmRPfW3goJQOAeR14FyLdEpLPnSAwFDB1YYb2OZBYFBUybEMUgLfXU6mgeAhBYAxjlGT1HAf/rgZaxJU/vaOYccDnQ7V0RBf+GnxyQne6JA5FK3NBK1gi274T6u9++FXsHj7XeHIEV0FtHAccduAHWc4AhlpaqkQAAAABJRU5ErkJggg=='
 
 /**** keep track of every Applet's Inspector state ****/
 
@@ -110,32 +111,31 @@ $:if (Applet != null) {                                            // needs "$:"
 
       <IconButton style="left:10px;  top:40px" ImageURL={SelectionImageURL}
         active={$InspectorState.Pane === 'overview'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        disabled={'import-export search settings'.indexOf($InspectorState.Mode) >= 0}
         on:click={() => InspectorState.setPane('overview')}/>
       <IconButton style="left:50px;  top:40px" ImageURL={SelectionGlobalsImageURL}
         active={$InspectorState.Pane === 'selection-globals'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        disabled={'import-export search settings'.indexOf($InspectorState.Mode) >= 0}
         on:click={() => InspectorState.setPane('selection-globals')}/>
       <IconButton style="left:90px;  top:40px" ImageURL={SelectionResourcesImageURL}
         active={$InspectorState.Pane === 'selection-resources'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        disabled={'import-export search settings'.indexOf($InspectorState.Mode) >= 0}
         on:click={() => InspectorState.setPane('selection-resources')}/>
       <IconButton style="left:130px; top:40px" ImageURL={SelectionPropertiesImageURL}
         active={$InspectorState.Pane === 'selection-properties'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        disabled={'import-export search settings'.indexOf($InspectorState.Mode) >= 0}
         on:click={() => InspectorState.setPane('selection-properties')}/>
       <IconButton style="left:170px; top:40px" ImageURL={SelectionConfigurationImageURL}
         active={$InspectorState.Pane === 'selection-configuration'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        disabled={'import-export search settings'.indexOf($InspectorState.Mode) >= 0}
         on:click={() => InspectorState.setPane('selection-configuration')}/>
       <IconButton style="left:210px; top:40px" ImageURL={SelectionScriptImageURL}
         active={$InspectorState.Pane === 'selection-script'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
+        disabled={'import-export search settings'.indexOf($InspectorState.Mode) >= 0}
         on:click={() => InspectorState.setPane('selection-script')}/>
-      <!--IconButton style="left:250px; top:40px" ImageURL={SelectionContentsImageURL}
-        active={$InspectorState.Pane === 'selection-contents'}
-        disabled={'import-export search'.indexOf($InspectorState.Mode) >= 0}
-        on:click={() => InspectorState.setPane('selection-contents')}/-->
+      <IconButton style="left:250px; top:40px" ImageURL={SettingsImageURL}
+        active={$InspectorState.Mode === 'settings'}
+        on:click={() => InspectorState.setMode('settings')}/>
     </div>
 
     <div name="PaneArea" style="
@@ -157,6 +157,7 @@ $:if (Applet != null) {                                            // needs "$:"
       {#if $InspectorState.Pane === 'selection-properties'}   <SelectionPropertiesPane/>{/if}
       {#if $InspectorState.Pane === 'selection-configuration'}<SelectionConfigurationPane/>{/if}
       {#if $InspectorState.Pane === 'selection-script'}       <SelectionScriptPane/>{/if}
+      {#if $InspectorState.Pane === 'settings'}               <SettingsPane/>{/if}
     </div>
 
     <MessageView/>
