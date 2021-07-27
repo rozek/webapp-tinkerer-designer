@@ -4,11 +4,12 @@
   import { chosenApplet } from '../stores/chosenApplet.js'
 /*
   export type WAD_Mode = (
-    'applet'|'master'|'card'|'overlay'|'component'|'import-export'|'search'
+    'applet'|'master'|'card'|'overlay'|'component'|
+    'import-export'|'search'|'settings'
   )
   export type WAD_Pane = (
     'overview'|'selection-globals'|'selection-resources'|'selection-properties'|
-    'selection-configuration'|'selection-script'|'selection-contents'
+    'selection-configuration'|'selection-script'
   )
 */
   const initialInspectorState = {
@@ -59,7 +60,10 @@
   function setMode (newMode) {
     if (newMode != currentInspectorState.Mode) {
       let newPane
-        if ((newMode === 'import-export') || (newMode === 'search')) {
+        if (
+          (newMode === 'import-export') || (newMode === 'search') ||
+          (newMode === 'settings')
+        ) {
           newPane = undefined
         } else {
           newPane = currentInspectorState.Pane || 'overview'
@@ -72,7 +76,7 @@
 
   function setPane (newPane) {
     if (newPane != currentInspectorState.Pane) {
-      if ('import-export search'.indexOf(currentInspectorState.Mode) >= 0) {
+      if ('import-export search settings'.indexOf(currentInspectorState.Mode) >= 0) {
         newPane = undefined
       }
       setInspectorState({ ...currentInspectorState, Pane:newPane })
