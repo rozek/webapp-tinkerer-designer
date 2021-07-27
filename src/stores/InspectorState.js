@@ -46,7 +46,7 @@
 /**** validate changes to "InspectorState" ****/
 
   function setInspectorState (newInspectorState) {
-    if (currentlyChosenApplet !== null) {
+    if (currentlyChosenApplet != null) {
       if (ValuesDiffer(currentInspectorState,newInspectorState)) {
         currentInspectorState = Object.assign({}, currentInspectorState, newInspectorState)
         InspectorStateSet.set(currentlyChosenApplet,currentInspectorState)
