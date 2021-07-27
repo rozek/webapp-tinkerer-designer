@@ -6,6 +6,8 @@
     background-image:-webkit-linear-gradient(270deg, #808080,#404040 70%);
     color:#B4B4B4;
     font-size:inherit; font-weight:bold;
+
+    -webkit-appearance:none; appearance:none;
   }
 
   .WAD-Button:hover:not(:disabled) {
