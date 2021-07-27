@@ -3,6 +3,9 @@
     display:block; position:absolute;
     width:32px; height:32px;
     background:var(--normal-image-url);
+
+    -webkit-appearance:none; appearance:none;
+    border:none; outline:inherit;
   }
 
   .WAD-IconButton:not([disabled]):hover,
@@ -85,9 +88,9 @@
   }
 </script>
 
-<div {...$$restProps} class:WAD-IconButton={true} class:active={active} style="
+<button {...$$restProps} class:WAD-IconButton={true} class:active={active} style="
   --normal-image-url:url({normalImageURL});
   --hovered-image-url:url({active ? activeHoveredImageURL : hoveredImageURL});
   --active-image-url:url({activeImageURL}); {style}
-" on:click></div>
+" on:click></button>
 
