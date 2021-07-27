@@ -197,15 +197,15 @@
     {/if}
   {/each}
 
-  {#if ($chosenApplet !== null)}
+  {#if ($chosenApplet != null)}
     <ToolboxView Applet={$chosenApplet} {PositionAroundPreferredPosition}/>
   {/if}
 
-  {#if ($chosenApplet !== null) && $NudgerState.isVisible }
+  {#if ($chosenApplet != null) && $NudgerState.isVisible }
     <NudgerView Applet={$chosenApplet} {PositionAroundPreferredPosition}/>
   {/if}
 
-  {#if ($chosenApplet !== null) && $InspectorState.isVisible }
+  {#if ($chosenApplet != null) && $InspectorState.isVisible }
     <InspectorView Applet={$chosenApplet} {PositionAroundPreferredPosition}/>
   {/if}
 
