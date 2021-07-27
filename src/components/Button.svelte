@@ -31,6 +31,6 @@
   export let active:boolean = false
 </script>
 
-<button {...$$restProps} class:WAD-Button={true} on:click>
+<button {...$$restProps} class:WAD-Button={true} on:click {active}>
   <slot>(Button)</slot>
 </button>
