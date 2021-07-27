@@ -30,9 +30,10 @@
 </style>
 
 <script lang="ts">
-  export let active:boolean = false
+  export let active:boolean   = false
+  export let disabled:boolean = false
 </script>
 
-<button {...$$restProps} class:WAD-Button={true} on:click {active}>
-  <slot>(Button)</slot>
+<button {...$$restProps} class:WAD-Button={true} {active} {disabled} on:click>
+  <slot {active} {disabled}>(Button)</slot>
 </button>
