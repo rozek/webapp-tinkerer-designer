@@ -36,7 +36,7 @@
 /**** validate changes to "ToolboxState" ****/
 
   function setToolboxState (newToolboxState) {
-    if (currentlyChosenApplet !== null) {
+    if (currentlyChosenApplet != null) {
       if (ValuesDiffer(currentToolboxState,newToolboxState)) {
         currentToolboxState = Object.assign({}, newToolboxState)
         ToolboxStateSet.set(currentlyChosenApplet,newToolboxState)
