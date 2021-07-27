@@ -36,7 +36,7 @@
 /**** validate changes to "NudgerState" ****/
 
   function setNudgerState (newNudgerState) {
-    if (currentlyChosenApplet !== null) {
+    if (currentlyChosenApplet != null) {
       if (ValuesDiffer(currentNudgerState,newNudgerState)) {
         currentNudgerState = Object.assign({}, newNudgerState)
         NudgerStateSet.set(currentlyChosenApplet,newNudgerState)
