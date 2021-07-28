@@ -89,12 +89,6 @@
 
   export const Version = '0.1.0'
 
-/**** Colors ****/
-
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
-
 //----------------------------------------------------------------------------//
 //                             Designer Interface                             //
 //----------------------------------------------------------------------------//
