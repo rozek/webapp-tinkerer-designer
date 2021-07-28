@@ -12,6 +12,7 @@
 
   import           Dialog           from '../components/Dialog.svelte'
   import         IconButton         from '../components/IconButton.svelte'
+  import         { Globals }        from '../stores/Globals.js'
   import      { chosenApplet }      from '../stores/chosenApplet.js'
 //import     { InspectorState }     from '../stores/InspectorState.js' // causes Svelte warnings
   import     AppletOverviewPane     from '../views/AppletOverviewPane.svelte'
@@ -51,14 +52,6 @@
 /**** keep track of every Applet's Inspector state ****/
 
   type WAD_InspectorState = WAD_DialogState
-
-/**** Colors ****/
-
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
-
-
 </script>
 
 <script lang="ts">
@@ -84,8 +77,8 @@ $:if (Applet != null) {                                            // needs "$:"
   >
     <div name="TabStrip" style="
       display:block; position:relative;
-      top:2px; height:74px; overflow:visible;
-      border:none; border-bottom: solid 1px #454545;
+      height:76px; overflow:visible;
+      border:none; border-bottom: solid 1px {$Globals.ShadowColor};
     ">
       <IconButton style="left:10px;  top:0px" ImageURL={AppletImageURL}
         active={$InspectorState.Mode === 'applet'}
@@ -140,7 +133,8 @@ $:if (Applet != null) {                                            // needs "$:"
 
     <div name="PaneArea" style="
       display:block; position:relative; flex:1 1 auto;
-      border:none; border-top:solid 1px (normalColor); border-bottom:solid 1px #454545;
+      border:none; border-top:solid 1px {$Globals.LightColor};
+        border-bottom:solid 1px {$Globals.ShadowColor};
     ">
       {#if $InspectorState.Pane === 'overview'}
         {#if $InspectorState.Mode === 'applet'}       <AppletOverviewPane/>{/if}
