@@ -9,16 +9,9 @@
 </style>
 
 <script context="module" lang="ts">
+  import   { Globals }    from '../stores/Globals.js'
   import { chosenApplet } from '../stores/chosenApplet.js'
   import      Button      from '../components/Button.svelte'
-
-/**** Colors ****/
-
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
-
-
 </script>
 
 <script lang="ts">
