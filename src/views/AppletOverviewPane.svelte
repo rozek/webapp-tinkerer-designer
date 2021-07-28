@@ -9,22 +9,15 @@
 <script context="module" lang="ts">
   import type { WAT_Applet } from 'webapp-tinkerer-runtime'
 
-  import {     AppletList     } from '../stores/AppletList.js'
-  import {    chosenApplet    } from '../stores/chosenApplet.js'
+  import       { Globals }      from '../stores/Globals.js'
+  import     { AppletList }     from '../stores/AppletList.js'
+  import    { chosenApplet }    from '../stores/chosenApplet.js'
   import { selectedAppletList } from '../stores/selectedAppletList.js'
   import         Button         from '../components/Button.svelte'
   import        IconImage       from '../components/IconImage.svelte'
   import        ListView        from 'svelte-sortable-flat-list-view'
 
   let smallChooseSelectionImageURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAG5JREFUOE/t1EEOABAMBEC+2wf1u8RBUkJ3JeXEWaZLlpyCVw720l1QVcucWESOhg6bV2AfwMJwuh3CoBBsCTsaBp6gVMIPutf07g69ktvXNFfJTYjQVS/hkXforuQQtB1k3jUFXik2+xHTCVmwAr8+PBWXrjCNAAAAAElFTkSuQmCC'
-
-/**** Colors ****/
-
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
-
-
 </script>
 
 <script lang="ts">
@@ -53,7 +46,7 @@ $:chosable = (
 
   function chooseSelection () {
     let Applet = $selectedAppletList[0]
-    if (Applet != null) {  chosenApplet.set(Applet) }
+    if (Applet != null) { chosenApplet.set(Applet) }
   }
 </script>
 
@@ -71,7 +64,7 @@ $:chosable = (
   </div>
 
   <ListView bind:this={AppletListView}
-    style="flex:1 1 auto; border:solid 1px {normalColor}; padding:2px"
+    style="flex:1 1 auto; border:solid 1px {$Globals.normalColor}; padding:2px"
     List={$AppletList} Key={(Applet,Index) => Applet.Id}
     SelectionLimit={1}
     on:selected-item={selectApplet} on:deselected-item={deselectApplet}
@@ -79,8 +72,8 @@ $:chosable = (
   >
     <div style="color:{
       $selectedAppletList.indexOf(Applet) < 0
-      ? (Applet === $chosenApplet ? activeColor : normalColor)
-      : '#454545'
+      ? (Applet === $chosenApplet ? $Globals.activeColor : $Globals.normalColor)
+      : $Globals.ShadowColor
     }">
       {Applet.Id || ('Applet #' + Index)}
     </div>
