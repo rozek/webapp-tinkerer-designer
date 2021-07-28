@@ -18,14 +18,7 @@
 
 <script context="module" lang="ts">
   import { tintedBitmapAsURL } from 'tinted-bitmap'
-
-/**** Colors ****/
-
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
-
-
+  import { Globals } from '../stores/Globals.js'
 </script>
 
 <script lang="ts">
@@ -58,11 +51,11 @@
   }
 
   function tintOriginalImage () {
-    normalImageURL  = tintedBitmapAsURL(auxImage as HTMLImageElement,normalColor)
-    hoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,hoveredColor)
+    normalImageURL  = tintedBitmapAsURL(auxImage as HTMLImageElement,$Globals.normalColor)
+    hoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,$Globals.hoveredColor)
 
     if (activeURL == null) {
-      activeImageURL        = tintedBitmapAsURL(auxImage as HTMLImageElement,activeColor)
+      activeImageURL        = tintedBitmapAsURL(auxImage as HTMLImageElement,$Globals.activeColor)
       activeHoveredImageURL = hoveredImageURL
       auxImage = undefined
     } else {
@@ -77,8 +70,8 @@
   }
 
   function tintActiveImage () {
-    activeImageURL        = tintedBitmapAsURL(auxImage as HTMLImageElement,activeColor)
-    activeHoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,hoveredColor)
+    activeImageURL        = tintedBitmapAsURL(auxImage as HTMLImageElement,$Globals.activeColor)
+    activeHoveredImageURL = tintedBitmapAsURL(auxImage as HTMLImageElement,$Globals.hoveredColor)
     auxImage = undefined
   }
 </script>
