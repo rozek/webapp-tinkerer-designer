@@ -8,14 +8,7 @@
 
 <script context="module" lang="ts">
   import Button from '../components/Button.svelte'
-
-/**** Colors ****/
-
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
-
-
+  import { Globals } from '../stores/Globals.js'
 </script>
 
 <script lang="ts">
