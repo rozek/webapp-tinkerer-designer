@@ -9,7 +9,7 @@
 
     font-family:"Source Sans Pro","Helvetica Neue",Helvetica,Arial,sans-serif;
     font-size:14px; line-height:normal; text-align:left;
-    color:#AAAAAA;
+    color:var(--normal-color);
 
     pointer-events:auto;
 
@@ -37,7 +37,7 @@
     display:inline-block; position:relative; flex:1 1 auto;
     padding:0px 4px 0px 4px;
     background-color:transparent;
-    line-height:24px; color:#7FFF00; /* chartreuse */
+    line-height:24px; color:var(--active-color);
     /* pointer-events:none; */
   }
 
@@ -110,6 +110,7 @@
   import {        onMount        } from 'svelte'
 
   import   IconButton    from '../components/IconButton.svelte'
+  import   { Globals }   from '../stores/Globals.js'
 //import { DialogOrder } from '../stores/DialogOrder.js'// causes Svelte warnings
 
   export type WAD_DialogState = {
@@ -179,7 +180,10 @@ $:if ((DialogElement != null) && State.isVisible) {
   <div {...$$restProps} bind:this={DialogElement} class:WAD-Dialog={true} style="
     left:{Applet.x + State.Offset.x}px; top:{Applet.y + State.Offset.y}px;
     width:{State.Width}px; height:{State.Height}px;
-    z-index:{$DialogOrder.zIndexOf(DialogElement)}
+    z-index:{$DialogOrder.zIndexOf(DialogElement)};
+    --normal-color:{$Globals.normalColor};
+    --hovered-color:{$Globals.hoveredColor};
+    --active-color:{$Globals.activeColor};
   ">
     <div class="WAD-Titlebar"
       use:asDraggable={{ relativeTo:document.body, onDragStart, onDragMove }}
