@@ -9,25 +9,29 @@
 
   .info    { color:var(--info-color) }
   .warning { color:var(--warning-color) }
-  .error   { color:#FF4500 } /* orangered */
+  .error   { color:var(--error-color) }
 </style>
 
 <script context="module" lang="ts">
+  import   { Globals }    from '../stores/Globals.js'
   import { MessageState } from '../stores/MessageState.js'
 
 /**** Colors ****/
 
-  const normalColor  = '#AAAAAA'
-  const hoveredColor = '#FFEC2E'
-  const activeColor  = '#7FFF00' /* chartreuse */
+  Globals.define({
+    normalColor: '#C0C0C0', /* silver */
+    hoveredColor:'#FFD700', /* gold */
+    activeColor: '#ADFF2F'  /* greenyellow */
+  })
 
 
 </script>
 
-<div class="WAD-MessageView" style={
-  `--normal-color:${normalColor};` +
-  `--info-color:${normalColor}; --warning-color:${hoveredColor}`
-} class:info   ={$MessageState.MessageType === 'info'}
+<div class="WAD-MessageView" style="
+  --info-color:{$Globals.InfoColor};
+  --warning-color:{$Globals.WarningColor};
+  --error-color:{$Globals.ErrorColor};
+" class:info   ={$MessageState.MessageType === 'info'}
   class:warning={$MessageState.MessageType === 'warning'}
   class:error  ={$MessageState.MessageType === 'error'}
 >{$MessageState.Message}</div>
