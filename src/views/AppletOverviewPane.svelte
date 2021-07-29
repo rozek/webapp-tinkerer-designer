@@ -23,21 +23,20 @@
 <script lang="ts">
   let AppletListView:ListView
 
+  let lastTouchedApplet:Applet | undefined = undefined
   function selectApplet (Event:CustomEvent) {           // triggered by ListView
-    selectedAppletList.select(Event.detail)
+    lastTouchedApplet = Event.detail
   }
 
   function deselectApplet (Event:CustomEvent) {         // triggered by ListView
-    selectedAppletList.deselect(Event.detail)
+    lastTouchedApplet = (
+      AppletList.contains(Event.detail) ? Event.detail : undefined
+    )
   }
 
   function onDoubleClick () {
-    let Applet = $selectedAppletList[0]
-      selectedAppletList.clear()
-      selectedAppletList.select(Applet)
-    chosenApplet.set(Applet)
-
-    AppletListView.select(Applet)
+    AppletListView.select(lastTouchedApplet)
+    chooseSelection()
   }
 
 $:chosable = (
@@ -65,9 +64,8 @@ $:chosable = (
 
   <ListView bind:this={AppletListView}
     style="flex:1 1 auto; border:solid 1px {$Globals.normalColor}; padding:2px"
-    List={$AppletList} Key={(Applet,Index) => Applet.Id}
-    SelectionLimit={1}
-    on:selected-item={selectApplet} on:deselected-item={deselectApplet}
+    List={$AppletList} Key={(Applet,Index) => Applet.Id} withTransitions={false}
+    SelectionLimit={1} bind:SelectionList={$selectedAppletList}
     let:Item={Applet} let:Index={Index}
   >
     <div style="color:{
