@@ -2607,7 +2607,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
             ? Argument
             : expectedListSatisfying(Description, Argument, Validator, Expectation, minLength, maxLength));
     }
-    var allowedListSatisfying = allowListSatisfying;
     /**** expect[ed]ListSatisfying ****/
     function expectListSatisfying(Description, Argument, Validator, Expectation, minLength, maxLength) {
         if (Argument == null) {
@@ -4168,8 +4167,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[72] = list[i];
-    	child_ctx[74] = i;
+    	child_ctx[74] = list[i];
+    	child_ctx[76] = i;
     	return child_ctx;
     }
 
@@ -4179,14 +4178,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     });
 
     const get_default_slot_context_1 = ctx => ({
-    	Item: /*Item*/ ctx[72],
-    	Index: /*Index*/ ctx[74]
+    	Item: /*Item*/ ctx[74],
+    	Index: /*Index*/ ctx[76]
     });
 
     function get_each_context$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[72] = list[i];
-    	child_ctx[74] = i;
+    	child_ctx[74] = list[i];
+    	child_ctx[76] = i;
     	return child_ctx;
     }
 
@@ -4196,14 +4195,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     });
 
     const get_default_slot_context = ctx => ({
-    	Item: /*Item*/ ctx[72],
-    	Index: /*Index*/ ctx[74]
+    	Item: /*Item*/ ctx[74],
+    	Index: /*Index*/ ctx[76]
     });
 
     // (75:4) {:else}
     function create_else_block_1(ctx) {
     	let li;
-    	let raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "";
+    	let raw_value = (/*Placeholder*/ ctx[6] || "(empty list)") + "";
 
     	return {
     		c() {
@@ -4215,7 +4214,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			li.innerHTML = raw_value;
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*Placeholder*/ 32 && raw_value !== (raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "")) li.innerHTML = raw_value;		},
+    			if (dirty[0] & /*Placeholder*/ 64 && raw_value !== (raw_value = (/*Placeholder*/ ctx[6] || "(empty list)") + "")) li.innerHTML = raw_value;		},
     		i: noop,
     		o: noop,
     		d(detaching) {
@@ -4227,7 +4226,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     // (67:4) {#if extendable}
     function create_if_block_3$2(ctx) {
     	let li;
-    	let raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "";
+    	let raw_value = (/*Placeholder*/ ctx[6] || "(empty list)") + "";
     	let asDropZone_action;
     	let mounted;
     	let dispose;
@@ -4244,23 +4243,23 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!mounted) {
     				dispose = action_destroyer(asDropZone_action = asDropZone.call(null, li, {
     					Extras: { List: /*List*/ ctx[0], Item: undefined },
-    					TypesToAccept: /*TypesAccepted*/ ctx[15],
-    					onDroppableEnter: /*onDroppableEnter*/ ctx[26],
-    					onDroppableMove: /*onDroppableMove*/ ctx[27],
-    					onDrop: /*onDrop*/ ctx[29]
+    					TypesToAccept: /*TypesAccepted*/ ctx[17],
+    					onDroppableEnter: /*onDroppableEnter*/ ctx[27],
+    					onDroppableMove: /*onDroppableMove*/ ctx[28],
+    					onDrop: /*onDrop*/ ctx[30]
     				}));
 
     				mounted = true;
     			}
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*Placeholder*/ 32 && raw_value !== (raw_value = (/*Placeholder*/ ctx[5] || "(empty list)") + "")) li.innerHTML = raw_value;
-    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted*/ 32769) asDropZone_action.update.call(null, {
+    			if (dirty[0] & /*Placeholder*/ 64 && raw_value !== (raw_value = (/*Placeholder*/ ctx[6] || "(empty list)") + "")) li.innerHTML = raw_value;
+    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted*/ 131073) asDropZone_action.update.call(null, {
     				Extras: { List: /*List*/ ctx[0], Item: undefined },
-    				TypesToAccept: /*TypesAccepted*/ ctx[15],
-    				onDroppableEnter: /*onDroppableEnter*/ ctx[26],
-    				onDroppableMove: /*onDroppableMove*/ ctx[27],
-    				onDrop: /*onDrop*/ ctx[29]
+    				TypesToAccept: /*TypesAccepted*/ ctx[17],
+    				onDroppableEnter: /*onDroppableEnter*/ ctx[27],
+    				onDroppableMove: /*onDroppableMove*/ ctx[28],
+    				onDrop: /*onDrop*/ ctx[30]
     			});
     		},
     		i: noop,
@@ -4283,7 +4282,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	const if_blocks = [];
 
     	function select_block_type_1(ctx, dirty) {
-    		if (/*sortable*/ ctx[1] || /*extendable*/ ctx[20] || /*shrinkable*/ ctx[19]) return 0;
+    		if (/*sortable*/ ctx[2] || /*extendable*/ ctx[21] || /*shrinkable*/ ctx[20]) return 0;
     		return 1;
     	}
 
@@ -4350,7 +4349,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let each_1_anchor;
     	let current;
     	let each_value_1 = /*List*/ ctx[0];
-    	const get_key = ctx => /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]);
+    	const get_key = ctx => /*KeyOf*/ ctx[15](/*Item*/ ctx[74], /*Index*/ ctx[76]);
 
     	for (let i = 0; i < each_value_1.length; i += 1) {
     		let child_ctx = get_each_context_1(ctx, each_value_1, i);
@@ -4375,7 +4374,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			current = true;
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*isSelected, List, handleClick, TransitionStarted, KeyOf*/ 1075970113 | dirty[1] & /*TransitionEnded, $$scope*/ 4194305) {
+    			if (dirty[0] & /*withTransitions, isSelected, List, handleClick, KeyOf*/ 4227203 | dirty[1] & /*TransitionStarted, TransitionEnded, $$scope*/ 33554435) {
     				each_value_1 = /*List*/ ctx[0];
     				group_outros();
     				each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value_1, each_1_lookup, each_1_anchor.parentNode, outro_and_destroy_block, create_each_block_1, each_1_anchor, get_each_context_1);
@@ -4416,7 +4415,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let if_block_anchor;
     	let current;
     	let each_value = /*List*/ ctx[0];
-    	const get_key = ctx => /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]);
+    	const get_key = ctx => /*KeyOf*/ ctx[15](/*Item*/ ctx[74], /*Index*/ ctx[76]);
 
     	for (let i = 0; i < each_value.length; i += 1) {
     		let child_ctx = get_each_context$1(ctx, each_value, i);
@@ -4424,7 +4423,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		each_1_lookup.set(key, each_blocks[i] = create_each_block$1(key, child_ctx));
     	}
 
-    	let if_block = (/*sortable*/ ctx[1] || /*extendable*/ ctx[20]) && create_if_block_2$2(ctx);
+    	let if_block = (/*sortable*/ ctx[2] || /*extendable*/ ctx[21]) && create_if_block_2$2(ctx);
 
     	return {
     		c() {
@@ -4447,7 +4446,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			current = true;
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*onlyFrom, neverFrom, dynamicDummy, List, DataOffered, onDragStart, onDragEnd, onDropped, TypesAccepted, onDrop, onDroppableEnter, onDroppableMove, onDroppableLeave, HoldDelay, onDroppableHold, ListViewElement, PanSensorWidth, PanSensorHeight, PanSpeed, draggedItemList, isSelected, handleClick, TransitionStarted, KeyOf*/ 2145910721 | dirty[1] & /*TransitionEnded, $$scope*/ 4194305) {
+    			if (dirty[0] & /*withTransitions, onlyFrom, neverFrom, dynamicDummy, List, DataOffered, onDragStart, onDragEnd, onDropped, TypesAccepted, onDrop, onDroppableEnter, onDroppableMove, onDroppableLeave, HoldDelay, onDroppableHold, ListViewElement, PanSensorWidth, PanSensorHeight, PanSpeed, draggedItemList, isSelected, handleClick, KeyOf*/ 2144337795 | dirty[1] & /*TransitionStarted, TransitionEnded, $$scope*/ 33554435) {
     				each_value = /*List*/ ctx[0];
     				group_outros();
     				for (let i = 0; i < each_blocks.length; i += 1) each_blocks[i].r();
@@ -4456,7 +4455,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				check_outros();
     			}
 
-    			if (/*sortable*/ ctx[1] || /*extendable*/ ctx[20]) {
+    			if (/*sortable*/ ctx[2] || /*extendable*/ ctx[21]) {
     				if (if_block) {
     					if_block.p(ctx, dirty);
     				} else {
@@ -4499,7 +4498,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     // (62:31)  
     function fallback_block_1(ctx) {
-    	let t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "";
+    	let t_value = /*KeyOf*/ ctx[15](/*Item*/ ctx[74], /*Index*/ ctx[76]) + "";
     	let t;
 
     	return {
@@ -4510,7 +4509,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			insert(target, t, anchor);
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*KeyOf, List*/ 131073 && t_value !== (t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "")) set_data(t, t_value);
+    			if (dirty[0] & /*KeyOf, List*/ 32769 && t_value !== (t_value = /*KeyOf*/ ctx[15](/*Item*/ ctx[74], /*Index*/ ctx[76]) + "")) set_data(t, t_value);
     		},
     		d(detaching) {
     			if (detaching) detach(t);
@@ -4526,12 +4525,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*#slots*/ ctx[54].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[53], get_default_slot_context_1);
+    	const default_slot_template = /*#slots*/ ctx[57].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[56], get_default_slot_context_1);
     	const default_slot_or_fallback = default_slot || fallback_block_1(ctx);
 
     	function click_handler_1(...args) {
-    		return /*click_handler_1*/ ctx[56](/*Item*/ ctx[72], ...args);
+    		return /*click_handler_1*/ ctx[59](/*Item*/ ctx[74], ...args);
     	}
 
     	return {
@@ -4542,7 +4541,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (default_slot_or_fallback) default_slot_or_fallback.c();
     			t = space();
     			toggle_class(li, "ListItemView", true);
-    			toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			toggle_class(li, "selected", /*isSelected*/ ctx[7](/*Item*/ ctx[74]));
     			this.first = li;
     		},
     		m(target, anchor) {
@@ -4558,10 +4557,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!mounted) {
     				dispose = [
     					listen(li, "click", click_handler_1),
-    					listen(li, "introstart", /*TransitionStarted*/ ctx[30]),
-    					listen(li, "introend", /*TransitionEnded*/ ctx[31]),
-    					listen(li, "outrostart", /*TransitionStarted*/ ctx[30]),
-    					listen(li, "outroend", /*TransitionEnded*/ ctx[31])
+    					listen(li, "introstart", /*TransitionStarted*/ ctx[31]),
+    					listen(li, "introend", /*TransitionEnded*/ ctx[32]),
+    					listen(li, "outrostart", /*TransitionStarted*/ ctx[31]),
+    					listen(li, "outroend", /*TransitionEnded*/ ctx[32])
     				];
 
     				mounted = true;
@@ -4571,17 +4570,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			ctx = new_ctx;
 
     			if (default_slot) {
-    				if (default_slot.p && (!current || dirty[0] & /*List*/ 1 | dirty[1] & /*$$scope*/ 4194304)) {
-    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[53], !current ? [-1, -1, -1] : dirty, get_default_slot_changes_1, get_default_slot_context_1);
+    				if (default_slot.p && (!current || dirty[0] & /*List*/ 1 | dirty[1] & /*$$scope*/ 33554432)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[56], !current ? [-1, -1, -1] : dirty, get_default_slot_changes_1, get_default_slot_context_1);
     				}
     			} else {
-    				if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*KeyOf, List*/ 131073)) {
+    				if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*KeyOf, List*/ 32769)) {
     					default_slot_or_fallback.p(ctx, !current ? [-1, -1, -1] : dirty);
     				}
     			}
 
-    			if (dirty[0] & /*isSelected, List*/ 65) {
-    				toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			if (dirty[0] & /*isSelected, List*/ 129) {
+    				toggle_class(li, "selected", /*isSelected*/ ctx[7](/*Item*/ ctx[74]));
     			}
     		},
     		i(local) {
@@ -4589,7 +4588,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_in(default_slot_or_fallback, local);
 
     			add_render_callback(() => {
-    				if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, true);
+    				if (!li_transition) li_transition = create_bidirectional_transition(
+    					li,
+    					scale,
+    					{
+    						duration: /*withTransitions*/ ctx[1] ? 300 : 0
+    					},
+    					true
+    				);
+
     				li_transition.run(1);
     			});
 
@@ -4597,7 +4604,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		o(local) {
     			transition_out(default_slot_or_fallback, local);
-    			if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, false);
+
+    			if (!li_transition) li_transition = create_bidirectional_transition(
+    				li,
+    				scale,
+    				{
+    					duration: /*withTransitions*/ ctx[1] ? 300 : 0
+    				},
+    				false
+    			);
+
     			li_transition.run(0);
     			current = false;
     		},
@@ -4613,7 +4629,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     // (38:31)  
     function fallback_block(ctx) {
-    	let t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "";
+    	let t_value = /*KeyOf*/ ctx[15](/*Item*/ ctx[74], /*Index*/ ctx[76]) + "";
     	let t;
 
     	return {
@@ -4624,7 +4640,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			insert(target, t, anchor);
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*KeyOf, List*/ 131073 && t_value !== (t_value = /*KeyOf*/ ctx[17](/*Item*/ ctx[72], /*Index*/ ctx[74]) + "")) set_data(t, t_value);
+    			if (dirty[0] & /*KeyOf, List*/ 32769 && t_value !== (t_value = /*KeyOf*/ ctx[15](/*Item*/ ctx[74], /*Index*/ ctx[76]) + "")) set_data(t, t_value);
     		},
     		d(detaching) {
     			if (detaching) detach(t);
@@ -4643,12 +4659,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*#slots*/ ctx[54].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[53], get_default_slot_context);
+    	const default_slot_template = /*#slots*/ ctx[57].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[56], get_default_slot_context);
     	const default_slot_or_fallback = default_slot || fallback_block(ctx);
 
     	function click_handler(...args) {
-    		return /*click_handler*/ ctx[55](/*Item*/ ctx[72], ...args);
+    		return /*click_handler*/ ctx[58](/*Item*/ ctx[74], ...args);
     	}
 
     	return {
@@ -4658,8 +4674,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			li = element("li");
     			if (default_slot_or_fallback) default_slot_or_fallback.c();
     			toggle_class(li, "ListItemView", true);
-    			toggle_class(li, "dragged", /*draggedItemList*/ ctx[18].indexOf(/*Item*/ ctx[72]) >= 0);
-    			toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			toggle_class(li, "dragged", /*draggedItemList*/ ctx[19].indexOf(/*Item*/ ctx[74]) >= 0);
+    			toggle_class(li, "selected", /*isSelected*/ ctx[7](/*Item*/ ctx[74]));
     			this.first = li;
     		},
     		m(target, anchor) {
@@ -4675,39 +4691,39 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				dispose = [
     					listen(li, "click", click_handler),
     					action_destroyer(asDroppable_action = asDroppable.call(null, li, {
-    						onlyFrom: /*onlyFrom*/ ctx[7],
-    						neverFrom: /*neverFrom*/ ctx[8],
-    						Dummy: /*dynamicDummy*/ ctx[22],
+    						onlyFrom: /*onlyFrom*/ ctx[8],
+    						neverFrom: /*neverFrom*/ ctx[9],
+    						Dummy: /*dynamicDummy*/ ctx[23],
     						Extras: {
     							List: /*List*/ ctx[0],
-    							Item: /*Item*/ ctx[72]
+    							Item: /*Item*/ ctx[74]
     						},
-    						DataToOffer: /*DataOffered*/ ctx[14],
-    						onDragStart: /*onDragStart*/ ctx[23],
-    						onDragEnd: /*onDragEnd*/ ctx[24],
-    						onDropped: /*onDropped*/ ctx[25]
+    						DataToOffer: /*DataOffered*/ ctx[16],
+    						onDragStart: /*onDragStart*/ ctx[24],
+    						onDragEnd: /*onDragEnd*/ ctx[25],
+    						onDropped: /*onDropped*/ ctx[26]
     					})),
     					action_destroyer(asDropZone_action = asDropZone.call(null, li, {
     						Extras: {
     							List: /*List*/ ctx[0],
-    							Item: /*Item*/ ctx[72]
+    							Item: /*Item*/ ctx[74]
     						},
-    						TypesToAccept: /*TypesAccepted*/ ctx[15],
-    						onDrop: /*onDrop*/ ctx[29],
-    						onDroppableEnter: /*onDroppableEnter*/ ctx[26],
-    						onDroppableMove: /*onDroppableMove*/ ctx[27],
-    						onDroppableLeave: /*onDroppableLeave*/ ctx[28],
-    						HoldDelay: /*HoldDelay*/ ctx[12],
-    						onDroppableHold: /*onDroppableHold*/ ctx[13],
-    						Pannable: /*ListViewElement*/ ctx[16],
-    						PanSensorWidth: /*PanSensorWidth*/ ctx[9],
-    						PanSensorHeight: /*PanSensorHeight*/ ctx[10],
-    						PanSpeed: /*PanSpeed*/ ctx[11]
+    						TypesToAccept: /*TypesAccepted*/ ctx[17],
+    						onDrop: /*onDrop*/ ctx[30],
+    						onDroppableEnter: /*onDroppableEnter*/ ctx[27],
+    						onDroppableMove: /*onDroppableMove*/ ctx[28],
+    						onDroppableLeave: /*onDroppableLeave*/ ctx[29],
+    						HoldDelay: /*HoldDelay*/ ctx[13],
+    						onDroppableHold: /*onDroppableHold*/ ctx[14],
+    						Pannable: /*ListViewElement*/ ctx[18],
+    						PanSensorWidth: /*PanSensorWidth*/ ctx[10],
+    						PanSensorHeight: /*PanSensorHeight*/ ctx[11],
+    						PanSpeed: /*PanSpeed*/ ctx[12]
     					})),
-    					listen(li, "introstart", /*TransitionStarted*/ ctx[30]),
-    					listen(li, "introend", /*TransitionEnded*/ ctx[31]),
-    					listen(li, "outrostart", /*TransitionStarted*/ ctx[30]),
-    					listen(li, "outroend", /*TransitionEnded*/ ctx[31])
+    					listen(li, "introstart", /*TransitionStarted*/ ctx[31]),
+    					listen(li, "introend", /*TransitionEnded*/ ctx[32]),
+    					listen(li, "outrostart", /*TransitionStarted*/ ctx[31]),
+    					listen(li, "outroend", /*TransitionEnded*/ ctx[32])
     				];
 
     				mounted = true;
@@ -4717,53 +4733,53 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			ctx = new_ctx;
 
     			if (default_slot) {
-    				if (default_slot.p && (!current || dirty[0] & /*List*/ 1 | dirty[1] & /*$$scope*/ 4194304)) {
-    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[53], !current ? [-1, -1, -1] : dirty, get_default_slot_changes, get_default_slot_context);
+    				if (default_slot.p && (!current || dirty[0] & /*List*/ 1 | dirty[1] & /*$$scope*/ 33554432)) {
+    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[56], !current ? [-1, -1, -1] : dirty, get_default_slot_changes, get_default_slot_context);
     				}
     			} else {
-    				if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*KeyOf, List*/ 131073)) {
+    				if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*KeyOf, List*/ 32769)) {
     					default_slot_or_fallback.p(ctx, !current ? [-1, -1, -1] : dirty);
     				}
     			}
 
-    			if (asDroppable_action && is_function(asDroppable_action.update) && dirty[0] & /*onlyFrom, neverFrom, List, DataOffered*/ 16769) asDroppable_action.update.call(null, {
-    				onlyFrom: /*onlyFrom*/ ctx[7],
-    				neverFrom: /*neverFrom*/ ctx[8],
-    				Dummy: /*dynamicDummy*/ ctx[22],
+    			if (asDroppable_action && is_function(asDroppable_action.update) && dirty[0] & /*onlyFrom, neverFrom, List, DataOffered*/ 66305) asDroppable_action.update.call(null, {
+    				onlyFrom: /*onlyFrom*/ ctx[8],
+    				neverFrom: /*neverFrom*/ ctx[9],
+    				Dummy: /*dynamicDummy*/ ctx[23],
     				Extras: {
     					List: /*List*/ ctx[0],
-    					Item: /*Item*/ ctx[72]
+    					Item: /*Item*/ ctx[74]
     				},
-    				DataToOffer: /*DataOffered*/ ctx[14],
-    				onDragStart: /*onDragStart*/ ctx[23],
-    				onDragEnd: /*onDragEnd*/ ctx[24],
-    				onDropped: /*onDropped*/ ctx[25]
+    				DataToOffer: /*DataOffered*/ ctx[16],
+    				onDragStart: /*onDragStart*/ ctx[24],
+    				onDragEnd: /*onDragEnd*/ ctx[25],
+    				onDropped: /*onDropped*/ ctx[26]
     			});
 
-    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted, HoldDelay, onDroppableHold, ListViewElement, PanSensorWidth, PanSensorHeight, PanSpeed*/ 114177) asDropZone_action.update.call(null, {
+    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted, HoldDelay, onDroppableHold, ListViewElement, PanSensorWidth, PanSensorHeight, PanSpeed*/ 424961) asDropZone_action.update.call(null, {
     				Extras: {
     					List: /*List*/ ctx[0],
-    					Item: /*Item*/ ctx[72]
+    					Item: /*Item*/ ctx[74]
     				},
-    				TypesToAccept: /*TypesAccepted*/ ctx[15],
-    				onDrop: /*onDrop*/ ctx[29],
-    				onDroppableEnter: /*onDroppableEnter*/ ctx[26],
-    				onDroppableMove: /*onDroppableMove*/ ctx[27],
-    				onDroppableLeave: /*onDroppableLeave*/ ctx[28],
-    				HoldDelay: /*HoldDelay*/ ctx[12],
-    				onDroppableHold: /*onDroppableHold*/ ctx[13],
-    				Pannable: /*ListViewElement*/ ctx[16],
-    				PanSensorWidth: /*PanSensorWidth*/ ctx[9],
-    				PanSensorHeight: /*PanSensorHeight*/ ctx[10],
-    				PanSpeed: /*PanSpeed*/ ctx[11]
+    				TypesToAccept: /*TypesAccepted*/ ctx[17],
+    				onDrop: /*onDrop*/ ctx[30],
+    				onDroppableEnter: /*onDroppableEnter*/ ctx[27],
+    				onDroppableMove: /*onDroppableMove*/ ctx[28],
+    				onDroppableLeave: /*onDroppableLeave*/ ctx[29],
+    				HoldDelay: /*HoldDelay*/ ctx[13],
+    				onDroppableHold: /*onDroppableHold*/ ctx[14],
+    				Pannable: /*ListViewElement*/ ctx[18],
+    				PanSensorWidth: /*PanSensorWidth*/ ctx[10],
+    				PanSensorHeight: /*PanSensorHeight*/ ctx[11],
+    				PanSpeed: /*PanSpeed*/ ctx[12]
     			});
 
-    			if (dirty[0] & /*draggedItemList, List*/ 262145) {
-    				toggle_class(li, "dragged", /*draggedItemList*/ ctx[18].indexOf(/*Item*/ ctx[72]) >= 0);
+    			if (dirty[0] & /*draggedItemList, List*/ 524289) {
+    				toggle_class(li, "dragged", /*draggedItemList*/ ctx[19].indexOf(/*Item*/ ctx[74]) >= 0);
     			}
 
-    			if (dirty[0] & /*isSelected, List*/ 65) {
-    				toggle_class(li, "selected", /*isSelected*/ ctx[6](/*Item*/ ctx[72]));
+    			if (dirty[0] & /*isSelected, List*/ 129) {
+    				toggle_class(li, "selected", /*isSelected*/ ctx[7](/*Item*/ ctx[74]));
     			}
     		},
     		r() {
@@ -4783,7 +4799,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_in(default_slot_or_fallback, local);
 
     			add_render_callback(() => {
-    				if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, true);
+    				if (!li_transition) li_transition = create_bidirectional_transition(
+    					li,
+    					scale,
+    					{
+    						duration: /*withTransitions*/ ctx[1] ? 300 : 0
+    					},
+    					true
+    				);
+
     				li_transition.run(1);
     			});
 
@@ -4791,7 +4815,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		},
     		o(local) {
     			transition_out(default_slot_or_fallback, local);
-    			if (!li_transition) li_transition = create_bidirectional_transition(li, scale, {}, false);
+
+    			if (!li_transition) li_transition = create_bidirectional_transition(
+    				li,
+    				scale,
+    				{
+    					duration: /*withTransitions*/ ctx[1] ? 300 : 0
+    				},
+    				false
+    			);
+
     			li_transition.run(0);
     			current = false;
     		},
@@ -4808,7 +4841,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     // (42:6) {#if sortable || extendable}
     function create_if_block_2$2(ctx) {
     	let li;
-    	let raw_value = (/*AttachmentRegion*/ ctx[4] || "") + "";
+    	let raw_value = (/*AttachmentRegion*/ ctx[5] || "") + "";
     	let asDropZone_action;
     	let mounted;
     	let dispose;
@@ -4825,27 +4858,27 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (!mounted) {
     				dispose = action_destroyer(asDropZone_action = asDropZone.call(null, li, {
     					Extras: { List: /*List*/ ctx[0], Item: undefined },
-    					TypesToAccept: /*TypesAccepted*/ ctx[15],
-    					onDroppableEnter: /*onDroppableEnter*/ ctx[26],
-    					onDroppableMove: /*onDroppableMove*/ ctx[27],
-    					onDrop: /*onDrop*/ ctx[29],
-    					HoldDelay: /*HoldDelay*/ ctx[12],
-    					onDroppableHold: /*onDroppableHold*/ ctx[13]
+    					TypesToAccept: /*TypesAccepted*/ ctx[17],
+    					onDroppableEnter: /*onDroppableEnter*/ ctx[27],
+    					onDroppableMove: /*onDroppableMove*/ ctx[28],
+    					onDrop: /*onDrop*/ ctx[30],
+    					HoldDelay: /*HoldDelay*/ ctx[13],
+    					onDroppableHold: /*onDroppableHold*/ ctx[14]
     				}));
 
     				mounted = true;
     			}
     		},
     		p(ctx, dirty) {
-    			if (dirty[0] & /*AttachmentRegion*/ 16 && raw_value !== (raw_value = (/*AttachmentRegion*/ ctx[4] || "") + "")) li.innerHTML = raw_value;
-    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted, HoldDelay, onDroppableHold*/ 45057) asDropZone_action.update.call(null, {
+    			if (dirty[0] & /*AttachmentRegion*/ 32 && raw_value !== (raw_value = (/*AttachmentRegion*/ ctx[5] || "") + "")) li.innerHTML = raw_value;
+    			if (asDropZone_action && is_function(asDropZone_action.update) && dirty[0] & /*List, TypesAccepted, HoldDelay, onDroppableHold*/ 155649) asDropZone_action.update.call(null, {
     				Extras: { List: /*List*/ ctx[0], Item: undefined },
-    				TypesToAccept: /*TypesAccepted*/ ctx[15],
-    				onDroppableEnter: /*onDroppableEnter*/ ctx[26],
-    				onDroppableMove: /*onDroppableMove*/ ctx[27],
-    				onDrop: /*onDrop*/ ctx[29],
-    				HoldDelay: /*HoldDelay*/ ctx[12],
-    				onDroppableHold: /*onDroppableHold*/ ctx[13]
+    				TypesToAccept: /*TypesAccepted*/ ctx[17],
+    				onDroppableEnter: /*onDroppableEnter*/ ctx[27],
+    				onDroppableMove: /*onDroppableMove*/ ctx[28],
+    				onDrop: /*onDrop*/ ctx[30],
+    				HoldDelay: /*HoldDelay*/ ctx[13],
+    				onDroppableHold: /*onDroppableHold*/ ctx[14]
     			});
     		},
     		d(detaching) {
@@ -4866,7 +4899,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	function select_block_type(ctx, dirty) {
     		if (/*List*/ ctx[0].length > 0) return 0;
-    		if (/*extendable*/ ctx[20]) return 1;
+    		if (/*extendable*/ ctx[21]) return 1;
     		return 2;
     	}
 
@@ -4874,9 +4907,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
 
     	let ul_levels = [
-    		{ class: /*ClassNames*/ ctx[2] },
-    		{ style: /*style*/ ctx[3] },
-    		/*$$restProps*/ ctx[32]
+    		{ class: /*ClassNames*/ ctx[3] },
+    		{ style: /*style*/ ctx[4] },
+    		/*$$restProps*/ ctx[33]
     	];
 
     	let ul_data = {};
@@ -4890,14 +4923,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			ul = element("ul");
     			if_block.c();
     			set_attributes(ul, ul_data);
-    			toggle_class(ul, "defaultListView", /*ClassNames*/ ctx[2] == null);
+    			toggle_class(ul, "defaultListView", /*ClassNames*/ ctx[3] == null);
     			toggle_class(ul, "withoutTextSelection", true);
     			toggle_class(ul, "svelte-1tfuj23", true);
     		},
     		m(target, anchor) {
     			insert(target, ul, anchor);
     			if_blocks[current_block_type_index].m(ul, null);
-    			/*ul_binding*/ ctx[57](ul);
+    			/*ul_binding*/ ctx[60](ul);
     			current = true;
     		},
     		p(ctx, dirty) {
@@ -4928,12 +4961,12 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
 
     			set_attributes(ul, ul_data = get_spread_update(ul_levels, [
-    				(!current || dirty[0] & /*ClassNames*/ 4) && { class: /*ClassNames*/ ctx[2] },
-    				(!current || dirty[0] & /*style*/ 8) && { style: /*style*/ ctx[3] },
-    				dirty[1] & /*$$restProps*/ 2 && /*$$restProps*/ ctx[32]
+    				(!current || dirty[0] & /*ClassNames*/ 8) && { class: /*ClassNames*/ ctx[3] },
+    				(!current || dirty[0] & /*style*/ 16) && { style: /*style*/ ctx[4] },
+    				dirty[1] & /*$$restProps*/ 4 && /*$$restProps*/ ctx[33]
     			]));
 
-    			toggle_class(ul, "defaultListView", /*ClassNames*/ ctx[2] == null);
+    			toggle_class(ul, "defaultListView", /*ClassNames*/ ctx[3] == null);
     			toggle_class(ul, "withoutTextSelection", true);
     			toggle_class(ul, "svelte-1tfuj23", true);
     		},
@@ -4949,7 +4982,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		d(detaching) {
     			if (detaching) detach(ul);
     			if_blocks[current_block_type_index].d();
-    			/*ul_binding*/ ctx[57](null);
+    			/*ul_binding*/ ctx[60](null);
     		}
     	};
     }
@@ -4965,14 +4998,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	return {
     		delay: 0,
-    		duration: 300,
+    		duration: Options.duration === 0 ? 0 : Options.duration || 300,
     		css: (t, u) => `transform: ${currentTransform} translateX(-${50 * u}%) scaleX(${t})`
     	};
     }
 
     function instance$9($$self, $$props, $$invalidate) {
     	const omit_props_names = [
-    		"class","style","List","Key","SelectionLimit","AttachmentRegion","Placeholder","select","selectOnly","selectAll","selectRange","deselect","deselectAll","toggleSelectionOf","selectedItems","SelectionCount","isSelected","sortable","onlyFrom","neverFrom","onSortRequest","onSort","PanSensorWidth","PanSensorHeight","PanSpeed","Operations","DataToOffer","TypesToAccept","onOuterDropRequest","onDroppedOutside","onDropFromOutside","HoldDelay","onDroppableHold"
+    		"class","style","List","Key","AttachmentRegion","Placeholder","withTransitions","SelectionLimit","SelectionList","select","selectOnly","selectAll","selectRange","deselect","deselectAll","toggleSelectionOf","selectedItems","SelectionCount","isSelected","sortable","onlyFrom","neverFrom","onSortRequest","onSort","PanSensorWidth","PanSensorHeight","PanSpeed","Operations","DataToOffer","TypesToAccept","onOuterDropRequest","onDroppedOutside","onDropFromOutside","HoldDelay","onDroppableHold"
     	];
 
     	let $$restProps = compute_rest_props($$props, omit_props_names);
@@ -4987,16 +5020,16 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let { style = undefined } = $$props; // ...control styling
     	let { List } = $$props;
     	let { Key = undefined } = $$props;
-    	let { SelectionLimit = undefined } = $$props;
     	let { AttachmentRegion = undefined } = $$props;
     	let { Placeholder = undefined } = $$props;
+    	let { withTransitions = true } = $$props;
     	let KeyOf;
 
     	/**** Key Validation and quick Lookup ****/
     	let ItemSet;
 
     	function updateItemSet(...ArgumentsAreForReactivityOnly) {
-    		ItemSet = Object.create(null);
+    		$$invalidate(54, ItemSet = Object.create(null));
 
     		List.forEach(Item => {
     			let Key = KeyOf(Item);
@@ -5008,9 +5041,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     					throwError("InvalidArgument: the given \"Key\" does not produce unique keys " + "for every \"List\" item");
     				}
     			} else {
-    				ItemSet[Key] = Item;
+    				$$invalidate(54, ItemSet[Key] = Item, ItemSet);
     			}
     		});
+
+    		if (ListViewElement != null) {
+    			// i.e., after component was initialized
+    			$$invalidate(34, SelectionList = selectedItems());
+    		}
     	}
 
     	//----------------------------------------------------------------------------//
@@ -5018,8 +5056,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	//----------------------------------------------------------------------------//
     	let SelectionSet = new WeakMap(); // automatically "updates" on list changes
 
+    	let { SelectionLimit = undefined } = $$props;
+    	let { SelectionList = [] } = $$props;
+
     	function select(...ItemList) {
-    		let curSelectionCount = SelectionCount();
+    		let curSelectionCount = SelectionCount(), SelectionChanged = false;
 
     		ItemList.forEach(Item => {
     			let Key = KeyOf(Item);
@@ -5029,6 +5070,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     					if (SelectionLimit == null || curSelectionCount < SelectionLimit) {
     						SelectionSet.set(Item, true);
     						curSelectionCount++;
+    						SelectionChanged = true;
     						dispatch("selected-item", Item);
     					}
     				}
@@ -5039,7 +5081,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     		SelectionRangeBoundaryA = ItemList.length === 1 ? ItemList[0] : undefined;
     		SelectionRangeBoundaryB = undefined;
-    		triggerRedraw();
+
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
+    		}
     	}
 
     	function selectOnly(...ItemList) {
@@ -5048,24 +5094,30 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			deselectAll();
 
     			select(...ItemList);
-    		} //    triggerRedraw()                                     // already done before
+    		} //    SelectionList = selectedItems()                     // already done before
+    		//    triggerRedraw()                                                    // dto.
     	}
 
     	function selectAll() {
-    		let curSelectionCount = SelectionCount();
+    		let curSelectionCount = SelectionCount(), SelectionChanged = false;
 
     		List.forEach(Item => {
     			if (!SelectionSet.has(Item)) {
     				if (SelectionLimit == null || curSelectionCount < SelectionLimit) {
     					SelectionSet.set(Item, true);
     					curSelectionCount++;
+    					SelectionChanged = true;
     					dispatch("selected-item", Item);
     				}
     			}
     		});
 
     		SelectionRangeBoundaryA = SelectionRangeBoundaryB = undefined;
-    		triggerRedraw();
+
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
+    		}
     	}
 
     	let SelectionRangeBoundaryA;
@@ -5089,19 +5141,25 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		let IndexB = List.indexOf(RangeBoundary);
     		let firstIndex = Math.min(IndexA, IndexB);
     		let lastIndex = Math.max(IndexA, IndexB);
-    		let curSelectionCount = SelectionCount();
+    		let curSelectionCount = SelectionCount(), SelectionChanged = false;
 
     		for (let i = firstIndex; i <= lastIndex; i++) {
     			if (!SelectionSet.has(List[i])) {
     				if (SelectionLimit == null || curSelectionCount < SelectionLimit) {
     					SelectionSet.set(List[i], true);
+    					curSelectionCount++;
+    					SelectionChanged = true;
     					dispatch("selected-item", List[i]);
     				}
     			}
     		}
 
     		SelectionRangeBoundaryB = RangeBoundary;
-    		triggerRedraw();
+
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
+    		}
     	}
 
     	/**** deselectRange (internal only) ****/
@@ -5110,22 +5168,32 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		let IndexB = List.indexOf(RangeBoundary);
     		let firstIndex = Math.min(IndexA, IndexB);
     		let lastIndex = Math.max(IndexA, IndexB);
+    		let SelectionChanged = false;
 
     		for (let i = firstIndex; i <= lastIndex; i++) {
     			if (SelectionSet.has(List[i])) {
     				SelectionSet.delete(List[i]);
+    				SelectionChanged = true;
     				dispatch("deselected-item", List[i]);
     			}
+    		}
+
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
     		}
     	}
 
     	function deselect(...ItemList) {
+    		let SelectionChanged = false;
+
     		ItemList.forEach(Item => {
     			let Key = KeyOf(Item);
 
     			if (Key in ItemSet) {
     				if (SelectionSet.has(Item)) {
     					SelectionSet.delete(Item);
+    					SelectionChanged = true;
     					dispatch("deselected-item", Item);
     				}
     			} else {
@@ -5134,24 +5202,35 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		});
 
     		SelectionRangeBoundaryA = SelectionRangeBoundaryB = undefined;
-    		triggerRedraw();
+
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
+    		}
     	}
 
     	function deselectAll() {
+    		let SelectionChanged = false;
+
     		List.forEach(Item => {
     			if (SelectionSet.has(Item)) {
     				SelectionSet.delete(Item);
+    				SelectionChanged = true;
     				dispatch("deselected-item", Item);
     			}
     		});
 
     		SelectionRangeBoundaryA = SelectionRangeBoundaryB = undefined;
-    		triggerRedraw();
+
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
+    		}
     	}
 
     	function toggleSelectionOf(...ItemList) {
     		SelectionRangeBoundaryA = undefined;
-    		let ItemsToBeSelected = [];
+    		let ItemsToBeSelected = [], SelectionChanged = false;
 
     		ItemList.forEach(Item => {
     			let Key = KeyOf(Item);
@@ -5159,6 +5238,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (Key in ItemSet) {
     				if (SelectionSet.has(Item)) {
     					SelectionSet.delete(Item);
+    					SelectionChanged = true;
     					dispatch("deselected-item", Item);
     				} else {
     					ItemsToBeSelected.push(Item);
@@ -5180,6 +5260,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     		ItemsToBeSelected.forEach(Item => {
     			SelectionSet.set(Item, true);
+    			SelectionChanged = true;
     			dispatch("selected-item", Item);
 
     			if (ItemList.length === 1) {
@@ -5188,7 +5269,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			}
     		});
 
-    		triggerRedraw();
+    		if (SelectionChanged) {
+    			$$invalidate(34, SelectionList = selectedItems());
+    			triggerRedraw();
+    		}
     	}
 
     	function selectedItems() {
@@ -5326,21 +5410,21 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	/**** onDragStart ****/
     	function onDragStart(DroppableExtras) {
-    		$$invalidate(52, isDragging = true);
+    		$$invalidate(55, isDragging = true);
 
     		if (!isSelected(DroppableExtras.Item)) {
     			selectOnly(DroppableExtras.Item);
     		}
 
-    		$$invalidate(18, draggedItemList = DroppableExtras.ItemList = selectedItems());
+    		$$invalidate(19, draggedItemList = DroppableExtras.ItemList = selectedItems());
     		return { x: 0, y: 0 };
     	}
 
     	/**** onDragEnd ****/
     	function onDragEnd(x, y, dx, dy, DroppableExtras) {
-    		$$invalidate(52, isDragging = false);
+    		$$invalidate(55, isDragging = false);
     		delete DroppableExtras.ItemList;
-    		$$invalidate(18, draggedItemList.length = 0, draggedItemList);
+    		$$invalidate(19, draggedItemList.length = 0, draggedItemList);
     	}
 
     	/**** onDropped ****/
@@ -5551,85 +5635,151 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	function ul_binding($$value) {
     		binding_callbacks[$$value ? "unshift" : "push"](() => {
     			ListViewElement = $$value;
-    			$$invalidate(16, ListViewElement);
+    			$$invalidate(18, ListViewElement);
     		});
     	}
 
     	$$self.$$set = $$new_props => {
     		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(32, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("class" in $$new_props) $$invalidate(2, ClassNames = $$new_props.class);
-    		if ("style" in $$new_props) $$invalidate(3, style = $$new_props.style);
+    		$$invalidate(33, $$restProps = compute_rest_props($$props, omit_props_names));
+    		if ("class" in $$new_props) $$invalidate(3, ClassNames = $$new_props.class);
+    		if ("style" in $$new_props) $$invalidate(4, style = $$new_props.style);
     		if ("List" in $$new_props) $$invalidate(0, List = $$new_props.List);
-    		if ("Key" in $$new_props) $$invalidate(33, Key = $$new_props.Key);
-    		if ("SelectionLimit" in $$new_props) $$invalidate(34, SelectionLimit = $$new_props.SelectionLimit);
-    		if ("AttachmentRegion" in $$new_props) $$invalidate(4, AttachmentRegion = $$new_props.AttachmentRegion);
-    		if ("Placeholder" in $$new_props) $$invalidate(5, Placeholder = $$new_props.Placeholder);
-    		if ("sortable" in $$new_props) $$invalidate(1, sortable = $$new_props.sortable);
-    		if ("onlyFrom" in $$new_props) $$invalidate(7, onlyFrom = $$new_props.onlyFrom);
-    		if ("neverFrom" in $$new_props) $$invalidate(8, neverFrom = $$new_props.neverFrom);
-    		if ("onSortRequest" in $$new_props) $$invalidate(44, onSortRequest = $$new_props.onSortRequest);
-    		if ("onSort" in $$new_props) $$invalidate(45, onSort = $$new_props.onSort);
-    		if ("PanSensorWidth" in $$new_props) $$invalidate(9, PanSensorWidth = $$new_props.PanSensorWidth);
-    		if ("PanSensorHeight" in $$new_props) $$invalidate(10, PanSensorHeight = $$new_props.PanSensorHeight);
-    		if ("PanSpeed" in $$new_props) $$invalidate(11, PanSpeed = $$new_props.PanSpeed);
-    		if ("Operations" in $$new_props) $$invalidate(46, Operations = $$new_props.Operations);
-    		if ("DataToOffer" in $$new_props) $$invalidate(47, DataToOffer = $$new_props.DataToOffer);
-    		if ("TypesToAccept" in $$new_props) $$invalidate(48, TypesToAccept = $$new_props.TypesToAccept);
-    		if ("onOuterDropRequest" in $$new_props) $$invalidate(49, onOuterDropRequest = $$new_props.onOuterDropRequest);
-    		if ("onDroppedOutside" in $$new_props) $$invalidate(50, onDroppedOutside = $$new_props.onDroppedOutside);
-    		if ("onDropFromOutside" in $$new_props) $$invalidate(51, onDropFromOutside = $$new_props.onDropFromOutside);
-    		if ("HoldDelay" in $$new_props) $$invalidate(12, HoldDelay = $$new_props.HoldDelay);
-    		if ("onDroppableHold" in $$new_props) $$invalidate(13, onDroppableHold = $$new_props.onDroppableHold);
-    		if ("$$scope" in $$new_props) $$invalidate(53, $$scope = $$new_props.$$scope);
+    		if ("Key" in $$new_props) $$invalidate(35, Key = $$new_props.Key);
+    		if ("AttachmentRegion" in $$new_props) $$invalidate(5, AttachmentRegion = $$new_props.AttachmentRegion);
+    		if ("Placeholder" in $$new_props) $$invalidate(6, Placeholder = $$new_props.Placeholder);
+    		if ("withTransitions" in $$new_props) $$invalidate(1, withTransitions = $$new_props.withTransitions);
+    		if ("SelectionLimit" in $$new_props) $$invalidate(36, SelectionLimit = $$new_props.SelectionLimit);
+    		if ("SelectionList" in $$new_props) $$invalidate(34, SelectionList = $$new_props.SelectionList);
+    		if ("sortable" in $$new_props) $$invalidate(2, sortable = $$new_props.sortable);
+    		if ("onlyFrom" in $$new_props) $$invalidate(8, onlyFrom = $$new_props.onlyFrom);
+    		if ("neverFrom" in $$new_props) $$invalidate(9, neverFrom = $$new_props.neverFrom);
+    		if ("onSortRequest" in $$new_props) $$invalidate(46, onSortRequest = $$new_props.onSortRequest);
+    		if ("onSort" in $$new_props) $$invalidate(47, onSort = $$new_props.onSort);
+    		if ("PanSensorWidth" in $$new_props) $$invalidate(10, PanSensorWidth = $$new_props.PanSensorWidth);
+    		if ("PanSensorHeight" in $$new_props) $$invalidate(11, PanSensorHeight = $$new_props.PanSensorHeight);
+    		if ("PanSpeed" in $$new_props) $$invalidate(12, PanSpeed = $$new_props.PanSpeed);
+    		if ("Operations" in $$new_props) $$invalidate(48, Operations = $$new_props.Operations);
+    		if ("DataToOffer" in $$new_props) $$invalidate(49, DataToOffer = $$new_props.DataToOffer);
+    		if ("TypesToAccept" in $$new_props) $$invalidate(50, TypesToAccept = $$new_props.TypesToAccept);
+    		if ("onOuterDropRequest" in $$new_props) $$invalidate(51, onOuterDropRequest = $$new_props.onOuterDropRequest);
+    		if ("onDroppedOutside" in $$new_props) $$invalidate(52, onDroppedOutside = $$new_props.onDroppedOutside);
+    		if ("onDropFromOutside" in $$new_props) $$invalidate(53, onDropFromOutside = $$new_props.onDropFromOutside);
+    		if ("HoldDelay" in $$new_props) $$invalidate(13, HoldDelay = $$new_props.HoldDelay);
+    		if ("onDroppableHold" in $$new_props) $$invalidate(14, onDroppableHold = $$new_props.onDroppableHold);
+    		if ("$$scope" in $$new_props) $$invalidate(56, $$scope = $$new_props.$$scope);
     	};
 
     	$$self.$$.update = () => {
-    		if ($$self.$$.dirty[0] & /*ClassNames*/ 4) {
+    		if ($$self.$$.dirty[0] & /*ClassNames*/ 8) {
     			allowNonEmptyString("\"class\" attribute", ClassNames);
     		}
 
-    		if ($$self.$$.dirty[0] & /*style*/ 8) {
+    		if ($$self.$$.dirty[0] & /*style*/ 16) {
     			allowNonEmptyString("\"style\" attribute", style);
     		}
 
     		if ($$self.$$.dirty[0] & /*List*/ 1) {
-    			$$invalidate(0, List = allowedListSatisfying("\"List\" attribute", List, ValueIsObject) || []);
+    			{
+    				allowListSatisfying("\"List\" attribute", List, ValueIsObject);
+
+    				if (List == null) {
+    					$$invalidate(0, List = []);
+    				}
+    			}
     		}
 
-    		if ($$self.$$.dirty[1] & /*Key*/ 4) {
+    		if ($$self.$$.dirty[1] & /*Key*/ 16) {
     			switch (true) {
     				case Key == null:
-    					$$invalidate(17, KeyOf = Item => String(Item));
+    					$$invalidate(15, KeyOf = Item => String(Item));
     					break;
     				case ValueIsNonEmptyString(Key):
-    					$$invalidate(17, KeyOf = Item => String(Item[Key]));
+    					$$invalidate(15, KeyOf = Item => String(Item[Key]));
     					break;
     				case ValueIsFunction(Key):
-    					$$invalidate(17, KeyOf = (Item, Index) => String(Key(Item, Index)));
+    					$$invalidate(15, KeyOf = (Item, Index) => String(Key(Item, Index)));
     					break;
     				default:
     					throwError("InvalidArgument: the given \"Key\" attribute is neither " + "a non-empty string nor a function returning such a string");
     			}
     		}
 
-    		if ($$self.$$.dirty[1] & /*SelectionLimit*/ 8) {
-    			allowOrdinal("selection limit", SelectionLimit);
-    		}
-
-    		if ($$self.$$.dirty[0] & /*AttachmentRegion*/ 16) {
+    		if ($$self.$$.dirty[0] & /*AttachmentRegion*/ 32) {
     			allowNonEmptyString("\"AttachmentRegion\" attribute", AttachmentRegion);
     		}
 
-    		if ($$self.$$.dirty[0] & /*Placeholder*/ 32) {
+    		if ($$self.$$.dirty[0] & /*Placeholder*/ 64) {
     			allowNonEmptyString("\"Placeholder\" attribute", Placeholder);
     		}
 
-    		if ($$self.$$.dirty[0] & /*List*/ 1 | $$self.$$.dirty[1] & /*Key*/ 4) {
+    		if ($$self.$$.dirty[0] & /*withTransitions*/ 2) {
+    			{
+    				allowBoolean("\"withTransitions\" attribute", withTransitions);
+
+    				if (withTransitions == null) {
+    					$$invalidate(1, withTransitions = true);
+    				}
+    			}
+    		}
+
+    		if ($$self.$$.dirty[0] & /*List*/ 1 | $$self.$$.dirty[1] & /*Key*/ 16) {
     			updateItemSet(List, Key);
     		}
 
-    		if ($$self.$$.dirty[0] & /*List*/ 1 | $$self.$$.dirty[1] & /*SelectionLimit*/ 8) {
+    		if ($$self.$$.dirty[1] & /*SelectionLimit*/ 32) {
+    			allowOrdinal("selection limit", SelectionLimit);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*KeyOf, List*/ 32769 | $$self.$$.dirty[1] & /*SelectionList, ItemSet, SelectionLimit*/ 8388648) {
+    			{
+    				allowListSatisfying("\"SelectionList\" attribute", SelectionList, ValueIsObject);
+
+    				if (SelectionList == null) {
+    					$$invalidate(34, SelectionList = []);
+    				}
+
+    				let newSelectionSet = new WeakMap(), newSelectionCount = 0;
+
+    				SelectionList.forEach(Item => {
+    					let Key = KeyOf(Item);
+
+    					if (Key in ItemSet) {
+    						if (!newSelectionSet.has(Item)) {
+    							if (SelectionLimit == null || newSelectionCount < SelectionLimit) {
+    								newSelectionSet.set(Item, true);
+    								newSelectionCount++;
+    							}
+    						}
+    					} else {
+    						throwError("InvalidArgument: one or multiple of the given items to select " + "are not part of the given \"List\"");
+    					}
+    				});
+
+    				let SelectionChanged = false;
+
+    				List.forEach(Item => {
+    					if (SelectionSet.has(Item)) {
+    						if (!newSelectionSet.has(Item)) {
+    							SelectionSet.delete(Item);
+    							SelectionChanged = true;
+    						}
+    					} else {
+    						if (newSelectionSet.has(Item)) {
+    							SelectionSet.set(Item, true);
+    							SelectionChanged = true;
+    						}
+    					}
+    				});
+
+    				if (SelectionChanged) {
+    					$$invalidate(34, SelectionList = selectedItems());
+    					triggerRedraw();
+    				}
+    			}
+    		}
+
+    		if ($$self.$$.dirty[0] & /*List*/ 1 | $$self.$$.dirty[1] & /*SelectionLimit*/ 32) {
     			if (SelectionLimit != null && SelectionCount() > SelectionLimit) {
     				let Count = 0;
 
@@ -5645,117 +5795,118 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			} // decreasing the selection limit with an active selection is very bad style
     		}
 
-    		if ($$self.$$.dirty[0] & /*sortable*/ 2) {
-    			$$invalidate(1, sortable = allowedBoolean("\"sortable\" attribute", sortable) || false);
+    		if ($$self.$$.dirty[0] & /*sortable*/ 4) {
+    			$$invalidate(2, sortable = allowedBoolean("\"sortable\" attribute", sortable) || false);
     		}
 
-    		if ($$self.$$.dirty[0] & /*onlyFrom*/ 128) {
+    		if ($$self.$$.dirty[0] & /*onlyFrom*/ 256) {
     			allowNonEmptyString("\"onlyFrom\" CSS selector list", onlyFrom);
     		}
 
-    		if ($$self.$$.dirty[0] & /*neverFrom*/ 256) {
+    		if ($$self.$$.dirty[0] & /*neverFrom*/ 512) {
     			allowNonEmptyString("\"neverFrom\" CSS selector list", neverFrom);
     		}
 
-    		if ($$self.$$.dirty[1] & /*onSortRequest*/ 8192) {
+    		if ($$self.$$.dirty[1] & /*onSortRequest*/ 32768) {
     			allowFunction("\"onSortRequest\" callback", onSortRequest);
     		}
 
-    		if ($$self.$$.dirty[1] & /*onSort*/ 16384) {
+    		if ($$self.$$.dirty[1] & /*onSort*/ 65536) {
     			allowFunction("\"onSort\" callback", onSort);
     		}
 
-    		if ($$self.$$.dirty[0] & /*PanSensorWidth*/ 512) {
+    		if ($$self.$$.dirty[0] & /*PanSensorWidth*/ 1024) {
     			allowOrdinal("panning sensor width", PanSensorWidth);
     		}
 
-    		if ($$self.$$.dirty[0] & /*PanSensorHeight*/ 1024) {
+    		if ($$self.$$.dirty[0] & /*PanSensorHeight*/ 2048) {
     			allowOrdinal("panning sensor height", PanSensorHeight);
     		}
 
-    		if ($$self.$$.dirty[0] & /*PanSpeed*/ 2048) {
+    		if ($$self.$$.dirty[0] & /*PanSpeed*/ 4096) {
     			allowOrdinal("panning speed", PanSpeed);
     		}
 
-    		if ($$self.$$.dirty[1] & /*Operations*/ 32768) {
+    		if ($$self.$$.dirty[1] & /*Operations*/ 131072) {
     			parsedOperations("list of allowed operations", Operations);
     		}
 
-    		if ($$self.$$.dirty[1] & /*DataToOffer*/ 65536) {
+    		if ($$self.$$.dirty[1] & /*DataToOffer*/ 262144) {
     			allowPlainObject("\"DataToOffer\" attribute", DataToOffer);
     		}
 
-    		if ($$self.$$.dirty[1] & /*TypesToAccept*/ 131072) {
+    		if ($$self.$$.dirty[1] & /*TypesToAccept*/ 524288) {
     			allowPlainObject("\"TypesToAccept\" attribute", TypesToAccept);
     		}
 
-    		if ($$self.$$.dirty[1] & /*onOuterDropRequest*/ 262144) {
+    		if ($$self.$$.dirty[1] & /*onOuterDropRequest*/ 1048576) {
     			allowFunction("\"onOuterDropRequest\" callback", onOuterDropRequest);
     		}
 
-    		if ($$self.$$.dirty[1] & /*onDroppedOutside*/ 524288) {
+    		if ($$self.$$.dirty[1] & /*onDroppedOutside*/ 2097152) {
     			allowFunction("\"onDroppedOutside\" callback", onDroppedOutside);
     		}
 
-    		if ($$self.$$.dirty[1] & /*onDropFromOutside*/ 1048576) {
+    		if ($$self.$$.dirty[1] & /*onDropFromOutside*/ 4194304) {
     			allowFunction("\"onDropFromOutside\" callback", onDropFromOutside);
     		}
 
-    		if ($$self.$$.dirty[0] & /*HoldDelay*/ 4096) {
+    		if ($$self.$$.dirty[0] & /*HoldDelay*/ 8192) {
     			allowIntegerInRange("\"HoldDelay\" attribute", HoldDelay, 0);
     		}
 
-    		if ($$self.$$.dirty[0] & /*onDroppableHold*/ 8192) {
+    		if ($$self.$$.dirty[0] & /*onDroppableHold*/ 16384) {
     			allowFunction("\"onDroppableHold\" callback", onDroppableHold);
     		}
 
-    		if ($$self.$$.dirty[0] & /*DataOffered, sortable*/ 16386 | $$self.$$.dirty[1] & /*isDragging, DataToOffer*/ 2162688) {
+    		if ($$self.$$.dirty[0] & /*DataOffered, sortable*/ 65540 | $$self.$$.dirty[1] & /*isDragging, DataToOffer*/ 17039360) {
     			if (!isDragging) {
     				// do not update while already dragging
-    				$$invalidate(14, DataOffered = Object.assign({}, DataToOffer));
+    				$$invalidate(16, DataOffered = Object.assign({}, DataToOffer));
 
     				if ("none" in DataOffered) throwError("InvalidArgument: \"none\" is not a valid data type");
 
     				// @ts-ignore "DataOffered" is definitely not undefined
     				if (sortable) {
-    					$$invalidate(14, DataOffered[privateKey] = "", DataOffered);
+    					$$invalidate(16, DataOffered[privateKey] = "", DataOffered);
     				}
     			}
     		}
 
-    		if ($$self.$$.dirty[0] & /*sortable*/ 2 | $$self.$$.dirty[1] & /*isDragging, TypesToAccept*/ 2228224) {
+    		if ($$self.$$.dirty[0] & /*sortable*/ 4 | $$self.$$.dirty[1] & /*isDragging, TypesToAccept*/ 17301504) {
     			if (!isDragging) {
     				// do not update while already dragging
-    				$$invalidate(15, TypesAccepted = {});
+    				$$invalidate(17, TypesAccepted = {});
 
     				if (TypesToAccept != null && "none" in TypesToAccept) throwError("InvalidArgument: \"none\" is not a valid data type");
 
     				for (let Type in TypesToAccept) {
     					if (TypesToAccept.hasOwnProperty(Type)) {
     						// @ts-ignore "TypesAccepted" is definitely not undefined
-    						$$invalidate(15, TypesAccepted[Type] = parsedOperations("list of accepted operations for type " + quoted(Type), TypesToAccept[Type]), TypesAccepted);
+    						$$invalidate(17, TypesAccepted[Type] = parsedOperations("list of accepted operations for type " + quoted(Type), TypesToAccept[Type]), TypesAccepted);
     					}
     				}
 
     				// @ts-ignore "TypesAccepted" is definitely not undefined
     				if (sortable) {
-    					$$invalidate(15, TypesAccepted[privateKey] = "copy move", TypesAccepted);
+    					$$invalidate(17, TypesAccepted[privateKey] = "copy move", TypesAccepted);
     				}
     			} // 'copy' because of the better visual feedback from native drag-and-drop
     		}
 
-    		if ($$self.$$.dirty[0] & /*DataOffered, TypesAccepted*/ 49152 | $$self.$$.dirty[1] & /*isDragging*/ 2097152) {
+    		if ($$self.$$.dirty[0] & /*DataOffered, TypesAccepted*/ 196608 | $$self.$$.dirty[1] & /*isDragging*/ 16777216) {
     			if (!isDragging) {
     				// do not update while already dragging
-    				$$invalidate(19, shrinkable = hasNonPrivateTypes(DataOffered));
+    				$$invalidate(20, shrinkable = hasNonPrivateTypes(DataOffered));
 
-    				$$invalidate(20, extendable = hasNonPrivateTypes(TypesAccepted));
+    				$$invalidate(21, extendable = hasNonPrivateTypes(TypesAccepted));
     			}
     		}
     	};
 
     	return [
     		List,
+    		withTransitions,
     		sortable,
     		ClassNames,
     		style,
@@ -5769,10 +5920,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		PanSpeed,
     		HoldDelay,
     		onDroppableHold,
+    		KeyOf,
     		DataOffered,
     		TypesAccepted,
     		ListViewElement,
-    		KeyOf,
     		draggedItemList,
     		shrinkable,
     		extendable,
@@ -5788,6 +5939,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		TransitionStarted,
     		TransitionEnded,
     		$$restProps,
+    		SelectionList,
     		Key,
     		SelectionLimit,
     		select,
@@ -5807,6 +5959,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		onOuterDropRequest,
     		onDroppedOutside,
     		onDropFromOutside,
+    		ItemSet,
     		isDragging,
     		$$scope,
     		slots,
@@ -5827,46 +5980,48 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			create_fragment$9,
     			safe_not_equal,
     			{
-    				class: 2,
-    				style: 3,
+    				class: 3,
+    				style: 4,
     				List: 0,
-    				Key: 33,
-    				SelectionLimit: 34,
-    				AttachmentRegion: 4,
-    				Placeholder: 5,
-    				select: 35,
-    				selectOnly: 36,
-    				selectAll: 37,
-    				selectRange: 38,
-    				deselect: 39,
-    				deselectAll: 40,
-    				toggleSelectionOf: 41,
-    				selectedItems: 42,
-    				SelectionCount: 43,
-    				isSelected: 6,
-    				sortable: 1,
-    				onlyFrom: 7,
-    				neverFrom: 8,
-    				onSortRequest: 44,
-    				onSort: 45,
-    				PanSensorWidth: 9,
-    				PanSensorHeight: 10,
-    				PanSpeed: 11,
-    				Operations: 46,
-    				DataToOffer: 47,
-    				TypesToAccept: 48,
-    				onOuterDropRequest: 49,
-    				onDroppedOutside: 50,
-    				onDropFromOutside: 51,
-    				HoldDelay: 12,
-    				onDroppableHold: 13
+    				Key: 35,
+    				AttachmentRegion: 5,
+    				Placeholder: 6,
+    				withTransitions: 1,
+    				SelectionLimit: 36,
+    				SelectionList: 34,
+    				select: 37,
+    				selectOnly: 38,
+    				selectAll: 39,
+    				selectRange: 40,
+    				deselect: 41,
+    				deselectAll: 42,
+    				toggleSelectionOf: 43,
+    				selectedItems: 44,
+    				SelectionCount: 45,
+    				isSelected: 7,
+    				sortable: 2,
+    				onlyFrom: 8,
+    				neverFrom: 9,
+    				onSortRequest: 46,
+    				onSort: 47,
+    				PanSensorWidth: 10,
+    				PanSensorHeight: 11,
+    				PanSpeed: 12,
+    				Operations: 48,
+    				DataToOffer: 49,
+    				TypesToAccept: 50,
+    				onOuterDropRequest: 51,
+    				onDroppedOutside: 52,
+    				onDropFromOutside: 53,
+    				HoldDelay: 13,
+    				onDroppableHold: 14
     			},
     			[-1, -1, -1]
     		);
     	}
 
     	get class() {
-    		return this.$$.ctx[2];
+    		return this.$$.ctx[3];
     	}
 
     	set class(ClassNames) {
@@ -5875,7 +6030,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get style() {
-    		return this.$$.ctx[3];
+    		return this.$$.ctx[4];
     	}
 
     	set style(style) {
@@ -5893,7 +6048,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get Key() {
-    		return this.$$.ctx[33];
+    		return this.$$.ctx[35];
     	}
 
     	set Key(Key) {
@@ -5901,17 +6056,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		flush();
     	}
 
-    	get SelectionLimit() {
-    		return this.$$.ctx[34];
-    	}
-
-    	set SelectionLimit(SelectionLimit) {
-    		this.$set({ SelectionLimit });
-    		flush();
-    	}
-
     	get AttachmentRegion() {
-    		return this.$$.ctx[4];
+    		return this.$$.ctx[5];
     	}
 
     	set AttachmentRegion(AttachmentRegion) {
@@ -5920,7 +6066,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get Placeholder() {
-    		return this.$$.ctx[5];
+    		return this.$$.ctx[6];
     	}
 
     	set Placeholder(Placeholder) {
@@ -5928,48 +6074,75 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		flush();
     	}
 
-    	get select() {
-    		return this.$$.ctx[35];
+    	get withTransitions() {
+    		return this.$$.ctx[1];
     	}
 
-    	get selectOnly() {
+    	set withTransitions(withTransitions) {
+    		this.$set({ withTransitions });
+    		flush();
+    	}
+
+    	get SelectionLimit() {
     		return this.$$.ctx[36];
     	}
 
-    	get selectAll() {
+    	set SelectionLimit(SelectionLimit) {
+    		this.$set({ SelectionLimit });
+    		flush();
+    	}
+
+    	get SelectionList() {
+    		return this.$$.ctx[34];
+    	}
+
+    	set SelectionList(SelectionList) {
+    		this.$set({ SelectionList });
+    		flush();
+    	}
+
+    	get select() {
     		return this.$$.ctx[37];
     	}
 
-    	get selectRange() {
+    	get selectOnly() {
     		return this.$$.ctx[38];
     	}
 
-    	get deselect() {
+    	get selectAll() {
     		return this.$$.ctx[39];
     	}
 
-    	get deselectAll() {
+    	get selectRange() {
     		return this.$$.ctx[40];
     	}
 
-    	get toggleSelectionOf() {
+    	get deselect() {
     		return this.$$.ctx[41];
     	}
 
-    	get selectedItems() {
+    	get deselectAll() {
     		return this.$$.ctx[42];
     	}
 
-    	get SelectionCount() {
+    	get toggleSelectionOf() {
     		return this.$$.ctx[43];
     	}
 
+    	get selectedItems() {
+    		return this.$$.ctx[44];
+    	}
+
+    	get SelectionCount() {
+    		return this.$$.ctx[45];
+    	}
+
     	get isSelected() {
-    		return this.$$.ctx[6];
+    		return this.$$.ctx[7];
     	}
 
     	get sortable() {
-    		return this.$$.ctx[1];
+    		return this.$$.ctx[2];
     	}
 
     	set sortable(sortable) {
@@ -5978,7 +6151,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onlyFrom() {
-    		return this.$$.ctx[7];
+    		return this.$$.ctx[8];
     	}
 
     	set onlyFrom(onlyFrom) {
@@ -5987,7 +6160,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get neverFrom() {
-    		return this.$$.ctx[8];
+    		return this.$$.ctx[9];
     	}
 
     	set neverFrom(neverFrom) {
@@ -5996,7 +6169,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onSortRequest() {
-    		return this.$$.ctx[44];
+    		return this.$$.ctx[46];
     	}
 
     	set onSortRequest(onSortRequest) {
@@ -6005,7 +6178,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onSort() {
-    		return this.$$.ctx[45];
+    		return this.$$.ctx[47];
     	}
 
     	set onSort(onSort) {
@@ -6014,7 +6187,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get PanSensorWidth() {
-    		return this.$$.ctx[9];
+    		return this.$$.ctx[10];
     	}
 
     	set PanSensorWidth(PanSensorWidth) {
@@ -6023,7 +6196,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get PanSensorHeight() {
-    		return this.$$.ctx[10];
+    		return this.$$.ctx[11];
     	}
 
     	set PanSensorHeight(PanSensorHeight) {
@@ -6032,7 +6205,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get PanSpeed() {
-    		return this.$$.ctx[11];
+    		return this.$$.ctx[12];
     	}
 
     	set PanSpeed(PanSpeed) {
@@ -6041,7 +6214,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get Operations() {
-    		return this.$$.ctx[46];
+    		return this.$$.ctx[48];
     	}
 
     	set Operations(Operations) {
@@ -6050,7 +6223,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get DataToOffer() {
-    		return this.$$.ctx[47];
+    		return this.$$.ctx[49];
     	}
 
     	set DataToOffer(DataToOffer) {
@@ -6059,7 +6232,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get TypesToAccept() {
-    		return this.$$.ctx[48];
+    		return this.$$.ctx[50];
     	}
 
     	set TypesToAccept(TypesToAccept) {
@@ -6068,7 +6241,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onOuterDropRequest() {
-    		return this.$$.ctx[49];
+    		return this.$$.ctx[51];
     	}
 
     	set onOuterDropRequest(onOuterDropRequest) {
@@ -6077,7 +6250,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onDroppedOutside() {
-    		return this.$$.ctx[50];
+    		return this.$$.ctx[52];
     	}
 
     	set onDroppedOutside(onDroppedOutside) {
@@ -6086,7 +6259,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onDropFromOutside() {
-    		return this.$$.ctx[51];
+    		return this.$$.ctx[53];
     	}
 
     	set onDropFromOutside(onDropFromOutside) {
@@ -6095,7 +6268,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get HoldDelay() {
-    		return this.$$.ctx[12];
+    		return this.$$.ctx[13];
     	}
 
     	set HoldDelay(HoldDelay) {
@@ -6104,7 +6277,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	}
 
     	get onDroppableHold() {
-    		return this.$$.ctx[13];
+    		return this.$$.ctx[14];
     	}
 
     	set onDroppableHold(onDroppableHold) {
@@ -6400,10 +6573,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (57:2) <ListView bind:this={AppletListView}     style="flex:1 1 auto; border:solid 1px {$Globals.normalColor}; padding:2px"     List={$AppletList} Key={(Applet,Index) => Applet.Id}     SelectionLimit={1}     on:selected-item={selectApplet} on:deselected-item={deselectApplet}     let:Item={Applet} let:Index={Index}   >
+    // (55:2) <ListView bind:this={AppletListView}     style="flex:1 1 auto; border:solid 1px {$Globals.normalColor}; padding:2px"     List={$AppletList} Key={(Applet,Index) => Applet.Id} withTransitions={false}     SelectionLimit={1} bind:SelectionList={$selectedAppletList}     let:Item={Applet} let:Index={Index}   >
     function create_default_slot$3(ctx) {
     	let div;
-    	let t_value = (/*Applet*/ ctx[9].Id || "Applet #" + /*Index*/ ctx[10]) + "";
+    	let t_value = (/*Applet*/ ctx[13].Id || "Applet #" + /*Index*/ ctx[14]) + "";
     	let t;
 
     	return {
@@ -6411,8 +6584,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			div = element("div");
     			t = text(t_value);
 
-    			set_style(div, "color", /*$selectedAppletList*/ ctx[0].indexOf(/*Applet*/ ctx[9]) < 0
-    			? /*Applet*/ ctx[9] === /*$chosenApplet*/ ctx[1]
+    			set_style(div, "color", /*$selectedAppletList*/ ctx[0].indexOf(/*Applet*/ ctx[13]) < 0
+    			? /*Applet*/ ctx[13] === /*$chosenApplet*/ ctx[1]
     				? /*$Globals*/ ctx[4].activeColor
     				: /*$Globals*/ ctx[4].normalColor
     			: /*$Globals*/ ctx[4].ShadowColor);
@@ -6422,11 +6595,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			append(div, t);
     		},
     		p(ctx, dirty) {
-    			if (dirty & /*Applet, Index*/ 1536 && t_value !== (t_value = (/*Applet*/ ctx[9].Id || "Applet #" + /*Index*/ ctx[10]) + "")) set_data(t, t_value);
+    			if (dirty & /*Applet, Index*/ 24576 && t_value !== (t_value = (/*Applet*/ ctx[13].Id || "Applet #" + /*Index*/ ctx[14]) + "")) set_data(t, t_value);
 
-    			if (dirty & /*$selectedAppletList, Applet, $chosenApplet, $Globals*/ 531) {
-    				set_style(div, "color", /*$selectedAppletList*/ ctx[0].indexOf(/*Applet*/ ctx[9]) < 0
-    				? /*Applet*/ ctx[9] === /*$chosenApplet*/ ctx[1]
+    			if (dirty & /*$selectedAppletList, Applet, $chosenApplet, $Globals*/ 8211) {
+    				set_style(div, "color", /*$selectedAppletList*/ ctx[0].indexOf(/*Applet*/ ctx[13]) < 0
+    				? /*Applet*/ ctx[13] === /*$chosenApplet*/ ctx[1]
     					? /*$Globals*/ ctx[4].activeColor
     					: /*$Globals*/ ctx[4].normalColor
     				: /*$Globals*/ ctx[4].ShadowColor);
@@ -6446,6 +6619,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let button;
     	let t2;
     	let listview;
+    	let updating_SelectionList;
     	let current;
     	let mounted;
     	let dispose;
@@ -6461,25 +6635,33 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
     	button.$on("click", /*chooseSelection*/ ctx[7]);
 
+    	function listview_SelectionList_binding(value) {
+    		/*listview_SelectionList_binding*/ ctx[9](value);
+    	}
+
     	let listview_props = {
     		style: "flex:1 1 auto; border:solid 1px " + /*$Globals*/ ctx[4].normalColor + "; padding:2px",
     		List: /*$AppletList*/ ctx[5],
     		Key: func,
+    		withTransitions: false,
     		SelectionLimit: 1,
     		$$slots: {
     			default: [
     				create_default_slot$3,
-    				({ Item: Applet, Index }) => ({ 9: Applet, 10: Index }),
-    				({ Item: Applet, Index }) => (Applet ? 512 : 0) | (Index ? 1024 : 0)
+    				({ Item: Applet, Index }) => ({ 13: Applet, 14: Index }),
+    				({ Item: Applet, Index }) => (Applet ? 8192 : 0) | (Index ? 16384 : 0)
     			]
     		},
     		$$scope: { ctx }
     	};
 
+    	if (/*$selectedAppletList*/ ctx[0] !== void 0) {
+    		listview_props.SelectionList = /*$selectedAppletList*/ ctx[0];
+    	}
+
     	listview = new Svelte_sortable_flat_list_view({ props: listview_props });
     	/*listview_binding*/ ctx[8](listview);
-    	listview.$on("selected-item", selectApplet);
-    	listview.$on("deselected-item", deselectApplet);
+    	binding_callbacks.push(() => bind(listview, "SelectionList", listview_SelectionList_binding));
 
     	return {
     		c() {
@@ -6520,7 +6702,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			const button_changes = {};
     			if (dirty & /*chosable*/ 8) button_changes.disabled = !/*chosable*/ ctx[3];
 
-    			if (dirty & /*$$scope, chosable*/ 2056) {
+    			if (dirty & /*$$scope, chosable*/ 32776) {
     				button_changes.$$scope = { dirty, ctx };
     			}
 
@@ -6529,8 +6711,14 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (dirty & /*$Globals*/ 16) listview_changes.style = "flex:1 1 auto; border:solid 1px " + /*$Globals*/ ctx[4].normalColor + "; padding:2px";
     			if (dirty & /*$AppletList*/ 32) listview_changes.List = /*$AppletList*/ ctx[5];
 
-    			if (dirty & /*$$scope, $selectedAppletList, Applet, $chosenApplet, $Globals, Index*/ 3603) {
+    			if (dirty & /*$$scope, $selectedAppletList, Applet, $chosenApplet, $Globals, Index*/ 57363) {
     				listview_changes.$$scope = { dirty, ctx };
+    			}
+
+    			if (!updating_SelectionList && dirty & /*$selectedAppletList*/ 1) {
+    				updating_SelectionList = true;
+    				listview_changes.SelectionList = /*$selectedAppletList*/ ctx[0];
+    				add_flush_callback(() => updating_SelectionList = false);
     			}
 
     			listview.$set(listview_changes);
@@ -6559,15 +6747,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
 
 
     let smallChooseSelectionImageURL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAG5JREFUOE/t1EEOABAMBEC+2wf1u8RBUkJ3JeXEWaZLlpyCVw720l1QVcucWESOhg6bV2AfwMJwuh3CoBBsCTsaBp6gVMIPutf07g69ktvXNFfJTYjQVS/hkXforuQQtB1k3jUFXik2+xHTCVmwAr8+PBWXrjCNAAAAAElFTkSuQmCC";
-
-    function selectApplet(Event) {
-    	selectedAppletList.select(Event.detail);
-    }
-
-    function deselectApplet(Event) {
-    	selectedAppletList.deselect(Event.detail);
-    }
-
     const func = (Applet, Index) => Applet.Id;
 
     function instance$7($$self, $$props, $$invalidate) {
@@ -6581,13 +6760,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	component_subscribe($$self, Globals, $$value => $$invalidate(4, $Globals = $$value));
     	component_subscribe($$self, AppletList, $$value => $$invalidate(5, $AppletList = $$value));
     	let AppletListView;
+    	let lastTouchedApplet = undefined;
 
     	function onDoubleClick() {
-    		let Applet = $selectedAppletList[0];
-    		selectedAppletList.clear();
-    		selectedAppletList.select(Applet);
-    		chosenApplet.set(Applet);
-    		AppletListView.select(Applet);
+    		AppletListView.select(lastTouchedApplet);
+    		chooseSelection();
     	}
 
     	function chooseSelection() {
@@ -6605,6 +6782,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		});
     	}
 
+    	function listview_SelectionList_binding(value) {
+    		$selectedAppletList = value;
+    		selectedAppletList.set($selectedAppletList);
+    	}
+
     	$$self.$$.update = () => {
     		if ($$self.$$.dirty & /*$selectedAppletList, $chosenApplet*/ 3) {
     			$$invalidate(3, chosable = $selectedAppletList.length === 1 && $chosenApplet !== $selectedAppletList[0]);
@@ -6620,7 +6802,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		$AppletList,
     		onDoubleClick,
     		chooseSelection,
-    		listview_binding
+    		listview_binding,
+    		listview_SelectionList_binding
     	];
     }
 
