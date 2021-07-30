@@ -142,8 +142,6 @@ $:if (Applet != null) {                                            // needs "$:"
         {#if $InspectorState.Mode === 'card'}         <CardOverviewPane/>{/if}
         {#if $InspectorState.Mode === 'overlay'}      <OverlayOverviewPane/>{/if}
         {#if $InspectorState.Mode === 'component'}    <ComponentOverviewPane/>{/if}
-        {#if $InspectorState.Mode === 'import-export'}<ImportExportPane/>{/if}
-        {#if $InspectorState.Mode === 'search'}       <SearchPane/>{/if}
       {/if}
 
       {#if $InspectorState.Pane === 'selection-globals'}      <SelectionGlobalsPane/>{/if}
@@ -151,7 +149,10 @@ $:if (Applet != null) {                                            // needs "$:"
       {#if $InspectorState.Pane === 'selection-properties'}   <SelectionPropertiesPane/>{/if}
       {#if $InspectorState.Pane === 'selection-configuration'}<SelectionConfigurationPane/>{/if}
       {#if $InspectorState.Pane === 'selection-script'}       <SelectionScriptPane/>{/if}
-      {#if $InspectorState.Pane === 'settings'}               <SettingsPane/>{/if}
+
+      {#if $InspectorState.Mode === 'import-export'}<ImportExportPane/>{/if}
+      {#if $InspectorState.Mode === 'search'}       <SearchPane/>{/if}
+      {#if $InspectorState.Pane === 'settings'}     <SettingsPane/>{/if}
     </div>
 
     <MessageView/>
