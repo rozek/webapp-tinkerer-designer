@@ -8192,22 +8192,18 @@ var WAD = (function (exports, webappTinkererRuntime) {
     }
 
     // (124:6) {#if $InspectorState.Pane === 'overview'}
-    function create_if_block_7(ctx) {
+    function create_if_block_9(ctx) {
     	let t0;
     	let t1;
     	let t2;
     	let t3;
-    	let t4;
-    	let t5;
-    	let if_block6_anchor;
+    	let if_block4_anchor;
     	let current;
     	let if_block0 = /*$InspectorState*/ ctx[2].Mode === "applet" && create_if_block_14();
     	let if_block1 = /*$InspectorState*/ ctx[2].Mode === "master" && create_if_block_13();
     	let if_block2 = /*$InspectorState*/ ctx[2].Mode === "card" && create_if_block_12();
     	let if_block3 = /*$InspectorState*/ ctx[2].Mode === "overlay" && create_if_block_11();
     	let if_block4 = /*$InspectorState*/ ctx[2].Mode === "component" && create_if_block_10();
-    	let if_block5 = /*$InspectorState*/ ctx[2].Mode === "import-export" && create_if_block_9();
-    	let if_block6 = /*$InspectorState*/ ctx[2].Mode === "search" && create_if_block_8();
 
     	return {
     		c() {
@@ -8220,11 +8216,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (if_block3) if_block3.c();
     			t3 = space();
     			if (if_block4) if_block4.c();
-    			t4 = space();
-    			if (if_block5) if_block5.c();
-    			t5 = space();
-    			if (if_block6) if_block6.c();
-    			if_block6_anchor = empty();
+    			if_block4_anchor = empty();
     		},
     		m(target, anchor) {
     			if (if_block0) if_block0.m(target, anchor);
@@ -8236,11 +8228,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (if_block3) if_block3.m(target, anchor);
     			insert(target, t3, anchor);
     			if (if_block4) if_block4.m(target, anchor);
-    			insert(target, t4, anchor);
-    			if (if_block5) if_block5.m(target, anchor);
-    			insert(target, t5, anchor);
-    			if (if_block6) if_block6.m(target, anchor);
-    			insert(target, if_block6_anchor, anchor);
+    			insert(target, if_block4_anchor, anchor);
     			current = true;
     		},
     		p(ctx, dirty) {
@@ -8337,55 +8325,13 @@ var WAD = (function (exports, webappTinkererRuntime) {
     					if_block4 = create_if_block_10();
     					if_block4.c();
     					transition_in(if_block4, 1);
-    					if_block4.m(t4.parentNode, t4);
+    					if_block4.m(if_block4_anchor.parentNode, if_block4_anchor);
     				}
     			} else if (if_block4) {
     				group_outros();
 
     				transition_out(if_block4, 1, 1, () => {
     					if_block4 = null;
-    				});
-
-    				check_outros();
-    			}
-
-    			if (/*$InspectorState*/ ctx[2].Mode === "import-export") {
-    				if (if_block5) {
-    					if (dirty & /*$InspectorState*/ 4) {
-    						transition_in(if_block5, 1);
-    					}
-    				} else {
-    					if_block5 = create_if_block_9();
-    					if_block5.c();
-    					transition_in(if_block5, 1);
-    					if_block5.m(t5.parentNode, t5);
-    				}
-    			} else if (if_block5) {
-    				group_outros();
-
-    				transition_out(if_block5, 1, 1, () => {
-    					if_block5 = null;
-    				});
-
-    				check_outros();
-    			}
-
-    			if (/*$InspectorState*/ ctx[2].Mode === "search") {
-    				if (if_block6) {
-    					if (dirty & /*$InspectorState*/ 4) {
-    						transition_in(if_block6, 1);
-    					}
-    				} else {
-    					if_block6 = create_if_block_8();
-    					if_block6.c();
-    					transition_in(if_block6, 1);
-    					if_block6.m(if_block6_anchor.parentNode, if_block6_anchor);
-    				}
-    			} else if (if_block6) {
-    				group_outros();
-
-    				transition_out(if_block6, 1, 1, () => {
-    					if_block6 = null;
     				});
 
     				check_outros();
@@ -8398,8 +8344,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_in(if_block2);
     			transition_in(if_block3);
     			transition_in(if_block4);
-    			transition_in(if_block5);
-    			transition_in(if_block6);
     			current = true;
     		},
     		o(local) {
@@ -8408,8 +8352,6 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_out(if_block2);
     			transition_out(if_block3);
     			transition_out(if_block4);
-    			transition_out(if_block5);
-    			transition_out(if_block6);
     			current = false;
     		},
     		d(detaching) {
@@ -8422,11 +8364,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (if_block3) if_block3.d(detaching);
     			if (detaching) detach(t3);
     			if (if_block4) if_block4.d(detaching);
-    			if (detaching) detach(t4);
-    			if (if_block5) if_block5.d(detaching);
-    			if (detaching) detach(t5);
-    			if (if_block6) if_block6.d(detaching);
-    			if (detaching) detach(if_block6_anchor);
+    			if (detaching) detach(if_block4_anchor);
     		}
     	};
     }
@@ -8576,66 +8514,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (130:8) {#if $InspectorState.Mode === 'import-export'}
-    function create_if_block_9(ctx) {
-    	let importexportpane;
-    	let current;
-    	importexportpane = new ImportExportPane({});
-
-    	return {
-    		c() {
-    			create_component(importexportpane.$$.fragment);
-    		},
-    		m(target, anchor) {
-    			mount_component(importexportpane, target, anchor);
-    			current = true;
-    		},
-    		i(local) {
-    			if (current) return;
-    			transition_in(importexportpane.$$.fragment, local);
-    			current = true;
-    		},
-    		o(local) {
-    			transition_out(importexportpane.$$.fragment, local);
-    			current = false;
-    		},
-    		d(detaching) {
-    			destroy_component(importexportpane, detaching);
-    		}
-    	};
-    }
-
-    // (131:8) {#if $InspectorState.Mode === 'search'}
+    // (132:6) {#if $InspectorState.Pane === 'selection-globals'}
     function create_if_block_8(ctx) {
-    	let searchpane;
-    	let current;
-    	searchpane = new SearchPane({});
-
-    	return {
-    		c() {
-    			create_component(searchpane.$$.fragment);
-    		},
-    		m(target, anchor) {
-    			mount_component(searchpane, target, anchor);
-    			current = true;
-    		},
-    		i(local) {
-    			if (current) return;
-    			transition_in(searchpane.$$.fragment, local);
-    			current = true;
-    		},
-    		o(local) {
-    			transition_out(searchpane.$$.fragment, local);
-    			current = false;
-    		},
-    		d(detaching) {
-    			destroy_component(searchpane, detaching);
-    		}
-    	};
-    }
-
-    // (134:6) {#if $InspectorState.Pane === 'selection-globals'}
-    function create_if_block_6(ctx) {
     	let selectionglobalspane;
     	let current;
     	selectionglobalspane = new SelectionGlobalsPane({});
@@ -8663,8 +8543,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (135:6) {#if $InspectorState.Pane === 'selection-resources'}
-    function create_if_block_5(ctx) {
+    // (133:6) {#if $InspectorState.Pane === 'selection-resources'}
+    function create_if_block_7(ctx) {
     	let selectionresourcespane;
     	let current;
     	selectionresourcespane = new SelectionResourcesPane({});
@@ -8692,8 +8572,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (136:6) {#if $InspectorState.Pane === 'selection-properties'}
-    function create_if_block_4(ctx) {
+    // (134:6) {#if $InspectorState.Pane === 'selection-properties'}
+    function create_if_block_6(ctx) {
     	let selectionpropertiespane;
     	let current;
     	selectionpropertiespane = new SelectionPropertiesPane({});
@@ -8721,8 +8601,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (137:6) {#if $InspectorState.Pane === 'selection-configuration'}
-    function create_if_block_3$1(ctx) {
+    // (135:6) {#if $InspectorState.Pane === 'selection-configuration'}
+    function create_if_block_5(ctx) {
     	let selectionconfigurationpane;
     	let current;
     	selectionconfigurationpane = new SelectionConfigurationPane({});
@@ -8750,8 +8630,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (138:6) {#if $InspectorState.Pane === 'selection-script'}
-    function create_if_block_2$1(ctx) {
+    // (136:6) {#if $InspectorState.Pane === 'selection-script'}
+    function create_if_block_4(ctx) {
     	let selectionscriptpane;
     	let current;
     	selectionscriptpane = new SelectionScriptPane({});
@@ -8779,7 +8659,65 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	};
     }
 
-    // (139:6) {#if $InspectorState.Pane === 'settings'}
+    // (138:6) {#if $InspectorState.Mode === 'import-export'}
+    function create_if_block_3$1(ctx) {
+    	let importexportpane;
+    	let current;
+    	importexportpane = new ImportExportPane({});
+
+    	return {
+    		c() {
+    			create_component(importexportpane.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(importexportpane, target, anchor);
+    			current = true;
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(importexportpane.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(importexportpane.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(importexportpane, detaching);
+    		}
+    	};
+    }
+
+    // (139:6) {#if $InspectorState.Mode === 'search'}
+    function create_if_block_2$1(ctx) {
+    	let searchpane;
+    	let current;
+    	searchpane = new SearchPane({});
+
+    	return {
+    		c() {
+    			create_component(searchpane.$$.fragment);
+    		},
+    		m(target, anchor) {
+    			mount_component(searchpane, target, anchor);
+    			current = true;
+    		},
+    		i(local) {
+    			if (current) return;
+    			transition_in(searchpane.$$.fragment, local);
+    			current = true;
+    		},
+    		o(local) {
+    			transition_out(searchpane.$$.fragment, local);
+    			current = false;
+    		},
+    		d(detaching) {
+    			destroy_component(searchpane, detaching);
+    		}
+    	};
+    }
+
+    // (140:6) {#if $InspectorState.Pane === 'settings'}
     function create_if_block_1$1(ctx) {
     	let settingspane;
     	let current;
@@ -8847,6 +8785,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     	let t18;
     	let t19;
     	let t20;
+    	let t21;
+    	let t22;
     	let messageview;
     	let current;
 
@@ -8995,13 +8935,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
     		});
 
     	iconbutton13.$on("click", /*click_handler_13*/ ctx[17]);
-    	let if_block0 = /*$InspectorState*/ ctx[2].Pane === "overview" && create_if_block_7(ctx);
-    	let if_block1 = /*$InspectorState*/ ctx[2].Pane === "selection-globals" && create_if_block_6();
-    	let if_block2 = /*$InspectorState*/ ctx[2].Pane === "selection-resources" && create_if_block_5();
-    	let if_block3 = /*$InspectorState*/ ctx[2].Pane === "selection-properties" && create_if_block_4();
-    	let if_block4 = /*$InspectorState*/ ctx[2].Pane === "selection-configuration" && create_if_block_3$1();
-    	let if_block5 = /*$InspectorState*/ ctx[2].Pane === "selection-script" && create_if_block_2$1();
-    	let if_block6 = /*$InspectorState*/ ctx[2].Pane === "settings" && create_if_block_1$1();
+    	let if_block0 = /*$InspectorState*/ ctx[2].Pane === "overview" && create_if_block_9(ctx);
+    	let if_block1 = /*$InspectorState*/ ctx[2].Pane === "selection-globals" && create_if_block_8();
+    	let if_block2 = /*$InspectorState*/ ctx[2].Pane === "selection-resources" && create_if_block_7();
+    	let if_block3 = /*$InspectorState*/ ctx[2].Pane === "selection-properties" && create_if_block_6();
+    	let if_block4 = /*$InspectorState*/ ctx[2].Pane === "selection-configuration" && create_if_block_5();
+    	let if_block5 = /*$InspectorState*/ ctx[2].Pane === "selection-script" && create_if_block_4();
+    	let if_block6 = /*$InspectorState*/ ctx[2].Mode === "import-export" && create_if_block_3$1();
+    	let if_block7 = /*$InspectorState*/ ctx[2].Mode === "search" && create_if_block_2$1();
+    	let if_block8 = /*$InspectorState*/ ctx[2].Pane === "settings" && create_if_block_1$1();
     	messageview = new MessageView({});
 
     	return {
@@ -9050,6 +8992,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			t19 = space();
     			if (if_block6) if_block6.c();
     			t20 = space();
+    			if (if_block7) if_block7.c();
+    			t21 = space();
+    			if (if_block8) if_block8.c();
+    			t22 = space();
     			create_component(messageview.$$.fragment);
     			attr(div0, "name", "TabStrip");
     			set_style(div0, "display", "block");
@@ -9110,7 +9056,11 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (if_block5) if_block5.m(div1, null);
     			append(div1, t19);
     			if (if_block6) if_block6.m(div1, null);
-    			insert(target, t20, anchor);
+    			append(div1, t20);
+    			if (if_block7) if_block7.m(div1, null);
+    			append(div1, t21);
+    			if (if_block8) if_block8.m(div1, null);
+    			insert(target, t22, anchor);
     			mount_component(messageview, target, anchor);
     			current = true;
     		},
@@ -9176,7 +9126,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block0, 1);
     					}
     				} else {
-    					if_block0 = create_if_block_7(ctx);
+    					if_block0 = create_if_block_9(ctx);
     					if_block0.c();
     					transition_in(if_block0, 1);
     					if_block0.m(div1, t14);
@@ -9197,7 +9147,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block1, 1);
     					}
     				} else {
-    					if_block1 = create_if_block_6();
+    					if_block1 = create_if_block_8();
     					if_block1.c();
     					transition_in(if_block1, 1);
     					if_block1.m(div1, t15);
@@ -9218,7 +9168,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block2, 1);
     					}
     				} else {
-    					if_block2 = create_if_block_5();
+    					if_block2 = create_if_block_7();
     					if_block2.c();
     					transition_in(if_block2, 1);
     					if_block2.m(div1, t16);
@@ -9239,7 +9189,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block3, 1);
     					}
     				} else {
-    					if_block3 = create_if_block_4();
+    					if_block3 = create_if_block_6();
     					if_block3.c();
     					transition_in(if_block3, 1);
     					if_block3.m(div1, t17);
@@ -9260,7 +9210,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block4, 1);
     					}
     				} else {
-    					if_block4 = create_if_block_3$1();
+    					if_block4 = create_if_block_5();
     					if_block4.c();
     					transition_in(if_block4, 1);
     					if_block4.m(div1, t18);
@@ -9281,7 +9231,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
     						transition_in(if_block5, 1);
     					}
     				} else {
-    					if_block5 = create_if_block_2$1();
+    					if_block5 = create_if_block_4();
     					if_block5.c();
     					transition_in(if_block5, 1);
     					if_block5.m(div1, t19);
@@ -9296,22 +9246,64 @@ var WAD = (function (exports, webappTinkererRuntime) {
     				check_outros();
     			}
 
-    			if (/*$InspectorState*/ ctx[2].Pane === "settings") {
+    			if (/*$InspectorState*/ ctx[2].Mode === "import-export") {
     				if (if_block6) {
     					if (dirty & /*$InspectorState*/ 4) {
     						transition_in(if_block6, 1);
     					}
     				} else {
-    					if_block6 = create_if_block_1$1();
+    					if_block6 = create_if_block_3$1();
     					if_block6.c();
     					transition_in(if_block6, 1);
-    					if_block6.m(div1, null);
+    					if_block6.m(div1, t20);
     				}
     			} else if (if_block6) {
     				group_outros();
 
     				transition_out(if_block6, 1, 1, () => {
     					if_block6 = null;
+    				});
+
+    				check_outros();
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Mode === "search") {
+    				if (if_block7) {
+    					if (dirty & /*$InspectorState*/ 4) {
+    						transition_in(if_block7, 1);
+    					}
+    				} else {
+    					if_block7 = create_if_block_2$1();
+    					if_block7.c();
+    					transition_in(if_block7, 1);
+    					if_block7.m(div1, t21);
+    				}
+    			} else if (if_block7) {
+    				group_outros();
+
+    				transition_out(if_block7, 1, 1, () => {
+    					if_block7 = null;
+    				});
+
+    				check_outros();
+    			}
+
+    			if (/*$InspectorState*/ ctx[2].Pane === "settings") {
+    				if (if_block8) {
+    					if (dirty & /*$InspectorState*/ 4) {
+    						transition_in(if_block8, 1);
+    					}
+    				} else {
+    					if_block8 = create_if_block_1$1();
+    					if_block8.c();
+    					transition_in(if_block8, 1);
+    					if_block8.m(div1, null);
+    				}
+    			} else if (if_block8) {
+    				group_outros();
+
+    				transition_out(if_block8, 1, 1, () => {
+    					if_block8 = null;
     				});
 
     				check_outros();
@@ -9348,6 +9340,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_in(if_block4);
     			transition_in(if_block5);
     			transition_in(if_block6);
+    			transition_in(if_block7);
+    			transition_in(if_block8);
     			transition_in(messageview.$$.fragment, local);
     			current = true;
     		},
@@ -9373,6 +9367,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			transition_out(if_block4);
     			transition_out(if_block5);
     			transition_out(if_block6);
+    			transition_out(if_block7);
+    			transition_out(if_block8);
     			transition_out(messageview.$$.fragment, local);
     			current = false;
     		},
@@ -9401,7 +9397,9 @@ var WAD = (function (exports, webappTinkererRuntime) {
     			if (if_block4) if_block4.d();
     			if (if_block5) if_block5.d();
     			if (if_block6) if_block6.d();
-    			if (detaching) detach(t20);
+    			if (if_block7) if_block7.d();
+    			if (if_block8) if_block8.d();
+    			if (detaching) detach(t22);
     			destroy_component(messageview, detaching);
     		}
     	};
