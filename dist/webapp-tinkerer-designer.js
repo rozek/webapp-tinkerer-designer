@@ -1042,7 +1042,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
       });
 
     let currentAppletList$1     = [];
-      let currentlyChosenApplet$5 = undefined;
+      let currentlyChosenApplet$4 = undefined;
 
       const chosenAppletStore = writable(undefined);   // for subscription management
 
@@ -1051,10 +1051,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
       AppletList.subscribe((newAppletList) => {      // implements a "derived" store
         currentAppletList$1 = newAppletList;
         if (
-          (currentlyChosenApplet$5 != null) &&
-          (newAppletList.indexOf(currentlyChosenApplet$5) < 0)
+          (currentlyChosenApplet$4 != null) &&
+          (newAppletList.indexOf(currentlyChosenApplet$4) < 0)
         ) {
-          currentlyChosenApplet$5 = undefined;
+          currentlyChosenApplet$4 = undefined;
           chosenAppletStore.set(undefined);
         }
       });
@@ -1069,8 +1069,8 @@ var WAD = (function (exports, webappTinkererRuntime) {
           Applet = undefined;
         }
 
-        if (currentlyChosenApplet$5 !== Applet) {
-          currentlyChosenApplet$5 = Applet;
+        if (currentlyChosenApplet$4 !== Applet) {
+          currentlyChosenApplet$4 = Applet;
           chosenAppletStore.set(Applet);
         }
       }
@@ -1091,7 +1091,7 @@ var WAD = (function (exports, webappTinkererRuntime) {
         MessageType:'info', Message:'', MessageSource:undefined
       };
 
-      let currentlyChosenApplet$4 = undefined;
+      let currentlyChosenApplet$3 = undefined;
       let currentMessageState = Object.assign({}, initialMessageState);
 
       const MessageStateStore = writable(currentMessageState);   // subscription mgmt
@@ -1100,17 +1100,17 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** keep track of changes in "chosenApplet" ****/
 
       chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$4 !== newChosenApplet) {
-          currentlyChosenApplet$4 = newChosenApplet;
+        if (currentlyChosenApplet$3 !== newChosenApplet) {
+          currentlyChosenApplet$3 = newChosenApplet;
 
-          if (currentlyChosenApplet$4 == null) {
+          if (currentlyChosenApplet$3 == null) {
             currentMessageState = Object.assign({}, initialMessageState);
           } else {
-            if (MessageStateSet.has(currentlyChosenApplet$4)) {
-              currentMessageState = MessageStateSet.get(currentlyChosenApplet$4);
+            if (MessageStateSet.has(currentlyChosenApplet$3)) {
+              currentMessageState = MessageStateSet.get(currentlyChosenApplet$3);
             } else {
               currentMessageState = Object.assign({}, initialMessageState);
-              MessageStateSet.set(currentlyChosenApplet$4,currentMessageState);
+              MessageStateSet.set(currentlyChosenApplet$3,currentMessageState);
             }
           }
           MessageStateStore.set(currentMessageState);
@@ -1120,10 +1120,10 @@ var WAD = (function (exports, webappTinkererRuntime) {
     /**** validate changes to "MessageState" ****/
 
       function setMessageState (newMessageState) {
-        if (currentlyChosenApplet$4 != null) {
+        if (currentlyChosenApplet$3 != null) {
           if (webappTinkererRuntime.ValuesDiffer(currentMessageState,newMessageState)) {
             currentMessageState = Object.assign({}, newMessageState);
-            MessageStateSet.set(currentlyChosenApplet$4,newMessageState);
+            MessageStateSet.set(currentlyChosenApplet$3,newMessageState);
             MessageStateStore.set(newMessageState);
           }
         }
@@ -7521,43 +7521,15 @@ var WAD = (function (exports, webappTinkererRuntime) {
         }
     }
 
-    const initialDialogOrder = { Dialogs:[], zIndexOf };
-
-      let currentlyChosenApplet$3 = undefined;
-      let currentDialogOrder = { Dialogs:[], zIndexOf };
-
+    let   currentDialogOrder = { Dialogs:[], zIndexOf };
       const DialogOrderStore = writable(currentDialogOrder);     // subscription mgmt
-      const DialogOrderSet   = new WeakMap();        // applet-specific dialog orders
-
-    /**** keep track of changes in "chosenApplet" ****/
-
-      chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-        if (currentlyChosenApplet$3 !== newChosenApplet) {
-          currentlyChosenApplet$3 = newChosenApplet;
-
-          if (currentlyChosenApplet$3 == null) {
-            currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
-          } else {
-            if (DialogOrderSet.has(currentlyChosenApplet$3)) {
-              currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet$3);
-            } else {
-              currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf };
-              DialogOrderSet.set(currentlyChosenApplet$3,currentDialogOrder);
-            }
-            DialogOrderStore.set(currentDialogOrder);
-          }
-        }
-      });
 
     /**** validate changes to "DialogOrder" ****/
 
       function setDialogOrder (newDialogOrder) {
-        if (currentlyChosenApplet$3 != null) {
-          if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder,'by-reference')) {
-            currentDialogOrder = newDialogOrder;
-            DialogOrderSet.set(currentlyChosenApplet$3,newDialogOrder);
-            DialogOrderStore.set(newDialogOrder);
-          }
+        if (webappTinkererRuntime.ValuesDiffer(currentDialogOrder,newDialogOrder,'by-reference')) {
+          currentDialogOrder = newDialogOrder;
+          DialogOrderStore.set(newDialogOrder);
         }
       }
 
