@@ -1,45 +1,16 @@
   import { writable } from 'svelte/store'
 
   import { ValuesDiffer } from 'webapp-tinkerer-runtime'
-  import { chosenApplet } from '../stores/chosenApplet.js'
 
-  const initialDialogOrder = { Dialogs:[], zIndexOf }
-
-  let currentlyChosenApplet = undefined
-  let currentDialogOrder = { Dialogs:[], zIndexOf }
-
+  let   currentDialogOrder = { Dialogs:[], zIndexOf }
   const DialogOrderStore = writable(currentDialogOrder)     // subscription mgmt
-  const DialogOrderSet   = new WeakMap()        // applet-specific dialog orders
-
-/**** keep track of changes in "chosenApplet" ****/
-
-  chosenApplet.subscribe((newChosenApplet) => {  // implements a "derived" store
-    if (currentlyChosenApplet !== newChosenApplet) {
-      currentlyChosenApplet = newChosenApplet
-
-      if (currentlyChosenApplet == null) {
-        currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf }
-      } else {
-        if (DialogOrderSet.has(currentlyChosenApplet)) {
-          currentDialogOrder = DialogOrderSet.get(currentlyChosenApplet)
-        } else {
-          currentDialogOrder = { Dialogs:initialDialogOrder.Dialogs.slice(), zIndexOf }
-          DialogOrderSet.set(currentlyChosenApplet,currentDialogOrder)
-        }
-        DialogOrderStore.set(currentDialogOrder)
-      }
-    }
-  })
 
 /**** validate changes to "DialogOrder" ****/
 
   function setDialogOrder (newDialogOrder) {
-    if (currentlyChosenApplet != null) {
-      if (ValuesDiffer(currentDialogOrder,newDialogOrder,'by-reference')) {
-        currentDialogOrder = newDialogOrder
-        DialogOrderSet.set(currentlyChosenApplet,newDialogOrder)
-        DialogOrderStore.set(newDialogOrder)
-      }
+    if (ValuesDiffer(currentDialogOrder,newDialogOrder,'by-reference')) {
+      currentDialogOrder = newDialogOrder
+      DialogOrderStore.set(newDialogOrder)
     }
   }
 
