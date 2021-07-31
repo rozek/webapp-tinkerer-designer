@@ -1,7 +1,7 @@
 <style>
   .WAD-Dialog {
     display:flex; flex-flow:column nowrap;
-    position:absolute; z-index:10000;
+    position:fixed; z-index:10000;
     overflow:hidden;
     border:solid 1px #454545; border-radius:8px;
     background-color:#555555;
