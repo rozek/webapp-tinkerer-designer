@@ -4,7 +4,7 @@ a visual Designer for the WebApp Tinkerer
 
 Build modern Web Applications from Components, live in your Browser, supported by an intuitive visual Editor.
 
-*(currently under active development, please stay tuned - to be finished by end of November)*
+*(currently under active development, please stay tuned - to be finished by end of June)*
 
 > Just a small note: if you like this module and plan to use it, consider "starring" this repository (you will find the "Star" button on the top right of this page), so that I know which of my repositories to take most care of.
 
